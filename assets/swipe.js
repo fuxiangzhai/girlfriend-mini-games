@@ -1,6 +1,7 @@
 const palmIndices = [0, 5, 9, 13, 17];
 const fingerIndices = [5, 9, 13, 17];
 const maxWindow = 240;
+const maxSampleGap = 215;
 const cooldown = 255;
 
 function distance(a, b) {
@@ -26,18 +27,17 @@ export class PalmSwipe {
     this.history = [];
   }
 
-  sample(landmarks, time, handedness) {
+  sample(landmarks, time) {
     if (!landmarks) return 0;
-    if (fingerIndices.filter(index => isFingerExtended(landmarks, index)).length < 3) {
-      this.reset();
-      return 0;
-    }
+    // A fast palm can be partially obscured for a frame. Require open samples
+    // on both sides, using position continuity instead of handedness labels.
+    if (fingerIndices.filter(index => isFingerExtended(landmarks, index)).length < 3) return 0;
 
     const palm = palmIndices.map(index => landmarks[index]);
     const x = 1 - palm.reduce((sum, point) => sum + point.x, 0) / palm.length;
     const y = palm.reduce((sum, point) => sum + point.y, 0) / palm.length;
     const previous = this.history.at(-1);
-    if (previous && (time - previous.time > 175 || previous.handedness !== handedness
+    if (previous && (time - previous.time > maxSampleGap
       || Math.abs(previous.y - y) > .25 || Math.abs(previous.x - x) > .49)) {
       this.reset();
     }
@@ -58,7 +58,7 @@ export class PalmSwipe {
         }
       }
     }
-    this.history.push({ x, y, time, handedness });
+    this.history.push({ x, y, time });
     return direction;
   }
 }

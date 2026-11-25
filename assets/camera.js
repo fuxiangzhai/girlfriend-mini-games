@@ -126,7 +126,7 @@ export function createCamera({ video, feed, canvas, onState, onHand, onHit }) {
           if (time - lastScan >= 30 && video.readyState >= 2 && video.currentTime !== previousFrame) {
             lastScan = time;
             previousFrame = video.currentTime;
-            const { landmarks, handedness } = detector.detectForVideo(video, time);
+            const { landmarks } = detector.detectForVideo(video, time);
             const hand = landmarks[0];
             if (hand) lastSeen = time;
             const seen = time - lastSeen < 175;
@@ -135,7 +135,7 @@ export function createCamera({ video, feed, canvas, onState, onHand, onHit }) {
               onHand(seen);
             }
             drawHand(hand, connections);
-            const direction = session.swipe.sample(hand, time, handedness?.[0]?.[0]?.index);
+            const direction = session.swipe.sample(hand, time);
             if (direction) onHit(direction);
           }
           session.animation = requestAnimationFrame(scan);
