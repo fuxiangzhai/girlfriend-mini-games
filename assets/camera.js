@@ -110,10 +110,14 @@ export function createCamera({ video, feed, canvas, onState, onHand, onHit }) {
     onState("loading");
     let phase = "camera";
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { facingMode: "user", width: { ideal: 480 }, height: { ideal: 360 }, frameRate: { ideal: 30 } },
-      });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: "user" } });
+      } catch (error) {
+        // Retry a device startup failure with the browser's default camera.
+        if (session !== active || !["NotReadableError", "OverconstrainedError"].includes(error.name)) throw error;
+        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+      }
       if (session !== active) {
         release(stream);
         return;
