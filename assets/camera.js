@@ -30,12 +30,22 @@ function release(stream) {
 }
 
 function cameraError(error, phase) {
-  if (phase === "model") return "手部识别暂时加载失败。可以重新开启摄像头，或先点击头像玩。";
-  if (error.name === "NotAllowedError" || error.name === "SecurityError") {
-    return "摄像头权限未开启。可以在浏览器里允许访问，或直接点击头像玩。";
+  if (phase === "model") return "摄像头已连接，但手势模型加载失败。检查网络后重新开启摄像头。";
+  if (phase === "preview") return "摄像头已连接，但浏览器没能播放预览。请用独立浏览器打开链接再试。";
+
+  switch (error.name) {
+    case "NotAllowedError":
+      return "浏览器未允许摄像头访问。请在地址栏的网站设置中允许摄像头。如果是在内嵌预览，请复制链接到 Chrome 或 Edge 打开。";
+    case "SecurityError":
+      return "当前页面禁止使用摄像头。请复制游戏链接到 Chrome 或 Edge 打开。";
+    case "NotFoundError":
+      return "浏览器没有找到可用的摄像头。请先用设备自带的相机检查画面。";
+    case "NotReadableError":
+    case "AbortError":
+      return "浏览器找到了摄像头，但无法启动。请关闭可能占用摄像头的应用，然后重试。";
+    default:
+      return "摄像头启动失败。可以重新开启摄像头，或先点击头像玩。";
   }
-  if (error.name === "NotFoundError") return "这里没有找到摄像头。点击头像也能玩。";
-  return "摄像头暂时无法使用。可以关闭占用摄像头的应用，或直接点击头像玩。";
 }
 
 export function createCamera({ video, feed, canvas, onState, onHand, onHit }) {
@@ -85,8 +95,13 @@ export function createCamera({ video, feed, canvas, onState, onHand, onHit }) {
 
   async function start() {
     if (active) return;
-    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-      onState("off", "请用 HTTPS 页面或本地预览开启摄像头。也可以直接点击头像玩。");
+    if (!window.isSecureContext) {
+      onState("off", "摄像头需要 HTTPS。请打开游戏的 HTTPS 链接，本机调试可以使用 localhost。");
+      return;
+    }
+    const policy = document.permissionsPolicy ?? document.featurePolicy;
+    if (policy?.allowsFeature?.("camera") === false || !navigator.mediaDevices?.getUserMedia) {
+      onState("off", "当前浏览器或内嵌预览未开放摄像头。请复制游戏链接到 Chrome 或 Edge 打开。");
       return;
     }
 
@@ -107,7 +122,9 @@ export function createCamera({ video, feed, canvas, onState, onHand, onHit }) {
       stream.getVideoTracks()[0]?.addEventListener("ended", () => {
         if (session === active) stop("摄像头已断开。你可以点击头像继续玩。");
       }, { once: true });
+      phase = "preview";
       video.srcObject = stream;
+      onState("initializing");
       await video.play();
       if (session !== active) return;
 

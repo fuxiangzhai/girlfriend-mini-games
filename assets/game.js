@@ -217,7 +217,6 @@ photoInput.addEventListener("change", async () => {
   if (photoUrl) URL.revokeObjectURL(photoUrl);
   photoUrl = nextPhoto;
   face.src = photoUrl;
-  target.classList.add("has-photo");
   undoPhoto.hidden = false;
   report();
 });
@@ -227,7 +226,6 @@ undoPhoto.addEventListener("click", () => {
   face.src = originalFace;
   if (photoUrl) URL.revokeObjectURL(photoUrl);
   photoUrl = undefined;
-  target.classList.remove("has-photo");
   photoButton.focus({ preventScroll: true });
   undoPhoto.hidden = true;
   report();
@@ -240,7 +238,8 @@ const camera = createCamera({
   onState(state, message = "") {
     const labels = {
       off: ["开启摄像头", "点击模式", "点击头像，先拍一下！"],
-      loading: ["取消开启", "正在开启", "等待摄像头和识别模型…"],
+      loading: ["取消开启", "正在开启", "请在浏览器中允许摄像头访问"],
+      initializing: ["关闭摄像头", "正在准备", "摄像头已连接，正在准备手势识别…"],
       on: ["关闭摄像头", "手势模式", "把张开的手掌放进画面"],
     };
     const [buttonText, modeText, hintText] = labels[state];
@@ -248,8 +247,9 @@ const camera = createCamera({
     byId("camera-label").textContent = buttonText;
     mode.textContent = modeText;
     hint.textContent = hintText;
-    stage.classList.toggle("is-tracking", state === "on");
-    cameraPreview.hidden = state !== "on";
+    const showPreview = state === "initializing" || state === "on";
+    stage.classList.toggle("is-tracking", showPreview);
+    cameraPreview.hidden = !showPreview;
     report(message);
   },
   onHand(found) {
