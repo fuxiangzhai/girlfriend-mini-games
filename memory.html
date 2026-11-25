@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1a112c">
+    <meta name="description" content="翻开两张一样的水果卡片。">
+    <title>翻牌配对 · 女友小游戏</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="./assets/game.css">
+    <link rel="stylesheet" href="./assets/arcade.css">
+    <script type="module" src="./assets/memory.js"></script>
+  </head>
+  <body class="memory-page">
+    <header class="topbar">
+      <div class="wrap topbar-inner">
+        <a class="brand" href="./" aria-label="女友小游戏首页">
+          <span class="brand-mark" aria-hidden="true">♥</span>
+          <span><strong>女友小游戏</strong><small>PAT PAT CLUB</small></span>
+        </a>
+        <nav class="game-nav" aria-label="切换游戏">
+          <a href="./slap.html">隔空拍脸</a>
+          <a href="./bubble-wrap.html">捏泡泡纸</a>
+          <a href="./memory.html" aria-current="page">翻牌配对</a>
+          <a href="./catch-stars.html">接星星</a>
+        </nav>
+        <button class="button sound-button" type="button" id="sound" aria-label="游戏音效" aria-pressed="true">
+          <span class="sound-note" aria-hidden="true">♪</span><span id="sound-label" aria-hidden="true">音效开</span>
+        </button>
+      </div>
+    </header>
+    <main class="wrap arcade-game">
+      <section class="intro" aria-labelledby="title">
+        <h1 id="title">翻牌<span>配对</span></h1>
+        <p>翻开两张一样的水果卡片。</p>
+      </section>
+      <div class="game-grid">
+        <section class="cabinet" aria-label="翻牌游戏">
+          <div class="arcade-screen memory-screen">
+            <p class="sr-only" id="memory-keys">用方向键移动，按空格翻开卡片。</p>
+            <div id="memory-board" class="memory-board" role="group" aria-label="水果卡片" aria-describedby="memory-keys"></div>
+          </div>
+        </section>
+        <aside class="sidebar" aria-label="本局进度">
+          <section class="score-card activity-score">
+            <h2>配对进度</h2>
+            <p class="activity-count"><strong id="memory-count">0</strong><span> / 6</span></p>
+            <progress id="memory-progress" aria-label="配对进度" value="0" max="6"></progress>
+            <p class="activity-status" id="memory-status" role="status"></p>
+            <button type="button" class="button activity-button" id="shuffle-cards">重新洗牌</button>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>

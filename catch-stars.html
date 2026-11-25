@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1a112c">
+    <meta name="description" content="移动小篮子，接住落下的星星。">
+    <title>接星星 · 女友小游戏</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="./assets/game.css">
+    <link rel="stylesheet" href="./assets/arcade.css">
+    <script type="module" src="./assets/catch-stars.js"></script>
+  </head>
+  <body class="catch-page">
+    <header class="topbar">
+      <div class="wrap topbar-inner">
+        <a class="brand" href="./" aria-label="女友小游戏首页">
+          <span class="brand-mark" aria-hidden="true">♥</span>
+          <span><strong>女友小游戏</strong><small>PAT PAT CLUB</small></span>
+        </a>
+        <nav class="game-nav" aria-label="切换游戏">
+          <a href="./slap.html">隔空拍脸</a>
+          <a href="./bubble-wrap.html">捏泡泡纸</a>
+          <a href="./memory.html">翻牌配对</a>
+          <a href="./catch-stars.html" aria-current="page">接星星</a>
+        </nav>
+        <button class="button sound-button" type="button" id="sound" aria-label="游戏音效" aria-pressed="true">
+          <span class="sound-note" aria-hidden="true">♪</span><span id="sound-label" aria-hidden="true">音效开</span>
+        </button>
+      </div>
+    </header>
+    <main class="wrap arcade-game">
+      <section class="intro" aria-labelledby="title">
+        <h1 id="title">接<span>星星</span></h1>
+        <p>移动小篮子，接住落下的星星。</p>
+      </section>
+      <div class="game-grid">
+        <section class="cabinet" aria-label="接星星游戏">
+          <div class="arcade-screen catch-screen" id="catch-stage" tabindex="0" role="group" aria-label="星星落下的区域" aria-describedby="catch-keys">
+            <div class="catch-lanes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="falling-stars" id="falling-stars" aria-hidden="true"></div>
+            <div class="catch-basket" id="catch-basket" aria-hidden="true"></div>
+            <div class="catch-start" id="catch-start">
+              <button class="button activity-button" id="start-catching" type="button">开始接星星</button>
+            </div>
+          </div>
+        </section>
+        <aside class="sidebar" aria-label="接星星进度">
+          <section class="score-card activity-score">
+            <h2>接住的星星</h2>
+            <p class="activity-count"><strong id="caught-count">00</strong><span> / 12</span></p>
+            <p class="activity-status" id="catch-status" role="status"></p>
+          </section>
+          <section class="help-card catch-help">
+            <h2>怎么移动？</h2>
+            <p id="catch-keys">在游戏区左右拖动，或者点一下想去的位置。键盘可以用左右方向键。</p>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>

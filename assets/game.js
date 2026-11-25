@@ -1,4 +1,5 @@
 import { createCamera } from "./camera.js";
+import { bindGameSound } from "./sound.js";
 
 const byId = id => document.getElementById(id);
 const stage = byId("stage");
@@ -7,7 +8,7 @@ const pose = byId("pose");
 const face = byId("face");
 const originalFace = face.src;
 const effects = byId("effects");
-const soundButton = byId("sound");
+const sound = bindGameSound(byId("sound"), byId("sound-label"));
 const cameraButton = byId("camera");
 const mode = byId("mode");
 const hint = byId("stage-hint");
@@ -26,9 +27,6 @@ let lastDirection = -1;
 let bounce;
 let photoUrl;
 let photoRequest = 0;
-let soundOn = true;
-let audio;
-let soundBuffer;
 
 function report(message = "") {
   feedback.textContent = message;
@@ -39,51 +37,6 @@ function updateScore() {
   byId("hits").textContent = String(hits).padStart(2, "0");
   byId("best").textContent = String(best);
   resetButton.disabled = hits === 0;
-}
-
-function unlockAudio() {
-  if (!soundOn) return;
-  const AudioEngine = window.AudioContext || window.webkitAudioContext;
-  if (!AudioEngine) return;
-  try {
-    audio ??= new AudioEngine();
-    if (audio.state === "suspended") void audio.resume().catch(() => {});
-  } catch {
-    // The visual feedback is available even without browser audio.
-  }
-}
-
-function playPop() {
-  if (!soundOn || !audio) return;
-  if (!soundBuffer) {
-    soundBuffer = audio.createBuffer(1, Math.ceil(audio.sampleRate * .12), audio.sampleRate);
-    const samples = soundBuffer.getChannelData(0);
-    for (let i = 0; i < samples.length; i++) {
-      samples[i] = (Math.random() * 2 - 1) * Math.exp(-8 * i / samples.length);
-    }
-  }
-  const now = audio.currentTime;
-  const noise = audio.createBufferSource();
-  const filter = audio.createBiquadFilter();
-  const output = audio.createGain();
-  noise.buffer = soundBuffer;
-  filter.type = "bandpass";
-  filter.frequency.value = 840;
-  filter.Q.value = .68;
-  output.gain.value = .24;
-  noise.connect(filter).connect(output).connect(audio.destination);
-  noise.start(now);
-
-  const thump = audio.createOscillator();
-  const envelope = audio.createGain();
-  thump.type = "sine";
-  thump.frequency.setValueAtTime(175, now);
-  thump.frequency.exponentialRampToValueAtTime(58, now + .085);
-  envelope.gain.setValueAtTime(.17, now);
-  envelope.gain.exponentialRampToValueAtTime(.001, now + .1);
-  thump.connect(envelope).connect(audio.destination);
-  thump.start(now);
-  thump.stop(now + .105);
 }
 
 function animateEffect(element, frames, duration) {
@@ -158,11 +111,11 @@ function hit(direction, position) {
     ], { duration: 390, easing: "ease-out" });
   }
   showImpact(direction, position);
-  playPop();
+  sound.play();
 }
 
 target.addEventListener("click", event => {
-  unlockAudio();
+  sound.unlock();
   const bounds = stage.getBoundingClientRect();
   if (event.detail === 0) {
     hit(-lastDirection);
@@ -171,13 +124,6 @@ target.addEventListener("click", event => {
   const x = (event.clientX - bounds.left) / bounds.width;
   const y = (event.clientY - bounds.top) / bounds.height;
   hit(x < .5 ? 1 : -1, { x, y });
-});
-
-soundButton.addEventListener("click", () => {
-  soundOn = !soundOn;
-  soundButton.setAttribute("aria-pressed", String(soundOn));
-  byId("sound-label").textContent = soundOn ? "音效开" : "音效关";
-  if (soundOn) unlockAudio();
 });
 
 resetButton.addEventListener("click", () => {
@@ -259,7 +205,7 @@ cameraButton.addEventListener("click", () => {
   if (camera.isActive()) {
     camera.stop();
   } else {
-    unlockAudio();
+    sound.unlock();
     void camera.start();
   }
 });
