@@ -1,5 +1,7 @@
 import { PalmSwipe } from "./swipe.js";
 
+const palmIndices = [0, 5, 9, 13, 17];
+const handHoldTime = 135;
 let detectorPromise;
 
 function loadDetector() {
@@ -12,9 +14,9 @@ function loadDetector() {
         baseOptions: { modelAssetPath: new URL("hand-landmarker.task", assetDirectory).href },
         runningMode: "VIDEO",
         numHands: 1,
-        minHandDetectionConfidence: .51,
-        minHandPresenceConfidence: .51,
-        minTrackingConfidence: .5,
+        minHandDetectionConfidence: .48,
+        minHandPresenceConfidence: .47,
+        minTrackingConfidence: .45,
       });
       return { detector, connections: HandLandmarker.HAND_CONNECTIONS };
     })().catch(error => {
@@ -31,7 +33,7 @@ function release(stream) {
 
 function cameraError(error, phase) {
   if (phase === "model") return "摄像头已连接，但手势模型加载失败。检查网络后重新开启摄像头。";
-  if (phase === "preview") return "摄像头已连接，但浏览器没能播放预览。请用独立浏览器打开链接再试。";
+  if (phase === "video") return "摄像头已连接，但浏览器无法读取画面。请用独立浏览器打开链接再试。";
 
   switch (error.name) {
     case "NotAllowedError":
@@ -48,9 +50,35 @@ function cameraError(error, phase) {
   }
 }
 
-export function createCamera({ video, feed, canvas, onState, onHand, onHit }) {
+export function createCamera({ video, canvas, portrait, onState, onHand, onHit }) {
   const context = canvas.getContext("2d");
+  let stageWidth = 0;
+  let stageHeight = 0;
+  let target;
   let active;
+
+  function measureStage() {
+    const stage = canvas.getBoundingClientRect();
+    const bounds = portrait.getBoundingClientRect();
+    if (!stage.width || !stage.height || !bounds.width || !bounds.height) return;
+    stageWidth = stage.width;
+    stageHeight = stage.height;
+    target = {
+      x: bounds.left + bounds.width * .5 - stage.left,
+      y: bounds.top + bounds.height * .5 - stage.top,
+      radiusX: bounds.width * .5,
+      radiusY: bounds.height * .5,
+    };
+    const scale = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(stageWidth * scale);
+    canvas.height = Math.round(stageHeight * scale);
+    context.setTransform(scale, 0, 0, scale, 0, 0);
+    active?.swipe.reset();
+  }
+
+  const resizeObserver = new ResizeObserver(measureStage);
+  resizeObserver.observe(canvas);
+  resizeObserver.observe(portrait);
 
   function stop(message = "") {
     if (active) {
@@ -59,38 +87,56 @@ export function createCamera({ video, feed, canvas, onState, onHand, onHit }) {
       active = undefined;
     }
     video.srcObject = null;
-    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.clearRect(0, 0, stageWidth, stageHeight);
     onState("off", message);
   }
 
   function drawHand(landmarks, connections) {
     const { videoWidth: width, videoHeight: height } = video;
-    if (!width || !height) return;
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
-      feed.style.aspectRatio = width + " / " + height;
-    }
-    context.clearRect(0, 0, width, height);
-    if (!landmarks) return;
-    const x = point => (1 - point.x) * width;
-    const y = point => point.y * height;
-    const line = Math.max(2, width / 145);
-    context.strokeStyle = "#f5f184";
-    context.lineWidth = line;
+    if (!width || !height || !target) return;
+    const center = palmIndices.reduce((sum, index) => ({
+      x: sum.x + landmarks[index].x / palmIndices.length,
+      y: sum.y + landmarks[index].y / palmIndices.length,
+    }), { x: 0, y: 0 });
+    const x = (1 - center.x) * stageWidth;
+    const y = center.y * stageHeight;
+    const scale = Math.min(stageWidth / width, stageHeight / height);
+    const points = landmarks.map(point => ({
+      x: x - (point.x - center.x) * width * scale,
+      y: y + (point.y - center.y) * height * scale,
+    }));
+    const palmWidth = Math.hypot(points[17].x - points[5].x, points[17].y - points[5].y);
+    const line = Math.max(2, Math.min(4, palmWidth * .075));
+    context.clearRect(0, 0, stageWidth, stageHeight);
     context.lineCap = "round";
+    context.lineJoin = "round";
+
+    context.beginPath();
+    context.moveTo(points[0].x, points[0].y);
+    for (const index of palmIndices.slice(1)) context.lineTo(points[index].x, points[index].y);
+    context.closePath();
+    context.fillStyle = "#ffe97a45";
+    context.fill();
+
     context.beginPath();
     for (const { start, end } of connections) {
-      context.moveTo(x(landmarks[start]), y(landmarks[start]));
-      context.lineTo(x(landmarks[end]), y(landmarks[end]));
+      context.moveTo(points[start].x, points[start].y);
+      context.lineTo(points[end].x, points[end].y);
     }
+    context.strokeStyle = "#26163b";
+    context.lineWidth = line + 3;
     context.stroke();
-    context.fillStyle = "#fff6df";
-    for (const point of landmarks) {
+    context.strokeStyle = "#ffe97a";
+    context.lineWidth = line;
+    context.stroke();
+
+    context.fillStyle = "#fff4cd";
+    for (const point of points) {
       context.beginPath();
-      context.arc(x(point), y(point), line, 0, Math.PI * 2);
+      context.arc(point.x, point.y, line * .85, 0, Math.PI * 2);
       context.fill();
     }
+    return { x, y, reach: Math.min(28, palmWidth * .36) };
   }
 
   async function start() {
@@ -107,6 +153,7 @@ export function createCamera({ video, feed, canvas, onState, onHand, onHit }) {
 
     const session = { swipe: new PalmSwipe(), animation: 0, stream: undefined };
     active = session;
+    measureStage();
     onState("loading");
     let phase = "camera";
     try {
@@ -126,7 +173,7 @@ export function createCamera({ video, feed, canvas, onState, onHand, onHit }) {
       stream.getVideoTracks()[0]?.addEventListener("ended", () => {
         if (session === active) stop("摄像头已断开。你可以点击头像继续玩。");
       }, { once: true });
-      phase = "preview";
+      phase = "video";
       video.srcObject = stream;
       onState("initializing");
       await video.play();
@@ -144,20 +191,24 @@ export function createCamera({ video, feed, canvas, onState, onHand, onHit }) {
       function scan(time) {
         if (session !== active) return;
         try {
-          if (time - lastScan >= 30 && video.readyState >= 2 && video.currentTime !== previousFrame) {
+          if (time - lastScan >= 24 && video.readyState >= 2 && video.currentTime !== previousFrame) {
             lastScan = time;
             previousFrame = video.currentTime;
             const { landmarks } = detector.detectForVideo(video, time);
             const hand = landmarks[0];
-            if (hand) lastSeen = time;
-            const seen = time - lastSeen < 175;
-            if (tracking !== seen) {
-              tracking = seen;
-              onHand(seen);
+            const palm = hand && drawHand(hand, connections);
+            if (palm) {
+              lastSeen = time;
+              if (!tracking) onHand(true);
+              tracking = true;
             }
-            drawHand(hand, connections);
-            const direction = session.swipe.sample(hand, time);
-            if (direction) onHit(direction);
+            const hit = session.swipe.sample(palm, time, target);
+            if (hit) onHit(hit.direction, { x: hit.x / stageWidth, y: hit.y / stageHeight });
+          }
+          if (tracking && time - lastSeen >= handHoldTime) {
+            tracking = false;
+            context.clearRect(0, 0, stageWidth, stageHeight);
+            onHand(false);
           }
           session.animation = requestAnimationFrame(scan);
         } catch {

@@ -1,64 +1,79 @@
-const palmIndices = [0, 5, 9, 13, 17];
-const fingerIndices = [5, 9, 13, 17];
-const maxWindow = 240;
-const maxSampleGap = 215;
-const cooldown = 255;
+const motionWindow = 170;
+const trackingGap = 195;
+const hitCooldown = 150;
+const restInterval = 105;
 
-function distance(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y, (a.z ?? 0) - (b.z ?? 0));
-}
+function contactPoint(from, to, target) {
+  const reach = Math.max(from.reach, to.reach);
+  const radiusX = target.radiusX + reach;
+  const radiusY = target.radiusY + reach;
+  const offsetX = (from.x - target.x) / radiusX;
+  const offsetY = (from.y - target.y) / radiusY;
+  const dx = (to.x - from.x) / radiusX;
+  const dy = (to.y - from.y) / radiusY;
+  const along = -(offsetX * dx + offsetY * dy) / (dx * dx + dy * dy);
+  const closest = Math.max(0, Math.min(1, along));
+  if (Math.hypot(offsetX + closest * dx, offsetY + closest * dy) > 1) return;
 
-function isFingerExtended(points, rootIndex) {
-  const root = points[rootIndex];
-  const joint = points[rootIndex + 1];
-  const tip = points[rootIndex + 3];
-  const firstSegment = distance(root, joint);
-  const restOfFinger = distance(joint, tip);
-  const total = distance(root, tip);
-  return firstSegment > 0 && total > firstSegment * 1.55
-    && total > (firstSegment + restOfFinger) * 0.89;
+  // Place the effect on the portrait even when the edge of the palm touched it.
+  const x = from.x + (to.x - from.x) * closest - target.x;
+  const y = from.y + (to.y - from.y) * closest - target.y;
+  const edge = Math.max(1, Math.hypot(x / target.radiusX, y / target.radiusY));
+  return { x: target.x + x / edge, y: target.y + y / edge };
 }
 
 export class PalmSwipe {
   history = [];
+  lastMotion = -Infinity;
   lastHit = -Infinity;
+  hitDirection = 0;
 
   reset() {
     this.history = [];
+    this.lastMotion = -Infinity;
+    this.hitDirection = 0;
   }
 
-  sample(landmarks, time) {
-    if (!landmarks) return 0;
-    // A fast palm can be partially obscured for a frame. Require open samples
-    // on both sides, using position continuity instead of handedness labels.
-    if (fingerIndices.filter(index => isFingerExtended(landmarks, index)).length < 3) return 0;
-
-    const palm = palmIndices.map(index => landmarks[index]);
-    const x = 1 - palm.reduce((sum, point) => sum + point.x, 0) / palm.length;
-    const y = palm.reduce((sum, point) => sum + point.y, 0) / palm.length;
+  sample(palm, time, target) {
     const previous = this.history.at(-1);
-    if (previous && (time - previous.time > maxSampleGap
-      || Math.abs(previous.y - y) > .25 || Math.abs(previous.x - x) > .49)) {
-      this.reset();
-    }
-    this.history = this.history.filter(point => time - point.time <= maxWindow);
+    if (previous && time - previous.time > trackingGap) this.reset();
+    if (!palm) return;
 
+    this.history = this.history.filter(point => time - point.time <= motionWindow);
+    const minimumTravel = Math.max(14, target.radiusX * .19);
+    const minimumSpeed = Math.max(.13, target.radiusX * .00185);
+    const recentDx = palm.x - (this.history.at(-1)?.x ?? palm.x);
+    const recentDirection = Math.abs(recentDx) >= 5 ? Math.sign(recentDx) : 0;
     let direction = 0;
-    if (time - this.lastHit >= cooldown && y > .13 && y < .87) {
-      for (const point of this.history) {
-        const elapsed = time - point.time;
-        const dx = x - point.x;
-        const crossesCenter = dx > 0 ? point.x < .46 && x >= .48 : point.x > .54 && x <= .52;
-        if (elapsed >= 42 && Math.abs(dx) >= .145 && Math.abs(dx) / elapsed >= .00092
-          && Math.abs(y - point.y) < Math.abs(dx) * .84 && crossesCenter) {
-          direction = Math.sign(dx);
-          this.lastHit = time;
-          this.reset();
-          break;
-        }
-      }
+    let contact;
+
+    for (let index = this.history.length - 1; index >= 0; index--) {
+      const point = this.history[index];
+      const elapsed = time - point.time;
+      const dx = palm.x - point.x;
+      const distance = Math.abs(dx);
+      if (elapsed < 30 || distance < minimumTravel || distance < elapsed * minimumSpeed
+        || Math.abs(palm.y - point.y) > distance * 1.1) continue;
+
+      const candidate = Math.sign(dx);
+      if ((recentDirection && candidate !== recentDirection) || (direction && candidate !== direction)) continue;
+      direction = candidate;
+      contact = contactPoint(point, palm, target);
+      if (contact) break;
     }
-    this.history.push({ x, y, time });
-    return direction;
+
+    this.history.push({ ...palm, time });
+    if (!direction) {
+      if (time - this.lastMotion >= restInterval) this.hitDirection = 0;
+      return;
+    }
+    this.lastMotion = time;
+    if (this.hitDirection !== direction) this.hitDirection = 0;
+    if (!contact || this.hitDirection || time - this.lastHit < hitCooldown) return;
+
+    this.hitDirection = direction;
+    this.lastHit = time;
+    this.history = [{ ...palm, time }];
+    return { ...contact, direction };
   }
 }

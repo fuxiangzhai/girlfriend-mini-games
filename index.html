@@ -46,13 +46,8 @@
                 </button>
               </div>
             </div>
-            <div class="camera-preview" id="camera-preview" hidden>
-              <div class="camera-feed" id="camera-feed">
-                <video id="camera-video" playsinline muted></video>
-                <canvas id="skeleton" aria-hidden="true"></canvas>
-              </div>
-              <div class="camera-preview-label"><span aria-hidden="true"></span>摄像头预览</div>
-            </div>
+            <video class="camera-source" id="camera-video" playsinline muted aria-hidden="true"></video>
+            <canvas class="hand-overlay" id="hand-overlay" aria-hidden="true"></canvas>
             <div class="effects" id="effects" aria-hidden="true"></div>
             <div class="stage-hint" id="stage-hint">点击头像，先拍一下！</div>
           </div>
@@ -86,7 +81,7 @@
             <h2>怎么玩？</h2>
             <div class="rule">
               <span class="rule-icon rule-camera" aria-hidden="true">✋</span>
-              <div><h3>挥手拍</h3><p>开启摄像头，手掌张开对着镜头，快速扫过画面中间。</p></div>
+              <div><h3>挥手拍</h3><p>开启摄像头，让手部节点出现在游戏里，再向头像横挥。</p></div>
             </div>
             <div class="rule">
               <span class="rule-icon rule-touch" aria-hidden="true">☛</span>

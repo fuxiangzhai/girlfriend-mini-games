@@ -9,7 +9,6 @@ const originalFace = face.src;
 const effects = byId("effects");
 const soundButton = byId("sound");
 const cameraButton = byId("camera");
-const cameraPreview = byId("camera-preview");
 const mode = byId("mode");
 const hint = byId("stage-hint");
 const feedback = byId("feedback");
@@ -233,27 +232,25 @@ undoPhoto.addEventListener("click", () => {
 
 const camera = createCamera({
   video: byId("camera-video"),
-  feed: byId("camera-feed"),
-  canvas: byId("skeleton"),
+  canvas: byId("hand-overlay"),
+  portrait: face,
   onState(state, message = "") {
     const labels = {
       off: ["开启摄像头", "点击模式", "点击头像，先拍一下！"],
       loading: ["取消开启", "正在开启", "请在浏览器中允许摄像头访问"],
       initializing: ["关闭摄像头", "正在准备", "摄像头已连接，正在准备手势识别…"],
-      on: ["关闭摄像头", "手势模式", "把张开的手掌放进画面"],
+      on: ["关闭摄像头", "手势模式", "把手放到镜头前"],
     };
     const [buttonText, modeText, hintText] = labels[state];
     cameraButton.setAttribute("aria-pressed", String(state !== "off"));
     byId("camera-label").textContent = buttonText;
     mode.textContent = modeText;
     hint.textContent = hintText;
-    const showPreview = state === "initializing" || state === "on";
-    stage.classList.toggle("is-tracking", showPreview);
-    cameraPreview.hidden = !showPreview;
+    stage.classList.toggle("is-tracking", state === "on");
     report(message);
   },
   onHand(found) {
-    hint.textContent = found ? "手掌张开，快速横挥！" : "把张开的手掌放进画面";
+    hint.textContent = found ? "向头像横挥！" : "把手放到镜头前";
   },
   onHit: hit,
 });
