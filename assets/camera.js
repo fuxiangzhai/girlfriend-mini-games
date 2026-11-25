@@ -1,3 +1,4 @@
+import { renderHand } from "./hand-model.js";
 import { PalmSwipe } from "./swipe.js";
 
 const palmIndices = [0, 5, 9, 13, 17];
@@ -10,7 +11,7 @@ function loadDetector() {
       const { FilesetResolver, HandLandmarker } = await import("./vision/vision_bundle.mjs");
       const assetDirectory = new URL("./vision/", import.meta.url);
       const files = await FilesetResolver.forVisionTasks(new URL("wasm", assetDirectory).href);
-      const detector = await HandLandmarker.createFromOptions(files, {
+      return HandLandmarker.createFromOptions(files, {
         baseOptions: { modelAssetPath: new URL("hand-landmarker.task", assetDirectory).href },
         runningMode: "VIDEO",
         numHands: 1,
@@ -18,7 +19,6 @@ function loadDetector() {
         minHandPresenceConfidence: .47,
         minTrackingConfidence: .45,
       });
-      return { detector, connections: HandLandmarker.HAND_CONNECTIONS };
     })().catch(error => {
       detectorPromise = undefined;
       throw error;
@@ -91,7 +91,7 @@ export function createCamera({ video, canvas, portrait, onState, onHand, onHit }
     onState("off", message);
   }
 
-  function drawHand(landmarks, connections) {
+  function drawHand(landmarks) {
     const { videoWidth: width, videoHeight: height } = video;
     if (!width || !height || !target) return;
     const center = palmIndices.reduce((sum, index) => ({
@@ -104,38 +104,11 @@ export function createCamera({ video, canvas, portrait, onState, onHand, onHit }
     const points = landmarks.map(point => ({
       x: x - (point.x - center.x) * width * scale,
       y: y + (point.y - center.y) * height * scale,
+      z: (point.z ?? 0) * width * scale,
     }));
     const palmWidth = Math.hypot(points[17].x - points[5].x, points[17].y - points[5].y);
-    const line = Math.max(2, Math.min(4, palmWidth * .075));
     context.clearRect(0, 0, stageWidth, stageHeight);
-    context.lineCap = "round";
-    context.lineJoin = "round";
-
-    context.beginPath();
-    context.moveTo(points[0].x, points[0].y);
-    for (const index of palmIndices.slice(1)) context.lineTo(points[index].x, points[index].y);
-    context.closePath();
-    context.fillStyle = "#ffe97a45";
-    context.fill();
-
-    context.beginPath();
-    for (const { start, end } of connections) {
-      context.moveTo(points[start].x, points[start].y);
-      context.lineTo(points[end].x, points[end].y);
-    }
-    context.strokeStyle = "#26163b";
-    context.lineWidth = line + 3;
-    context.stroke();
-    context.strokeStyle = "#ffe97a";
-    context.lineWidth = line;
-    context.stroke();
-
-    context.fillStyle = "#fff4cd";
-    for (const point of points) {
-      context.beginPath();
-      context.arc(point.x, point.y, line * .85, 0, Math.PI * 2);
-      context.fill();
-    }
+    renderHand(context, points, palmWidth);
     return { x, y, reach: Math.min(28, palmWidth * .36) };
   }
 
@@ -180,7 +153,7 @@ export function createCamera({ video, canvas, portrait, onState, onHand, onHit }
       if (session !== active) return;
 
       phase = "model";
-      const { detector, connections } = await loadDetector();
+      const detector = await loadDetector();
       if (session !== active) return;
       let previousFrame = -1;
       let lastScan = -Infinity;
@@ -196,7 +169,7 @@ export function createCamera({ video, canvas, portrait, onState, onHand, onHit }
             previousFrame = video.currentTime;
             const { landmarks } = detector.detectForVideo(video, time);
             const hand = landmarks[0];
-            const palm = hand && drawHand(hand, connections);
+            const palm = hand && drawHand(hand);
             if (palm) {
               lastSeen = time;
               if (!tracking) onHand(true);
