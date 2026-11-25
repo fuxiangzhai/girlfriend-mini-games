@@ -18,21 +18,14 @@ button:focus-visible { outline: 3px solid #f5ee7d; outline-offset: 4px; }
 [hidden] { display: none !important; }
 .wrap { width: min(1200px, calc(100% - 80px)); margin-inline: auto; }
 .topbar { background: #1a122a; border-bottom: 1px solid #ffffff1a; }
-.topbar-inner { min-height: 74px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 13px; }
-.brand { display: flex; width: fit-content; align-items: center; gap: 11px; color: inherit; text-decoration: none; }
+.topbar-inner { min-height: 74px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 11px; }
 .brand-mark { display: grid; place-items: center; flex: 0 0 40px; height: 40px; border: 1px solid #c89aff; border-radius: 13px; color: #ffdd95; background: #513680; font-size: 23px; transform: rotate(-8deg); }
-.brand strong, .brand small { display: block; }
 .brand strong { font-size: 1.06rem; line-height: 1.25; letter-spacing: .045em; }
-.brand small { margin-top: 3px; color: #c2a9eb; font: 800 .7rem/1.2 ui-monospace, Consolas, monospace; letter-spacing: .13em; }
-.game-nav { display: flex; align-items: center; gap: 3px; padding: 4px; border: 1px solid #513c6b; border-radius: 12px; background: #271b3a; }
-.game-nav a { display: grid; min-height: 38px; place-items: center; padding: 0 10px; border-radius: 8px; color: #dacced; font-size: .88rem; font-weight: 780; text-decoration: none; white-space: nowrap; }
-.game-nav a:hover { color: #fff3df; background: #423054; }
-.game-nav a[aria-current="page"] { color: #21172c; background: var(--game-accent, var(--yellow)); }
-.brand:focus-visible, .game-nav a:focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
 .button { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid transparent; border-radius: 10px; padding: 0 15px; font-size: .91rem; font-weight: 800; white-space: nowrap; transition: filter 140ms, background 140ms, transform 140ms; }
 .button:hover { filter: brightness(1.13); }
 .button:active { transform: translateY(2px); }
-.sound-button { min-height: 40px; justify-self: end; color: #e8dbff; background: #2d2042; border-color: #4a3864; }
+.sound-button { min-height: 40px; color: #e8dbff; background: #2d2042; border-color: #4a3864; }
 .sound-note { width: 16px; display: inline-block; color: #d2aaff; font-size: 1.16rem; line-height: 1; }
 .sound-button[aria-pressed="false"] .sound-note { text-decoration: line-through; }
 .intro { padding: 34px 0 25px; }
@@ -131,10 +124,7 @@ h2 { font-size: 1.18rem; font-weight: 900; line-height: 1.4; }
 
 @media (max-width: 665px) {
   .wrap { width: calc(100% - 28px); }
-  .topbar-inner { min-height: 61px; grid-template-columns: minmax(0, 1fr) auto; gap: 9px 10px; padding-block: 10px 8px; }
-  .game-nav { grid-area: 2 / 1 / 3 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .game-nav a { padding-inline: 2px; }
-  .sound-button { grid-area: 1 / 2; }
+  .topbar-inner { min-height: 61px; }
   .brand-mark { flex-basis: 34px; height: 34px; font-size: 19px; }
   .intro { padding: 24px 0 19px; }
   h1 { margin-block: 6px 8px; }
