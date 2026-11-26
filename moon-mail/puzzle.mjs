@@ -20,10 +20,15 @@ export function prepareBoard(rows) {
       mirrors.push(cell);
     }
     if (tile === "@") gates.push(cell);
-    if (tile === "*") marks.push(cell);
+    if (tile === "*" || isNumbered(tile)) marks.push(cell);
     if (arrows.includes(tile)) source = cell;
   }
-  return { width, height: rows.length, tiles, mirrors, mirrorAt, gates, marks, source, initial };
+  const sealOrder = marks.map(cell => tiles[cell]).filter(isNumbered).map(Number).sort((a, b) => a - b);
+  return { width, height: rows.length, tiles, mirrors, mirrorAt, gates, marks, sealOrder, source, initial };
+}
+
+export function isNumbered(tile) {
+  return tile === "1" || tile === "2" || tile === "3";
 }
 
 export function trace(board, mask) {
@@ -34,6 +39,8 @@ export function trace(board, mask) {
   let line = [[x + 0.5, y + 0.5]];
   const lines = [line];
   const lit = new Set();
+  const sequence = [];
+  let wrongOrder = false;
   const turns = [];
   const visited = new Set();
   let end;
@@ -64,7 +71,12 @@ export function trace(board, mask) {
       const index = mirrorAt.get(cell);
       turns.push(index);
       direction = (mask & (1 << index) ? falling : rising)[direction];
-    } else if (tile === "*") {
+    } else if (tile === "*" || isNumbered(tile)) {
+      if (isNumbered(tile) && !lit.has(cell)) {
+        const number = Number(tile);
+        if (number !== board.sealOrder[sequence.length]) wrongOrder = true;
+        sequence.push(number);
+      }
       lit.add(cell);
     } else if (tile === "@") {
       const exit = gates[0] === cell ? gates[1] : gates[0];
@@ -73,10 +85,12 @@ export function trace(board, mask) {
       line = [[x + 0.5, y + 0.5]];
       lines.push(line);
     } else if (tile === "M") {
-      end = lit.size === marks.length ? "ready" : "missing";
+      end = "ready";
+      if (lit.size < marks.length) end = "missing";
+      else if (wrongOrder) end = "order";
     }
   }
-  return { lines, lit, turns, end };
+  return { lines, lit, sequence, wrongOrder, turns, end };
 }
 
 const cachedSolutions = new WeakMap();
@@ -106,4 +120,20 @@ export function closestRoute(board, mask) {
   const differences = best ^ mask;
   const next = trace(board, best).turns.find(index => differences & (1 << index));
   return { distance, next };
+}
+
+export const difficulties = ["relaxed", "standard", "expert"];
+
+export function prepareRoute(letter, difficulty) {
+  const board = prepareBoard(difficulty === "expert" ? letter.expert : letter.rows);
+  board.budget = null;
+  if (difficulty === "expert") board.budget = closestRoute(board, board.initial).distance;
+  if (difficulty === "relaxed") {
+    let guide = closestRoute(board, board.initial);
+    while (guide.distance > 2 && guide.next !== undefined) {
+      board.initial ^= 1 << guide.next;
+      guide = closestRoute(board, board.initial);
+    }
+  }
+  return board;
 }

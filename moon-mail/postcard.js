@@ -5,19 +5,28 @@ function wrapLines(ctx, text, width) {
   const lines = [];
   for (const paragraph of text.replace(/\n{3,}/g, "\n\n").split("\n")) {
     let line = "";
-    for (const char of paragraph) {
-      if (line && ctx.measureText(line + char).width > width) {
-        lines.push(line);
+    const tokens = paragraph.match(/[a-z0-9]+(?:['’-][a-z0-9]+)*|[^\S\n]+|[^\s]/giu) || [];
+    for (const token of tokens) {
+      if (line && ctx.measureText(line + token).width > width) {
+        lines.push(line.trimEnd());
         line = "";
       }
-      line += char;
+      if (!line && !token.trim()) continue;
+      if (ctx.measureText(token).width <= width) {
+        line += token;
+        continue;
+      }
+      for (const char of token) {
+        if (line && ctx.measureText(line + char).width > width) { lines.push(line); line = ""; }
+        line += char;
+      }
     }
     lines.push(line);
   }
   return lines;
 }
 
-export async function postcardPNG(letter, number, message) {
+export async function postcardPNG(letter, number, message, language, t) {
   const image = new Image();
   image.src = letter.image;
   await image.decode();
@@ -44,10 +53,10 @@ export async function postcardPNG(letter, number, message) {
   }
   ctx.fillStyle = "#25494e";
   ctx.font = "bold 32px " + serif;
-  ctx.fillText("月光邮局", margin, 76);
+  ctx.fillText(t("title"), margin, 76);
   ctx.font = "bold 23px monospace";
   ctx.fillStyle = "#95654d";
-  ctx.fillText("MOONLIGHT POST", margin + 160, 75);
+  if (language === "zh") ctx.fillText("MOONLIGHT POST", margin + 160, 75);
   ctx.textAlign = "right";
   ctx.fillText("NO. " + String(number).padStart(2, "0"), width - margin, 75);
   ctx.textAlign = "left";
@@ -64,10 +73,10 @@ export async function postcardPNG(letter, number, message) {
   ctx.beginPath(); ctx.moveTo(margin, baseline - 47); ctx.lineTo(width - margin, baseline - 47); ctx.stroke();
   ctx.fillStyle = "#586b60";
   ctx.font = "26px " + sans;
-  ctx.fillText(letter.place + "  ·  " + letter.time + " 邮班", margin, baseline);
+  ctx.fillText(letter.place + "  ·  " + letter.time + " " + t("postRun"), margin, baseline);
   ctx.textAlign = "right";
   ctx.fillStyle = "#a3523f";
-  ctx.fillText("月光已送达", width - margin, baseline);
+  ctx.fillText(t("printMark"), width - margin, baseline);
   return new Promise((resolve, reject) => canvas.toBlob(blob => {
     if (blob) resolve(blob);
     else reject(new Error("PNG encoding failed"));

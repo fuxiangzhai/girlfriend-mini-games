@@ -1,5 +1,6 @@
 // Each row runs west to east. A and B are the two mirror orientations.
 // Arrows are lamps, M is the mailbox, # a reef, * a postmark and @ a tide gate.
+// A numbered postmark must be encountered for the first time in ascending order.
 export const letters = [
   {
     id: "lighthouse", title: "灯塔初亮", place: "白沙灯塔", time: "19:08",
@@ -7,6 +8,15 @@ export const letters = [
     brief: "今晚的第一封信从这里出发。点一下海面上的圆镜，让月光拐向信箱。",
     letter: "灯塔每转一圈，海面就亮一下。数到第七下的时候，我想把这一小片亮光寄给你。",
     rows: [".#.M.", ".....", ">..B.", "....#"],
+    expert: ["......", ".A.#BM", "..B.B.", "...#..", "..^..."],
+    expertNote: "挑战邮路从南岸出发。先从东岸的信箱倒推最后一次转弯，再决定调哪面镜。",
+    en: {
+      expertNote: "This chart starts on the south shore. Trace the last turn backwards from the mailbox on the east bank.",
+      title: "First Light", place: "White Sand Light",
+      artAlt: "A red-and-white lighthouse casts a golden beam across the sea under a crescent moon.",
+      brief: "The first letter leaves from here. Turn the round mirror to bend the moonbeam toward the mailbox.",
+      letter: "The sea lights up each time the lantern turns. On the seventh sweep I thought of you, and wanted to send you a little of that light.",
+    },
   },
   {
     id: "ferry", title: "末班渡船", place: "蓝湾渡口", time: "20:26",
@@ -14,6 +24,15 @@ export const letters = [
     brief: "渡船刚刚离岸。沿着光走，看看哪几面镜子能让信绕过渡口的礁石。",
     letter: "渡船最后一排有两个位置。今天先把靠窗的海风寄给你，下次我们一起坐。",
     rows: [".#...", "A.B.B", "...#.", ">.B.M"],
+    expert: [".#v...", ".....#", "B..AB.", "..AB..", "M....."],
+    expertNote: "渡船这次在西南角靠岸。找一条能沿岸边直达信箱的光路。",
+    en: {
+      expertNote: "The ferry docks in the southwest corner this time. Find a stretch of shoreline that leads straight to the mailbox.",
+      title: "The Last Ferry", place: "Blue Bay Landing",
+      artAlt: "A ferry with warm cabin lights crosses Blue Bay at dusk.",
+      brief: "The ferry has just cast off. Follow the beam and find a way past the rocks at the landing.",
+      letter: "There are two seats in the last row of the ferry. Today I'm sending you the breeze from the window seat. Next time, let's take it together.",
+    },
   },
   {
     id: "rain", title: "雨巷里的邮戳", place: "雨巷街角", time: "21:45",
@@ -21,6 +40,15 @@ export const letters = [
     brief: "这封信还缺一枚星形邮戳。换一条路，让同一束光先穿过邮戳，再到信箱。",
     letter: "刚躲进屋檐，雨就小了。窗边的人递给我两张纸巾，我把多的那张折成了你喜欢的小船。",
     rows: ["..A..B", ".#....", ">.A..M", "....#.", "..A*.B"],
+    expert: [".M..B<", "B...BB", "......", ".*#..#", "AB...A"],
+    expertNote: "邮戳和信箱在同一列。先找出能扫过邮戳的那段光，再接上屋顶的信箱。",
+    en: {
+      expertNote: "The stamp and the mailbox share a column. Find the stretch of light that crosses the stamp before connecting the rooftop mailbox.",
+      title: "A Postmark in the Rain", place: "Rain Lane",
+      artAlt: "Warm light from a window reflects off wet paving stones in a narrow lane.",
+      brief: "This letter needs a star postmark. Find a route that touches the stamp before reaching the mailbox.",
+      letter: "The rain let up just as I ducked under the eaves. Someone by the window handed me two napkins. I folded the spare into that little boat you like.",
+    },
   },
   {
     id: "arches", title: "潮门彼端", place: "双拱海峡", time: "23:17",
@@ -28,6 +56,15 @@ export const letters = [
     brief: "紫色潮门成对相连。月光从一扇门进去，会从另一扇门沿原方向继续走。",
     letter: "潮水钻进眼前的拱门，又在远处冒出头。要是想念也有这样的近路，我推开门就能见到你。",
     rows: ["..@M..", "...A.A", ">.B.#.", "..#..*", "#....@"],
+    expert: [">....B", "B...*B", ".M@#.#", "A...A.", "@...BB"],
+    expertNote: "进门的方向也是出门的方向。看看潮门两侧的空水面，哪边能让信经过邮戳？",
+    en: {
+      expertNote: "The light keeps its heading through a gate. Look at the clear water beside each arch to find a way through the stamp.",
+      title: "Beyond the Tide Gate", place: "Twin Arch Strait",
+      artAlt: "The same tide runs through two stone arches, one near and one on the horizon.",
+      brief: "Purple tide gates come in pairs. Light entering one leaves the other in the same direction.",
+      letter: "The tide slips through the arch beside me and comes up far out at sea. I wish missing you had a shortcut like that. I'd open a door and there you'd be.",
+    },
   },
   {
     id: "funicular", title: "山坡上的灯", place: "橘子坡站", time: "04:52",
@@ -35,6 +72,15 @@ export const letters = [
     brief: "山腰和坡底各有一枚邮戳。光可以和自己的路线交叉，试着把两处都串起来。",
     letter: "缆车爬得很慢，慢到我能把山坡上的窗灯一盏盏数完。下一趟，想和你挤在同一扇窗边。",
     rows: [".#..#.", "A.*A.A", ".....M", "A.*..B", ".#.A.<"],
+    expert: [".B..*A", "...B.B", "..#.MA", "#*....", "B^.AB."],
+    expertNote: "两个邮戳分居山坡两端。先试着在心里把它们连起来，再接上月光源。",
+    en: {
+      expertNote: "The two stamps sit at opposite ends of the hill. Sketch a connection between them before joining it to the lamp.",
+      title: "Lights on the Hill", place: "Orange Hill Station",
+      artAlt: "A red cable car climbs above the lights of a seaside town.",
+      brief: "Two postmarks wait on the hillside. The beam can cross its own path on its way to the mailbox.",
+      letter: "The cable car climbed so slowly I could count the lit windows one by one. Next time, let's squeeze in beside the same window.",
+    },
   },
   {
     id: "dawn", title: "天亮时见", place: "晨光窗台", time: "06:10",
@@ -42,5 +88,66 @@ export const letters = [
     brief: "窗台上摆好了两只杯子。试试从不同方向进入同一扇潮门，把两枚邮戳都带到窗边。",
     letter: "两只杯子都摆好了，你的那只还是旧位置。今天的海是什么颜色，不用再写信告诉你了。推开窗，我们一起看吧。",
     rows: ["..B*@v", ".#*...", "B.B...", "@AA.AB", "MA.#.."],
+    expert: ["M.A.#B", "..A.A.", "..B*B@", ">.A.*B", ".B@..#"],
+    expertNote: "窗边的信箱在西北角。沿着最后一段光路往回找，别让潮门把信带过了站。",
+    en: {
+      expertNote: "The window is in the northwest corner. Work back along the last leg so the tide gate doesn't carry the letter past its stop.",
+      title: "See You at Dawn", place: "The Morning Window",
+      artAlt: "Two cups and a letter sit on a blue windowsill as day breaks over the sea.",
+      brief: "Two cups are waiting. Try entering the same tide gate from different directions to bring both postmarks home.",
+      letter: "Both cups are out. Yours is in its usual spot. Today I don't have to write and tell you what colour the sea is. Open the window. Let's look together.",
+    },
   },
-].map(letter => ({ ...letter, image: "./art/" + letter.id + ".webp" }));
+  {
+    id: "glasshouse", chapter: "replies", title: "花房里的回信", place: "海角温室", time: "17:32",
+    artAlt: "临海的玻璃花房被夕阳照亮，珊瑚色的花藤垂在门边。",
+    brief: "这回换我寄信。看清两枚邮戳上的数字，月光第一次经过它们时，要先盖 1 号，再盖 2 号。",
+    letter: "你寄来的六张明信片，我用木夹子一张张挂在了花房。今天海边开了第一朵橙花，轮到我把它寄给你。",
+    rows: ["A.12.B", ".#....", "..M.#.", "B.A..A", "..^..."],
+    expert: ["#..v..", "..BB.A", "..1...", ".BA2.A", "....#M"],
+    expertNote: "先从温室的北窗找 1 号邮戳。2 号离信箱很近，但中间还需要一次转弯。",
+    en: {
+      expertNote: "Look for seal 1 from the north window. Seal 2 lies near the mailbox, with a corner still to turn.",
+      title: "A Glasshouse Reply", place: "Cape Glasshouse",
+      artAlt: "Coral flowers climb the door of a seaside glasshouse glowing in the late sun.",
+      brief: "My turn to write. On its first visit to each numbered seal, the beam must reach 1 before 2.",
+      letter: "I pegged your six postcards to a line in the glasshouse. The first orange flower opened by the sea today. Now it's my turn to send something back.",
+    },
+  },
+  {
+    id: "chimes", chapter: "replies", title: "风从栈桥来", place: "风铃栈桥", time: "19:16",
+    artAlt: "玻璃风铃挂在暮色中的木栈桥旁，海湾对岸亮起了路灯。",
+    brief: "晚风穿过成对的潮门。先找到 1 号邮戳，再看看从哪一侧入门，能把月光送往 2 号。",
+    letter: "栈桥上那串风铃，起风时总是左边的先响。我站着听了半天，才想起你在电话那头也能听见。",
+    rows: ["...BB@", "...@2M", "#.B..<", "..A1B.", "A....#"],
+    expert: ["A..B.A", "B..B..", ".#..@2", ".#B.B@", "M.B.1<"],
+    expertNote: "月光一出发就会经过 1 号邮戳。难的是绕上栈桥另一端，把 2 号也印在信上。",
+    en: {
+      expertNote: "The beam picks up seal 1 as it leaves. The tricky part is the far end of the pier, where seal 2 is waiting.",
+      title: "Wind off the Pier", place: "Wind Chime Pier",
+      artAlt: "Glass wind chimes hang above a wooden pier as lamps come on across the bay.",
+      brief: "The evening breeze runs through the tide gates. Find seal 1, then work out which approach will take the light toward seal 2.",
+      letter: "On the pier it's always the chime on the left that rings first. I stood there listening for ages before I remembered you could hear it down the phone, too.",
+    },
+  },
+  {
+    id: "observatory", chapter: "replies", title: "替你留一颗星", place: "望海天文台", time: "22:48",
+    artAlt: "山顶天文台的铜绿穹顶下亮着一扇门，流星掠过靛蓝的天空。",
+    brief: "最后的回信要依次盖上 1、2、3 号邮戳。可以从信箱逆着看，找出哪条路能把最后一枚邮戳送过来。",
+    letter: "望远镜那头的星星太小，画在纸上只剩一个点。我在旁边又点了一下。现在这张星图上，我们挨得很近。",
+    rows: ["BMv.@.", "3..BB.", "..12..", "@.ABB#", "A.#B.."],
+    expert: ["BMB@.A", "@3.B.A", "..A..A", ".B1.2B", "#^#..."],
+    expertNote: "用潮门把三颗编号星星串成一条线。从信箱回看时，最后照亮的应该是 3 号。",
+    en: {
+      expertNote: "Use the tide gates to thread the three numbered stars together. Looking back from the mailbox, the last one should be seal 3.",
+      title: "A Star for You", place: "Seaward Observatory",
+      artAlt: "A shooting star passes over the teal dome and warm doorway of a hilltop observatory.",
+      brief: "The final reply needs seals 1, 2 and 3 in order. Try tracing backwards from the mailbox to find where the last seal belongs.",
+      letter: "The star in the telescope was so small it came out as a dot on the paper. I put another dot beside it. On this star chart, we're right next to each other.",
+    },
+  },
+].map(letter => ({ chapter: "coast", ...letter, image: "./art/" + letter.id + ".webp" }));
+
+export function localLetter(letter, language) {
+  return language === "en" ? { ...letter, ...letter.en } : letter;
+}

@@ -1,20 +1,32 @@
+import { isNumbered } from "./puzzle.mjs";
+
 const svgNS = "http://www.w3.org/2000/svg";
 const arrows = ">v<^";
-const directions = ["东", "南", "西", "北"];
+const directions = ["east", "south", "west", "north"];
 const features = {
-  M: ["box", "收信箱"], "#": ["reef", "礁石"], "*": ["mark", "星形邮戳"], "@": ["gate", "潮门"],
+  M: "box", "#": "reef", "*": "mark", "@": "gate",
 };
 
 export function coordinate(board, cell) {
   return String.fromCharCode(65 + cell % board.width) + (1 + Math.floor(cell / board.width));
 }
 
-function glyph(name) {
+function glyph(name, number) {
   const icon = document.createElementNS(svgNS, "svg");
   icon.setAttribute("aria-hidden", "true");
   const use = document.createElementNS(svgNS, "use");
   use.setAttribute("href", "#g-" + name);
   icon.append(use);
+  if (number) {
+    icon.setAttribute("viewBox", "0 0 64 64");
+    const text = document.createElementNS(svgNS, "text");
+    text.setAttribute("x", "32");
+    text.setAttribute("y", "41");
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("class", "seal-digit");
+    text.textContent = number;
+    icon.append(text);
+  }
   return icon;
 }
 
@@ -26,7 +38,7 @@ function axis(id, labels) {
   }));
 }
 
-export function mountChart(board, onRotate) {
+export function mountChart(board, onRotate, t) {
   const chart = document.getElementById("chart");
   const tiles = document.getElementById("tiles");
   const beam = document.getElementById("beam");
@@ -45,22 +57,24 @@ export function mountChart(board, onRotate) {
     const isMirror = index !== undefined;
     const element = document.createElement(isMirror ? "button" : "span");
     const direction = arrows.indexOf(tile);
-    let feature = features[tile];
-    if (direction !== -1) feature = ["lamp", "向" + directions[direction] + "发出的月光源"];
-    if (isMirror) feature = ["mirror", "圆镜"];
-    const name = feature?.[0] || "water";
-    element.className = "tile " + name;
+    let name = features[tile] || "water";
+    if (direction !== -1) name = "lamp";
+    if (isMirror) name = "mirror";
+    if (isNumbered(tile)) name = "number";
+    element.className = "tile " + name + (name === "number" ? " mark" : "");
     if (isMirror) {
       element.type = "button";
       element.dataset.mirror = index;
       element.addEventListener("click", () => onRotate(index));
-    } else if (feature) {
+    } else if (name !== "water") {
       element.setAttribute("role", "img");
-      element.setAttribute("aria-label", coordinate(board, cell) + " " + feature[1]);
+      const label = name === "lamp" ? t("lampLabel", {direction: t(directions[direction])})
+        : name === "number" ? t("sealLabel", {n: tile}) : t(name);
+      element.setAttribute("aria-label", coordinate(board, cell) + " " + label);
     } else {
       element.setAttribute("aria-hidden", "true");
     }
-    if (feature || (cell * 7 + Math.floor(cell / board.width)) % 5 < 2) element.append(glyph(name));
+    if (name !== "water" || (cell * 7 + Math.floor(cell / board.width)) % 5 < 2) element.append(glyph(name, name === "number" ? tile : null));
     if (direction !== -1) {
       const arrow = document.createElement("i");
       arrow.className = "heading-arrow";
@@ -89,16 +103,21 @@ export function mountChart(board, onRotate) {
       mirror.classList.toggle("falling", falling);
       mirror.classList.toggle("hinted", index === hint);
       mirror.disabled = locked;
-      mirror.setAttribute("aria-label", coordinate(board, cell) + " 圆镜，" + (falling ? "左上至右下" : "左下至右上") + (index === hint ? "，提示位置" : ""));
+      mirror.setAttribute("aria-label", t("mirrorLabel", {cell: coordinate(board, cell), slope: t(falling ? "falling" : "rising")}) + (index === hint ? t("hinted") : ""));
     });
     board.marks.forEach(cell => {
       cells[cell].classList.toggle("lit", route.lit.has(cell));
-      cells[cell].setAttribute("aria-label", coordinate(board, cell) + (route.lit.has(cell) ? " 已点亮邮戳" : " 未点亮邮戳"));
+      const tile = board.tiles[cell];
+      const name = isNumbered(tile) ? t("sealLabel", {n: tile}) : t("mark");
+      cells[cell].setAttribute("aria-label", [coordinate(board, cell), name, t(route.lit.has(cell) ? "lit" : "unlit")].join(" "));
     });
     cells[board.tiles.indexOf("M")].classList.toggle("arrived", route.end === "ready");
     const via = route.turns.map(index => coordinate(board, board.mirrors[index]));
-    document.getElementById("route-description").textContent = "月光从 " + coordinate(board, board.source) + " 出发。" +
-      (via.length ? "依次经过圆镜 " + via.join("、") + "。" : "") + "信箱在 " + coordinate(board, board.tiles.indexOf("M")) + "。";
+    document.getElementById("route-description").textContent = [
+      t("routeFrom", {cell: coordinate(board, board.source)}),
+      via.length ? t("routeVia", {cells: via.join(" → ")}) : "",
+      t("routeTo", {cell: coordinate(board, board.tiles.indexOf("M"))}),
+    ].filter(Boolean).join(" ");
   }
 
   async function carryLetter() {

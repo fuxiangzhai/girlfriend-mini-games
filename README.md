@@ -6,11 +6,15 @@
 
 ## 月光邮局
 
-从首页顶部点「月光邮局」，或打开 [月光邮局](./moon-mail/index.html)。转动海上的圆镜，让同一束月光经过沿途的星形邮戳、照到收信箱，再点「寄出月光」拆信。六封信从白沙灯塔一直寄到晨光窗台，中途会遇到礁石和成对的潮门。
+从首页顶部点「月光邮局」，或打开 [月光邮局](./moon-mail/index.html)。转动海上的圆镜，让月光经过沿途的邮戳、照到收信箱，再点「寄出月光」拆信。「沿海夜邮」的六封信从白沙灯塔一路寄到晨光窗台。「回信篇」从海角温室出发，经过风铃栈桥，抵达望海天文台。回信的编号邮戳要按数字顺序首次经过。
 
-点击镜片或用 Tab 选中后按空格、回车即可旋转。可以随时撤销、重来或查看一步提示。「明信片夹」可以选关、重读和重玩。已送达的明信片支持改写寄语并导出 PNG。当前路线、最佳步数和寄语保存在当前浏览器，插画随站点提供。
+点航图上的难度名或顶部「设置」即可换档。轻松档会先调好一部分镜片并标出下一步。标准档提供按需提示。挑战档每站都有独立的航图，须在最少步数内送达，撤销可以返还步数。各档独立保存路线、撤销记录与最佳步数。原版存档可在标准档继续。
 
-![月光邮局的第一段投递航图和白沙灯塔明信片](./docs/moon-mail.webp)
+顶部的语言按钮可随时切换简体中文和 English。设置内可试听、静音或调节音量。转镜、邮戳、潮门、寄送和拆信等声音由浏览器实时合成。键盘可用 Tab 选中镜片后按空格或回车旋转。「信夹」可以选关、重读、改写寄语并导出 PNG。自写的寄语在切换语言和难度后保留。
+
+**English.** Open Moonlight Post and use the language button in the upper right. The album contains six coastal letters and three replies with numbered seals. Select Relaxed, Standard or Expert on the chart, or open Settings to change the sound. Each delivered card can be personalised and saved as a PNG.
+
+![回信篇的温室明信片和需要按顺序盖章的航图](./docs/moon-mail.webp)
 
 在仓库根目录运行 `node --test tests/moon-mail.test.mjs` 可验证全部关卡的光路与提示（Node.js 18 及以上）。
 

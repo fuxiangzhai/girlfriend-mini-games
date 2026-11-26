@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { letters } from "../moon-mail/levels.mjs";
-import { prepareBoard, trace, closestRoute } from "../moon-mail/puzzle.mjs";
+import { letters, localLetter } from "../moon-mail/levels.mjs";
+import { prepareBoard, prepareRoute, isNumbered, trace, closestRoute } from "../moon-mail/puzzle.mjs";
+import { chooseLanguage, translator } from "../moon-mail/i18n.mjs";
 
-test("all six letters start unsolved and their shortest routes follow the intended progression", () => {
-  const par = [1, 2, 3, 3, 4, 6];
+test("all nine standard letters start unsolved and retain the original six routes", () => {
+  const par = [1, 2, 3, 3, 4, 6, 1, 4, 5];
   assert.equal(new Set(letters.map(letter => letter.id)).size, par.length);
   letters.forEach(({ rows }, index) => {
     const board = prepareBoard(rows);
@@ -17,9 +18,10 @@ test("all six letters start unsolved and their shortest routes follow the intend
   });
 });
 
-test("hints reduce the actual shortest distance by one from every mirror configuration", () => {
-  for (const letter of letters) {
-    const board = prepareBoard(letter.rows);
+test("every standard and expert configuration has a shortest route and a valid next turn", () => {
+  const charts = letters.flatMap(letter => [letter.rows, letter.expert]);
+  for (const rows of charts) {
+    const board = prepareBoard(rows);
     // Work backwards from every valid delivery by individual mirror turns.
     const size = 2 ** board.mirrors.length;
     const distance = Array(size).fill(Infinity);
@@ -42,11 +44,11 @@ test("hints reduce the actual shortest distance by one from every mirror configu
     assert.equal(queue.length, size);
     for (let state = 0; state < size; state++) {
       const hint = closestRoute(board, state);
-      assert.equal(hint.distance, distance[state], letter.id);
+      assert.equal(hint.distance, distance[state], rows.join("/"));
       if (distance[state] === 0) assert.equal(hint.next, undefined);
       else {
         assert.ok(Number.isInteger(hint.next));
-        assert.equal(distance[state ^ (1 << hint.next)], distance[state] - 1, letter.id);
+        assert.equal(distance[state ^ (1 << hint.next)], distance[state] - 1, rows.join("/"));
       }
     }
   }
@@ -63,8 +65,8 @@ test("illumination is recomputed for each route and the mailbox requires every m
   assert.equal(trace(board, board.initial).lit.size, 0);
 });
 
-test("the last letter must traverse the same tide gate twice and keep its direction at both exits", () => {
-  const board = prepareBoard(letters.at(-1).rows);
+test("the dawn letter must traverse the same tide gate twice and keep its direction at both exits", () => {
+  const board = prepareBoard(letters.find(letter => letter.id === "dawn").rows);
   let found = 0;
   for (let state = 0; state < 2 ** board.mirrors.length; state++) {
     const result = trace(board, state);
@@ -84,6 +86,67 @@ test("the last letter must traverse the same tide gate twice and keep its direct
     assert.deepEqual(entrances[0], entrances[1]);
   }
   assert.ok(found > 0);
+});
+
+test("relaxed starts one or two turns away and each expert budget fits its own unique chart", () => {
+  const expertPar = [3, 4, 5, 5, 6, 7, 4, 6, 7];
+  const layouts = new Set();
+  letters.forEach((letter, i) => {
+    const relaxed = prepareRoute(letter, "relaxed");
+    const normal = prepareRoute(letter, "standard");
+    const expert = prepareRoute(letter, "expert");
+    const min = closestRoute(normal, normal.initial).distance;
+    assert.equal(closestRoute(relaxed, relaxed.initial).distance, Math.min(2, min));
+    assert.equal(relaxed.budget, null);
+    assert.equal(normal.budget, null);
+    assert.equal(expert.budget, expertPar[i]);
+    assert.equal(closestRoute(expert, expert.initial).distance, expert.budget);
+    assert.ok(expert.budget > min);
+    for (const rows of [letter.rows, letter.expert]) {
+      assert.ok(rows.every(row => row.length === rows[0].length && /^[AB.M#*@1-3<>^v]+$/.test(row)));
+      const numbers = [...rows.join("")].filter(isNumbered).map(Number).sort();
+      assert.deepEqual(numbers, numbers.map((_, index) => index + 1));
+      const layout = rows.join("/").replace(/[AB]/g, "X");
+      assert.ok(!layouts.has(layout));
+      layouts.add(layout);
+    }
+  });
+});
+
+test("a reply that reaches every seal in reverse order cannot be delivered", () => {
+  const board = prepareBoard(letters.find(letter => letter.id === "glasshouse").rows);
+  const wrong = trace(board, board.initial);
+  assert.equal(wrong.end, "order");
+  assert.equal(wrong.lit.size, 2);
+  assert.deepEqual(wrong.sequence, [2, 1]);
+  const next = closestRoute(board, board.initial).next;
+  const right = trace(board, board.initial ^ (1 << next));
+  assert.equal(right.end, "ready");
+  assert.deepEqual(right.sequence, [1, 2]);
+  for (const letter of letters.filter(letter => letter.chapter === "replies")) {
+    for (const rows of [letter.rows, letter.expert]) {
+      const b = prepareBoard(rows);
+      for (let mask = 0; mask < 2 ** b.mirrors.length; mask++) {
+        const path = trace(b, mask);
+        if (path.end === "ready") assert.deepEqual(path.sequence, b.marks.map((_, index) => index + 1));
+      }
+    }
+  }
+});
+
+test("an explicit language takes precedence and both editions contain complete station copy", () => {
+  assert.equal(chooseLanguage("zh", ["en-US"]), "zh");
+  assert.equal(chooseLanguage(null, ["de-DE", "en-GB"]), "en");
+  assert.equal(chooseLanguage("invalid", ["zh-TW"]), "zh");
+  assert.equal(chooseLanguage(null, []), "zh");
+  assert.equal(translator("en")("hintStatus", {cell: "B2"}), "Try turning the mirror at B2.");
+  for (const letter of letters) {
+    const en = localLetter(letter, "en");
+    for (const key of ["title", "place", "artAlt", "brief", "expertNote", "letter"]) {
+      assert.ok(en[key] && letter[key] && en[key] !== letter[key]);
+    }
+    assert.ok(en.letter.length <= 200 && letter.letter.length <= 200);
+  }
 });
 
 test("a reef stops light on its near side, and an escaping beam ends on the board edge", () => {

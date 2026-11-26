@@ -223,3 +223,55 @@ body:has(dialog[open]) { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+.chart-heading, #mode-open, .chapters, .sound-row, .volume-row, #sound { display: flex; align-items: center; }
+.chart-heading { gap: 10px; }
+#mode-open { min-height: 34px; gap: 5px; padding-inline: 9px; border: 1px solid #79958d; border-radius: 5px; color: #e8eada; font-size: .76rem; }
+#mode-open:hover { background: #345a5e; }
+.seal-digit { fill: #173d47; font: bold 27px var(--mono); }
+.counters .wrong-order { color: #ffd0ac; }
+.legend b { font-weight: 500; }
+.chapters { gap: 3px; margin-top: 14px; flex-wrap: wrap; }
+.chapters button { min-height: 40px; padding: 3px 11px; color: #516157; border-bottom: 2px solid var(--rule); font-size: .85rem; font-weight: 650; }
+.chapters button[aria-pressed="true"] { border-color: var(--coral); color: #954632; }
+.chapters small { margin-left: 3px; font: 700 .75rem var(--mono); }
+.chapters + .album-grid { margin-top: 10px; }
+#settings { width: 430px; }
+#settings fieldset { margin: 15px 0 0; padding: 0; min-width: 0; border: 0; }
+#settings legend { margin-bottom: 6px; padding: 0; font-weight: 750; font-size: .9rem; }
+.modes label { display: flex; align-items: center; gap: 11px; padding: 8px 11px; min-height: 49px; border: 1px solid var(--rule); background: #fffaf0; border-radius: 6px; cursor: pointer; }
+.modes label + label { margin-top: 5px; }
+.modes label:has(input:checked) { border-color: #57796e; background: #e6eee3; }
+.modes input, #volume { accent-color: #315e55; }
+.modes input { margin: 0; width: 17px; height: 17px; flex: none; }
+.modes strong, .modes small { display: block; }
+.modes strong { font-size: .91rem; }
+.modes small, .save-note { color: #53625a; font-size: .78rem; line-height: 1.5; }
+.save-note { margin-top: 7px; }
+.sound-row { justify-content: space-between; gap: 10px; }
+.sound-row button { min-height: 40px; padding: 0 10px; border: 1px solid var(--rule); border-radius: 5px; background: #fffcf2; font-size: .86rem; }
+#sound { gap: 7px; }
+#preview-sound:disabled { opacity: .52; }
+.volume-row { gap: 10px; min-height: 44px; font-size: .83rem; }
+#volume { flex: 1; min-width: 0; min-height: 40px; }
+#volume-value { min-width: 3.8ch; text-align: right; font: bold .8rem var(--mono); }
+#finish-settings { width: 100%; margin-top: 10px; }
+html:lang(en) .wordmark > span { display: none; }
+html:lang(en) .wordmark h1 { font-family: Baskervville, Georgia, serif; letter-spacing: -.03em; }
+html:lang(en) .card-copy h2, html:lang(en) .receipt-body h2, html:lang(en) .album-item strong { font-family: Baskervville, Georgia, serif; letter-spacing: -.015em; }
+html:lang(en) .postmark b { font: bold .75rem Georgia, serif; }
+html:lang(en) .legend span { white-space: normal; }
+@media (max-width: 680px) {
+  .chart-heading { gap: 6px; }
+  #mode-open { min-height: 32px; padding-inline: 7px; }
+  html:lang(en) .chart-tools button { gap: 3px; padding-inline: 5px; }
+  html:lang(en) .wordmark h1 { font-size: clamp(1.8rem, 7vw, 2.5rem); }
+}
+@media (max-width: 410px) {
+  .top-tools { gap: 7px; }
+  .top-tools button + button { padding-left: 8px; }
+  .chart-head { flex-wrap: wrap; }
+  html:lang(en) .masthead p { display: none; }
+  html:lang(en) .chart-tools .icon { width: 14px; }
+  html:lang(en) .dispatch { gap: 4px; padding-inline: 7px; }
+}
