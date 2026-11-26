@@ -140,7 +140,7 @@ function setPage(page) {
   write('room',page);
 }
 function jacket(chapter) {
-  $('hero').classList.remove('is-night');
+  $('hero').classList.remove('is-night','is-roll');
   const sequel=volumes[1].chapters.includes(chapter);
   $('hero').classList.toggle('is-letter',sequel);
   $('jacket').hidden=!sequel;
@@ -467,17 +467,21 @@ $('daily').onclick=()=>{ openLevel(dailyLevel(dateKey()),true); window.scrollTo(
 $('nav-bench').onclick=()=>{setPage('bench'); jacket(level.chapter); render();};
 $('brand').onclick=e=>{e.preventDefault(); $('nav-bench').click();};
 $('nav-book').onclick=()=>showBook(chapterOpen);
-const enterNight=setupNight(chime);
-function showNight() {
-  setPage('night'); hover=null; drag=null;
+const filmArt = id => './art/film-' + id + '.webp';
+const enterNight=setupNight(chime,nightCover,filmArt);
+function nightCover(edition) {
+  const roll=edition==='roll';
   $('hero').classList.remove('is-letter'); $('hero').classList.add('is-night');
+  $('hero').classList.toggle('is-roll',roll);
   $('jacket').hidden=true; $('sequel').hidden=true;
-  $('volume-name').textContent='Petal Panes · Night Shift';
-  $('page-title').textContent='对窗夜班';
-  $('hero-line').textContent='一人在窗里，一人在窗外，把两盏灯送到约好的地方。';
-  enterNight();
+  $('volume-name').textContent=roll?'Petal Panes · Contact Sheets':'Petal Panes · Night Shift';
+  $('page-title').textContent=roll?'快门之间':'对窗夜班';
+  $('hero-line').textContent=roll?'把两三次快门之间发生的小事，留在同一卷底片上。':'一人在窗里，一人在窗外，把两盏灯送到约好的地方。';
 }
-$('nav-night').onclick=showNight;
+function showNight(edition) {
+  setPage('night'); hover=null; drag=null; enterNight(edition);
+}
+$('nav-night').onclick=()=>showNight();
 $('nav-night').hidden=false;
 $('guide').onclick=()=>$('guide-dialog').showModal();
 document.querySelectorAll('[data-close]').forEach(b=>{b.onclick=()=>b.closest('dialog').close();});
@@ -546,13 +550,14 @@ function openAfterlight() {
 if (location.hash==='#afterlight') openAfterlight();
 else {
   openLevel(last==='daily'?dailyLevel():previous || levels[0]);
-  if(location.hash==='#nightshift' || lastRoom==='night') showNight();
-  if(location.hash==='#nightshift') consumeEntry();
+  if(location.hash==='#nightshift' || location.hash==='#shutters') {
+    showNight(location.hash==='#shutters'?'roll':'night'); consumeEntry();
+  } else if(lastRoom==='night') showNight();
 }
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#afterlight') openAfterlight();
-  if(location.hash==='#nightshift') {
+  if(location.hash==='#nightshift' || location.hash==='#shutters') {
     for(const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
-    showNight(); consumeEntry(); window.scrollTo(0,0);
+    showNight(location.hash==='#shutters'?'roll':'night'); consumeEntry(); window.scrollTo(0,0);
   }
 });

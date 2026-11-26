@@ -76,7 +76,7 @@ export function inspectNight(night,setting) {
   return {rays,inside,outside,done,silver:done && night.filmLamp!=null && rays[night.filmLamp].film};
 }
 
-function turnsBetween(a,b) {
+export function turnsBetween(a,b) {
   let diff=a^b, count=0;
   while (diff) { diff &= diff-1; count++; }
   return count;

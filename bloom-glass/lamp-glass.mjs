@@ -73,10 +73,10 @@ export function mountMirrors(board,container,night) {
   board.setAttribute('aria-label','调光镜台。'+boardNotes.join('，')+'。点镜片转动。');
 }
 
-export function drawLampBoard(svg,container,night,setting,result,filter,hintBit,step) {
+export function drawLampBoard(svg,container,night,setting,result,filter,hintBit,step,changedBits=0) {
   const width=night.width*cell+rim*2,height=night.height*cell+rim*2;
   svg.setAttribute('viewBox','0 0 '+width+' '+height);
-  const tiles=[],marks=[],ports=[],mirrors=[];
+  const tiles=[],marks=[],ports=[],mirrors=[],changed=[];
   const linked=night.controls.filter(control=>control.panes.length>1);
   for(let y=0;y<night.height;y++) for(let x=0;x<night.width;x++) {
     const mark=night.rows[y][x], cx=center(x),cy=center(y);
@@ -85,14 +85,15 @@ export function drawLampBoard(svg,container,night,setting,result,filter,hintBit,
     if(mark==='*') marks.push('<g transform="translate('+cx+' '+cy+')" fill="none" stroke="#dce1e6"><rect x="-12" y="-11" width="24" height="19" rx="2" stroke-dasharray="3 2"/><circle cy="-2" r="4"/></g>'+label(cx,cy+17,'底片',10));
     const pane=night.panes.get(y*night.width+x);
     if(pane) mirrors.push(mirror(pane,setting,linked.indexOf(pane.control)));
+    if(pane && (pane.control.bit&changedBits)) changed.push('<rect x="'+(cx-25)+'" y="'+(cy-25)+'" width="50" height="50" rx="5" fill="none" stroke="#ffd27a" stroke-width="2.8" stroke-dasharray="5 3"/>');
   }
   for (const side of ['T','B','L','R']) {
     const n=side==='T'||side==='B'?night.width:night.height;
     for(let i=0;i<n;i++) ports.push(borderPort(night,side,i));
   }
   const rays=result?.rays.map((ray,i)=>filter===-1||filter===i?drawRay(night,ray,i,step):'').join('') || '';
-  svg.innerHTML=tiles.join('')+ports.join('')+mirrors.join('')+rays+marks.join('');
-  for(const button of container.children) {
+  svg.innerHTML=tiles.join('')+ports.join('')+mirrors.join('')+rays+marks.join('')+changed.join('');
+  for(const button of container?.children || []) {
     const pane=night.panes.get((Number(button.dataset.at.slice(1))-1)*night.width+button.dataset.at.charCodeAt(0)-65);
     const name=button.dataset.at+' 镜片，'+(falls(pane,setting)?'左上到右下':'左下到右上')+
       (button.dataset.link?'，与 '+pane.control.panes.filter(p=>p!==pane).map(p=>squareName(p.x,p.y)).join('、')+' 同属 '+button.dataset.link+' 号铜轴':'');
