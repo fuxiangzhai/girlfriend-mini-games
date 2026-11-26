@@ -10,6 +10,8 @@ import { showFilmTray, filmStatus, contactSheet, developPrint } from "./darkroom
 import { dispatchStations } from "./dispatch.mjs";
 import { createDispatchDesk } from "./dispatch-ui.js";
 import { createFogWatch, watchSlip } from "./fogwatch-ui.js";
+import { prepareHill, moveHill, restoreHill, hillSetting, traceHill, hillTrip, hillHint } from "./hillside.mjs";
+import { hillKey, hillTickets, hillSummary, drawHillBook, drawHillSlip } from "./hillside-ui.js";
 
 const byId = id => document.getElementById(id);
 const pad = value => String(value).padStart(2, "0");
@@ -71,6 +73,7 @@ const receipt = byId("receipt");
 const settings = byId("settings");
 const dispatchDesk = createDispatchDesk({ context: () => ({ language, t, difficulty }), read, write, cue, openSettings, switchLanguage });
 const pier = letters.findIndex(letter => letter.id === "chimes");
+const slope = letters.findIndex(letter => letter.id === "funicular");
 const fog = createFogWatch({ letter: letters[pier], read, write, cue, delivered: updateCount, openReceipt: record => showReceipt(pier, true, record) });
 let onWatch = false;
 let active, board, chart, mask, path, history, sent, hint;
@@ -80,12 +83,15 @@ let chapter = "coast";
 let sending = false;
 let viewed = 0;
 let receiptWatch;
+let receiptHill, hillGoal, hillOverlay, hillFull;
+let tickets = new Map();
 let exportVersion = 0;
 let exportURL;
 
 function delivered(index) {
   return bestFor(index) !== null || (letters[index].chapter === "together" && bestFor(index, "joint") !== null)
-    || (index === pier && Boolean(fog.latest(difficulty)));
+    || (index === pier && Boolean(fog.latest(difficulty)))
+    || (index === slope && hillTickets(letters[slope], difficulty, read).size > 0);
 }
 function hasImprint(index) { return read(routeKey(index, "imprint")) === true; }
 const meetingStops = letters.map((letter, index) => ({letter, index})).filter(stop => stop.letter.chapter === "together");
@@ -97,15 +103,35 @@ function updateCount() {
 }
 
 function saveDraft() {
+  if (board.hill) {
+    write(hillKey(difficulty, "draft"), { history: history.slice(), sent, goal: hillGoal, overlay: hillOverlay });
+    return;
+  }
   write(routeKey(active, "route", board.goal), { history: history.slice(), sent });
 }
 
 function turns() { return history.length - frames.length; }
 function outOfTurns() { return board.budget !== null && turns() >= board.budget; }
 function readyToSend() { return reading ? reading.complete : path.end === "ready"; }
-function nextAction() { return reading ? filmHint(board, mask, reading) : closestRoute(board, mask).next; }
+function hillTargets() {
+  return hillGoal ? [hillGoal] : board.hill.lines.filter(id => !tickets.has(id));
+}
+function nextAction() {
+  if (board.hill) return hillHint(board, mask, hillTargets());
+  return reading ? filmHint(board, mask, reading) : closestRoute(board, mask).next;
+}
 
 function statusText(advice) {
+  if (board.hill && !sending) {
+    if (hillFull) return t("hillFull");
+    if (advice !== undefined && advice >= board.hill.fixed) {
+      const action = ["hillFit", "hillFlip", "hillLift"][hillSetting(board, mask, advice)];
+      return t(action, {cell: coordinate(board, board.mirrors[advice])});
+    }
+    if (advice !== undefined) return t("hintStatus", {cell: coordinate(board, board.mirrors[advice])});
+    const trip = hillTrip(board, path);
+    if (trip) return t(sent ? "hillSigned" : tickets.has(trip.id) ? "hillKnown" : "hillNew", {name: t("hillName_" + trip.id)});
+  }
   if (board.film) {
     if (sending || sent) return t(sending ? "developing" : "printSent");
     const text = Number.isInteger(advice)
@@ -140,10 +166,10 @@ function statusText(advice) {
 }
 
 function render() {
-  path = trace(board, mask);
+  path = board.hill ? traceHill(board, mask) : trace(board, mask);
   reading = board.film ? readFilm(board, frames, mask) : null;
   const advice = difficulty === "relaxed" && !sent ? nextAction() : hint;
-  chart.draw(mask, path, advice, sending || sent || outOfTurns() || reading?.slots === 0);
+  chart.draw(path.mask ?? mask, path, advice, sending || sent || outOfTurns() || reading?.slots === 0);
   byId("moves").textContent = pad(turns());
   byId("budget").textContent = board.budget === null ? "" : " / " + pad(board.budget);
   byId("turn-counter").title = board.budget === null ? t("turns") : t("budgetAccess", {used: turns(), total: board.budget});
@@ -153,6 +179,23 @@ function render() {
     ? board.sealOrder.map((_, i) => path.sequence[i] ?? "–").join("›")
     : path.lit.size + "/" + board.marks.length);
   counter.classList.toggle("wrong-order", path.wrongOrder);
+  if (board.hill) {
+    const stamps = [...path.lit].map(cell => coordinate(board, cell));
+    counter.textContent = t("stamps") + " " + [stamps[0] || "–", stamps[1] || "–"].join(" › ");
+    byId("hill-stock").textContent = t("hillStock", {n: board.hill.capacity - path.used, total: board.hill.capacity});
+    const comparedTicket = tickets.get(hillOverlay);
+    chart.compareRays(comparedTicket ? traceHill(board, comparedTicket.state).rays : []);
+    drawHillBook(board, tickets, hillGoal, hillOverlay, t, sending);
+    const trip = hillTrip(board, path);
+    if (comparedTicket && trip) {
+      const previous = comparedTicket.trip.cells;
+      const at = trip.cells.findIndex((cell, i) => cell !== previous[i]);
+      byId("hill-comparison").textContent += " · " + (at > 0 ? t("hillSplit", {cell: coordinate(board, trip.cells[at - 1])}) : t("hillSame"));
+    }
+    byId("hill-again").hidden = !sent || sending;
+    byId("hill-read").hidden = !comparedTicket;
+    byId("hill-read").disabled = byId("hill-wallet-link").disabled = byId("hill-return").disabled = sending;
+  }
   if (reading) {
     counter.hidden = false;
     counter.textContent = t("filmCounter", {n: frames.length, total: board.film.frames});
@@ -165,6 +208,10 @@ function render() {
   byId("undo").disabled = byId("reset").disabled = !history.length || sending || sent;
   byId("hint").hidden = difficulty !== "standard";
   byId("hint").disabled = difficulty !== "standard" || readyToSend() || sending || sent;
+  if (board.hill && difficulty === "standard" && !sending && !sent && readyToSend()) {
+    const targets = hillTargets();
+    byId("hint").disabled = !targets.length || targets.includes(hillTrip(board, path).id);
+  }
   byId("send").disabled = sending || !(readyToSend() || reading?.canShoot);
   const paired = board.starSource !== undefined;
   const action = reading ? (reading.complete ? "develop" : "takeShot") : paired ? "pairSend" : "send";
@@ -183,37 +230,44 @@ function render() {
     });
     byId("joint-count").textContent = t("sealCount", {n: path.jointCount});
   }
-  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter"]) byId(id).disabled = sending;
+  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter", "hill-enter", "hill-normal"]) byId(id).disabled = sending;
 }
 
-function openRoute(index, fresh = false, requestedGoal, watch = false) {
+function openRoute(index, fresh = false, requestedGoal, service) {
   if (onWatch) fog.leave();
-  onWatch = index === pier && watch;
+  onWatch = index === pier && service === "watch";
+  const hillside = index === slope && service === "hill";
   active = index;
   const letter = letters[index];
   const paired = letter.chapter === "together";
   const choice = requestedGoal ?? (paired ? read(routeKey(index, "goal")) : "direct");
   const goal = paired && choice === "joint" ? "joint" : "direct";
-  board = letter.plate ? prepareFilm(letter, difficulty) : prepareRoute(letter, difficulty, goal);
+  board = hillside ? prepareHill(letter, difficulty) : letter.plate ? prepareFilm(letter, difficulty) : prepareRoute(letter, difficulty, goal);
   if (paired) write(routeKey(index, "goal"), goal);
-  const draft = fresh ? null : read(routeKey(index, "route", goal));
+  const draft = fresh ? null : read(hillside ? hillKey(difficulty, "draft") : routeKey(index, "route", goal));
+  const hillState = hillside ? restoreHill(board, draft?.history) : null;
+  tickets = hillside ? hillTickets(letter, difficulty, read) : new Map();
+  hillGoal = hillside && board.hill.lines.includes(draft?.goal) && !tickets.has(draft.goal) ? draft.goal : null;
+  const compareId = fresh && hillside ? read(hillKey(difficulty, "last")) : draft?.overlay;
+  hillOverlay = tickets.has(compareId) ? compareId : null;
+  hillFull = false;
   const restored = board.film ? restoreFilm(board, draft?.history) : null;
-  const valid = board.film ? !!restored : Array.isArray(draft?.history) && (board.budget === null || draft.history.length <= board.budget)
+  const valid = hillside ? hillState !== null : board.film ? !!restored : Array.isArray(draft?.history) && (board.budget === null || draft.history.length <= board.budget)
     && draft.history.every(i => Number.isInteger(i) && i >= 0 && i < board.mirrors.length);
   history = valid ? draft.history.slice() : [];
-  mask = restored?.mask ?? history.reduce((state, i) => state ^ (1 << i), board.initial);
+  mask = hillState ?? restored?.mask ?? history.reduce((state, i) => state ^ (1 << i), board.initial);
   frames = restored?.frames ?? [];
   compared = -1;
   justExposed = false;
-  sent = valid && draft.sent === true && bestFor(index, goal) !== null
-    && (board.film ? isDevelopedFilm(board, frames) : trace(board, mask).end === "ready");
+  sent = valid && draft.sent === true && (hillside ? tickets.has(hillTrip(board, traceHill(board, mask))?.id)
+    : bestFor(index, goal) !== null && (board.film ? isDevelopedFilm(board, frames) : trace(board, mask).end === "ready"));
   hint = undefined;
   sending = false;
   write("active", letter.id);
   delete byId("chart").dataset.focus;
   const fragment = location.hash.slice(1);
-  const target = onWatch ? "chimes-watch" : letter.id;
-  if (fragment !== target && (onWatch || fragment === "chimes-watch" || letters.some(station => station.id === fragment))) {
+  const target = hillside ? "funicular-switchbacks" : onWatch ? "chimes-watch" : letter.id;
+  if (fragment !== target && (hillside || onWatch || ["chimes-watch", "funicular-switchbacks"].includes(fragment) || letters.some(station => station.id === fragment))) {
     try { window.history.replaceState(null, "", "#" + target); } catch { /* Optional shortcut in local files. */ }
   }
   if (fresh) saveDraft();
@@ -228,15 +282,20 @@ function presentRoute() {
   byId("station-title").textContent = letter.title;
   byId("place").textContent = letter.place;
   byId("time").textContent = letter.time;
-  byId("brief").textContent = onWatch ? t("watchBrief") : difficulty === "expert" ? letter.expertNote : letter.brief;
+  byId("brief").textContent = board.hill ? t("hillBrief") : onWatch ? t("watchBrief") : difficulty === "expert" ? letter.expertNote : letter.brief;
   const chartPanel = document.querySelector(".chart-panel");
   chartPanel.classList.toggle("on-watch", onWatch);
+  chartPanel.classList.toggle("on-hill", Boolean(board.hill));
+  byId("hill-switch").hidden = active !== slope;
+  byId("hill-normal").setAttribute("aria-pressed", String(!board.hill));
+  byId("hill-enter").setAttribute("aria-pressed", String(Boolean(board.hill)));
+  byId("hill-tray").hidden = byId("hill-book").hidden = !board.hill;
   byId("watch-switch").hidden = active !== pier;
   byId("watch-normal").setAttribute("aria-pressed", String(!onWatch));
   byId("watch-enter").setAttribute("aria-pressed", String(onWatch));
   for (const id of ["watch-head", "watch-panel", "watch-book"]) byId(id).hidden = !onWatch;
-  byId("guide").hidden = onWatch;
-  byId("chart").setAttribute("aria-label", t(onWatch ? "watchChartAccess" : "chartAccess"));
+  byId("guide").hidden = onWatch || Boolean(board.hill);
+  byId("chart").setAttribute("aria-label", t(board.hill ? "hillChartAccess" : onWatch ? "watchChartAccess" : "chartAccess"));
   byId("mode-label").textContent = t(difficulty);
   byId("mode-open").setAttribute("aria-label", t("modeControl", { mode: t(difficulty) }));
   byId("station-desk").hidden = !dispatchStations.includes(letter.id);
@@ -245,8 +304,8 @@ function presentRoute() {
   byId("goals").hidden = byId("ray-key").hidden = !paired;
   byId("film-tray").hidden = !film;
   byId("send").classList.remove("suggested");
-  byId("chart-title").querySelector("span").textContent = t(onWatch ? "watchTitle" : film ? "filmChart" : "chart");
-  byId("chart-title").querySelector("use").setAttribute("href", onWatch ? "#i-chime" : film ? "#i-camera" : "#i-compass");
+  byId("chart-title").querySelector("span").textContent = t(board.hill ? "hillMap" : onWatch ? "watchTitle" : film ? "filmChart" : "chart");
+  byId("chart-title").querySelector("use").setAttribute("href", board.hill ? "#i-switchback" : onWatch ? "#i-chime" : film ? "#i-camera" : "#i-compass");
   document.querySelector(".chart-panel").classList.toggle("darkroom-chart", film);
   for (const key of document.querySelectorAll(".bay-symbol")) key.hidden = !paired;
   for (const key of document.querySelectorAll(".single-symbol")) key.hidden = paired || film;
@@ -264,9 +323,17 @@ function rotate(index) {
   if (sending || sent || outOfTurns() || reading?.slots === 0) return;
   const previous = path;
   const wasShootable = reading?.canShoot;
-  cue("turn");
+  const next = board.hill ? moveHill(board, mask, index) : mask ^ (1 << index);
+  if (next === null) {
+    hillFull = true;
+    cue("limit");
+    render();
+    return;
+  }
+  hillFull = false;
+  cue(board.hill && index >= board.hill.fixed ? "switchRail" : "turn");
   history.push(index);
-  mask ^= 1 << index;
+  mask = next;
   justExposed = false;
   hint = undefined;
   saveDraft();
@@ -286,8 +353,10 @@ function rotate(index) {
 
 function undoAction() {
   justExposed = false;
+  hillFull = false;
   const action = history.pop();
   if (action === shutter) frames.pop();
+  else if (board.hill) mask = moveHill(board, mask, action, true);
   else mask ^= 1 << action;
 }
 
@@ -316,7 +385,17 @@ byId("film-log").addEventListener("click", event => {
   render();
   byId("film-log").querySelector('[data-frame="' + index + '"]').focus({preventScroll: true});
 });
-byId("reset").addEventListener("click", () => { cue("reset"); openRoute(active, true); });
+byId("reset").addEventListener("click", () => {
+  cue("reset");
+  if (board.hill) {
+    mask = board.initial;
+    history = [];
+    hint = undefined;
+    hillFull = false;
+    saveDraft();
+    render();
+  } else openRoute(active, true);
+});
 for (const button of byId("goals").querySelectorAll("button")) {
   button.addEventListener("click", () => {
     if (sending || button.dataset.goal === board.goal) return;
@@ -338,6 +417,7 @@ for (const button of byId("ray-key").querySelectorAll("button")) {
 byId("hint").addEventListener("click", () => {
   if (difficulty !== "standard") return;
   cue("hint");
+  hillFull = false;
   justExposed = false;
   hint = nextAction();
   render();
@@ -365,7 +445,15 @@ byId("send").addEventListener("click", async () => {
     sent = true;
     cue(reading ? "develop" : "depart");
     if (reading) write(routeKey(active, "print"), frames.slice());
-    write(routeKey(active, "best", board.goal), Math.min(bestFor(active, board.goal) ?? Infinity, turns()));
+    if (board.hill) {
+      const trip = hillTrip(board, path);
+      hint = undefined;
+      hillFull = false;
+      write(hillKey(difficulty, trip.id), mask);
+      write(hillKey(difficulty, "last"), trip.id);
+      tickets = hillTickets(letters[slope], difficulty, read);
+      if (hillGoal === trip.id) hillGoal = null;
+    } else write(routeKey(active, "best", board.goal), Math.min(bestFor(active, board.goal) ?? Infinity, turns()));
     if (path.jointCount === 2) write(routeKey(active, "imprint"), true);
     saveDraft();
     updateCount();
@@ -379,13 +467,14 @@ byId("send").addEventListener("click", async () => {
       sending = false;
       render();
     }
-    if (!document.hidden) sound.play("sent");
+    if (!document.hidden) sound.play(board.hill ? "punchTicket" : "sent");
   }
-  showReceipt(active, !firstDelivery);
+  showReceipt(active, !firstDelivery, board.hill ? hillTrip(board, path).id : active === slope ? null : undefined);
 });
 
 function fillAlbum() {
   byId("album-watch").hidden = chapter !== "replies";
+  byId("album-hill").hidden = chapter !== "coast";
   const count = savedCount();
   byId("album-summary").textContent = t(count === letters.length ? "albumComplete" : "albumSummary", {mode: t(difficulty), done: count, total: letters.length});
   for (const tab of byId("chapters").querySelectorAll("button")) tab.setAttribute("aria-pressed", String(tab.dataset.chapter === chapter));
@@ -408,6 +497,7 @@ function fillAlbum() {
     const status = document.createElement("small");
     status.textContent = best !== null ? t(best === 1 ? "albumBestOne" : "albumBest", {n: best}) : t(active === index ? "inProgress" : "visit");
     if (index === pier && wasDelivered && best === null) status.textContent = t("watchDelivered");
+    if (index === slope && wasDelivered && best === null) status.textContent = t("hillFiled", {n: hillTickets(station, difficulty, read).size, total: 4});
     button.append(image, title, status);
     if (station.chapter === "together") {
       const jointBest = bestFor(index, "joint");
@@ -463,13 +553,50 @@ function openWatchFromBook() {
   if (album.open) album.close();
   if (receipt.open) receipt.close();
   cue("paper");
-  openRoute(pier, false, undefined, true);
+  openRoute(pier, false, undefined, "watch");
   byId("watch-shift").focus();
 }
 byId("album-watch").addEventListener("click", openWatchFromBook);
 byId("receipt-watch").addEventListener("click", openWatchFromBook);
-byId("watch-enter").addEventListener("click", () => { if (!onWatch && !sending) { cue("paper"); openRoute(pier, false, undefined, true); } });
+byId("watch-enter").addEventListener("click", () => { if (!onWatch && !sending) { cue("paper"); openRoute(pier, false, undefined, "watch"); } });
 byId("watch-normal").addEventListener("click", () => { if (onWatch) { cue("paper"); openRoute(pier); } });
+function openHill(fresh = false) {
+  if (receipt.open) receipt.close();
+  if (album.open) album.close();
+  cue("paper");
+  openRoute(slope, fresh, undefined, "hill");
+  focusHillChart();
+}
+function focusHillChart() {
+  const first = byId("tiles").querySelector("button:not(:disabled)") || byId("send");
+  first.focus({ preventScroll: true });
+  if (matchMedia("(max-width: 680px)").matches) document.querySelector(".chart-head").scrollIntoView({block: "start"});
+}
+byId("hill-wallet-link").addEventListener("click", () => {
+  byId("hill-lines").querySelector("button").focus({preventScroll: true});
+  byId("hill-book").scrollIntoView({block: "start"});
+});
+byId("hill-return").addEventListener("click", focusHillChart);
+byId("hill-read").addEventListener("click", () => { if (tickets.has(hillOverlay)) showReceipt(slope, true, hillOverlay); });
+byId("hill-enter").addEventListener("click", () => { if (!board.hill && !sending) openHill(); });
+byId("hill-normal").addEventListener("click", () => { if (board.hill && !sending) { cue("paper"); openRoute(slope); } });
+byId("album-hill").addEventListener("click", () => openHill());
+byId("receipt-hill").addEventListener("click", () => openHill(read(hillKey(difficulty, "draft"))?.sent === true));
+byId("hill-again").addEventListener("click", () => openHill(true));
+byId("hill-lines").addEventListener("click", event => {
+  const id = event.target.closest("button[data-line]")?.dataset.line;
+  if (!board.hill || !board.hill.lines.includes(id) || sending) return;
+  if (tickets.has(id)) hillOverlay = hillOverlay === id ? null : id;
+  else {
+    if (sent) openRoute(slope, true, undefined, "hill");
+    hillGoal = hillGoal === id ? null : id;
+  }
+  hint = undefined;
+  hillFull = false;
+  cue("paper");
+  saveDraft();
+  render();
+});
 byId("station-desk").addEventListener("click", () => { cue("paper"); dispatchDesk.open(letters[active].id); });
 byId("receipt-desk").addEventListener("click", () => { cue("paper"); dispatchDesk.open(letters[viewed].id); });
 byId("album-desk").addEventListener("click", () => { cue("paper"); dispatchDesk.open(); });
@@ -500,6 +627,8 @@ function setEditing(value) {
   byId("editor").hidden = !value;
   byId("receipt-watch").hidden = value || viewed !== pier;
   byId("watch-slip").hidden = value || !receiptWatch;
+  byId("receipt-hill").hidden = value || viewed !== slope;
+  byId("hill-slip").hidden = value || !receiptHill;
   byId("receipt-desk").hidden = value || !dispatchStations.includes(letters[viewed].id);
   byId("letter-text").hidden = value;
   byId("postscript").hidden = value || letters[viewed].chapter !== "together";
@@ -515,6 +644,7 @@ function setEditing(value) {
 function showReceipt(index, rustle = true, record) {
   viewed = index;
   receiptWatch = index === pier ? record ?? fog.latest(difficulty) : null;
+  receiptHill = index === slope && record !== null ? hillTickets(letters[slope], difficulty, read).get(record ?? read(hillKey(difficulty, "last"))) : null;
   const letter = localLetter(letters[index], language);
   if (rustle) cue("paper");
   clearExport();
@@ -524,6 +654,10 @@ function showReceipt(index, rustle = true, record) {
   byId("receipt-image").alt = letter.artAlt;
   byId("receipt-title").textContent = letter.title;
   byId("letter-text").textContent = messageFor(index);
+  if (index === slope) {
+    byId("receipt-hill").querySelector("span").textContent = t(receiptHill ? read(hillKey(difficulty, "draft"))?.sent === true ? "hillAgain" : "hillBack" : "hillOpen");
+    if (receiptHill) drawHillSlip(prepareHill(letters[slope], difficulty), receiptHill.trip, t);
+  }
   if (receiptWatch) {
     byId("watch-slip").querySelector("p").textContent = t("watchStory");
     byId("watch-slip").querySelector("small").textContent = watchSlip(t, receiptWatch.shift, receiptWatch);
@@ -547,7 +681,7 @@ function updateReceiptRoutes() {
   const paired = station.chapter === "together";
   const goal = paired && read(routeKey(viewed, "goal")) === "joint" ? "joint" : "direct";
   const draft = read(routeKey(viewed, "route", goal));
-  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty))) && draft?.sent === false && draft.history?.length > 0;
+  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty)) || viewed === slope) && draft?.sent === false && draft.history?.length > 0;
   byId("replay").textContent = t(resume ? "continueRoute" : "replay");
   byId("replay").dataset.resume = String(resume);
   if (!paired) return;
@@ -589,8 +723,10 @@ byId("save-image").addEventListener("click", async () => {
   try {
     const letter = localLetter(letters[index], language);
     const last = receiptWatch;
-    const back = last ? t("watchStory") + "\n" + watchSlip(t, last.shift, last) : hasImprint(index) ? letter.postscript : undefined;
-    const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, back, byId("contact-sheet").firstElementChild, last ? "watchSlipTitle" : "onTheBack");
+    const trip = receiptHill?.trip;
+    const back = trip ? t("hillName_" + trip.id) + "\n" + hillSummary(prepareHill(letters[slope], difficulty), trip, t) + "\n" + t("hillStory_" + trip.id)
+      : last ? t("watchStory") + "\n" + watchSlip(t, last.shift, last) : hasImprint(index) ? letter.postscript : undefined;
+    const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, back, byId("contact-sheet").firstElementChild, trip ? "hillStub" : last ? "watchSlipTitle" : "onTheBack");
     if (version !== exportVersion || !receipt.open) return;
     exportURL = URL.createObjectURL(blob);
     const download = document.createElement("a");
@@ -637,7 +773,7 @@ function switchLanguage() {
   applyLanguage();
   presentRoute();
   if (album.open) fillAlbum();
-  if (receipt.open) showReceipt(viewed, false, receiptWatch);
+  if (receipt.open) showReceipt(viewed, false, viewed === slope ? receiptHill?.trip.id ?? null : receiptWatch);
   dispatchDesk.refresh();
 }
 byId("language-switch").addEventListener("click", switchLanguage);
@@ -645,7 +781,7 @@ byId("language-switch").addEventListener("click", switchLanguage);
 function openSettings(focusMode = false) {
   const inDesk = byId("dispatch-desk").open;
   for (const mode of difficulties) {
-    settings.querySelector('[data-t="' + mode + 'Help"]').textContent = t(inDesk ? "deskMode_" + mode : onWatch ? "watchMode_" + mode : mode + "Help");
+    settings.querySelector('[data-t="' + mode + 'Help"]').textContent = t(inDesk ? "deskMode_" + mode : onWatch ? "watchMode_" + mode : board.hill ? "hillMode_" + mode : mode + "Help");
   }
   const selected = settings.querySelector('input[value="' + difficulty + '"]');
   selected.checked = true;
@@ -660,7 +796,7 @@ for (const radio of settings.querySelectorAll('input[name="difficulty"]')) {
     if (!radio.checked || difficulty === radio.value) return;
     difficulty = radio.value;
     write("difficulty", difficulty);
-    openRoute(active, false, undefined, onWatch);
+    openRoute(active, false, undefined, onWatch ? "watch" : board.hill ? "hill" : undefined);
     if (album.open) fillAlbum();
     if (receipt.open && !delivered(viewed)) receipt.close();
     else if (receipt.open) showReceipt(viewed, false);
@@ -684,6 +820,18 @@ setVolume(Number.isInteger(savedVolume) && savedVolume >= 0 && savedVolume <= 10
 applyLanguage();
 window.addEventListener("pageshow", updateCount);
 window.addEventListener("storage", event => {
+  if (event.key?.startsWith(prefix + hillKey(difficulty, "")) && !event.key.endsWith(".draft")) {
+    if (board.hill) {
+      tickets = hillTickets(letters[slope], difficulty, read);
+      if (tickets.has(hillGoal)) hillGoal = null;
+      if (!tickets.has(hillOverlay)) hillOverlay = null;
+      hint = undefined;
+      render();
+    }
+    updateCount();
+    if (album.open) fillAlbum();
+    return;
+  }
   if (event.key === prefix + "watch.v1." + difficulty + ".last") {
     updateCount();
     if (album.open) fillAlbum();
@@ -700,6 +848,7 @@ window.addEventListener("storage", event => {
   if (receipt.open) updateReceiptRoutes();
 });
 const linked = location.hash.slice(1);
-const savedStation = linked === "chimes-watch" ? "chimes" : letters.some(letter => letter.id === linked) ? linked : read("active");
-openRoute(Math.max(0, letters.findIndex(letter => letter.id === savedStation)), false, undefined, linked === "chimes-watch");
+const linkedService = linked === "chimes-watch" ? "watch" : linked === "funicular-switchbacks" ? "hill" : undefined;
+const savedStation = linkedService === "watch" ? "chimes" : linkedService === "hill" ? "funicular" : letters.some(letter => letter.id === linked) ? linked : read("active");
+openRoute(Math.max(0, letters.findIndex(letter => letter.id === savedStation)), false, undefined, linkedService);
 if (dispatchStations.some(id => linked === "dispatch-" + id)) dispatchDesk.open(linked.slice("dispatch-".length));

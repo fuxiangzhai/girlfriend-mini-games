@@ -13,6 +13,9 @@
   <body>
     <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
+        <symbol id="i-switchback" viewBox="0 0 24 24"><path d="M3 20h12q5 0 5-4t-5-4H9q-4 0-4-3t4-3h9M15 3l4 3-4 3"/><circle cx="4" cy="20" r="1.3"/></symbol>
+        <symbol id="g-siding" viewBox="0 0 64 64"><rect x="10" y="10" width="44" height="44" rx="8" fill="#273f3c" stroke="#e0b272" stroke-width="2.4" stroke-dasharray="6 3"/><path d="M20 23v-3h4m16 0h4v3m0 17v4h-4m-16 0h-4v-4" fill="none" stroke="#e4bb81" stroke-width="2"/><circle cx="32" cy="32" r="2.7" fill="#edce8b"/></symbol>
+        <symbol id="g-blade" viewBox="0 0 64 64"><g transform="rotate(-45 32 32)"><rect x="9" y="27" width="46" height="10" rx="3" fill="#d99650" stroke="#fff0b9" stroke-width="1.8"/><path d="M14 30h34" stroke="#ffedb0" stroke-width="2"/></g></symbol>
         <symbol id="i-back" viewBox="0 0 24 24"><path d="m11 5-7 7 7 7M5 12h15"/></symbol>
         <symbol id="i-next" viewBox="0 0 24 24"><path d="m13 5 7 7-7 7M19 12H4"/></symbol>
         <symbol id="i-album" viewBox="0 0 24 24"><path d="M5 6H3v15h16v-2"/><rect x="7" y="3" width="14" height="14" rx="2"/><path d="m9 14 3-4 3 2 2-3 2 3"/><circle cx="11" cy="7" r=".7"/></symbol>
@@ -78,6 +81,8 @@
             <span data-t="deliveryGoal">投递方式</span><div class="goal-options"><button type="button" data-goal="direct" data-t="direct">直投</button><button type="button" data-goal="joint" data-t="joint">合印</button></div>
           </div>
           <div id="watch-switch" class="goal-strip" role="group" data-aria="watchShiftType" hidden><span data-t="watchShiftType">栈桥邮班</span><div class="goal-options"><button id="watch-normal" type="button" data-t="watchOrdinary">日常回信</button><button id="watch-enter" type="button" data-t="watchTitle">雾班听测</button></div></div>
+          <div id="hill-switch" class="goal-strip" role="group" data-aria="hillService" hidden><span data-t="hillService">山坡邮班</span><div class="goal-options"><button id="hill-normal" type="button" data-t="hillOrdinary">日常投递</button><button id="hill-enter" type="button" data-t="hillTitle">橘坡分岔线</button></div></div>
+          <div id="hill-tray" hidden><svg class="icon" aria-hidden="true"><use href="#i-switchback"/></svg><span id="hill-stock"></span><button id="hill-wallet-link" type="button" aria-controls="hill-book" data-t="hillToWallet"></button><span class="hill-cycle" data-t="hillCycle"></span></div>
           <div id="watch-head" hidden>
             <div class="watch-ribbon"><label for="watch-shift" data-t="watchShift">班次</label><select id="watch-shift"></select><span id="watch-phase"></span></div>
             <div id="watch-shores"><span data-t="watchChoose">从哪盏岸灯发光</span><div id="watch-ports" role="group" data-aria="watchChoose"></div></div>
@@ -136,6 +141,13 @@
             </div>
           </article>
           <section class="brief" aria-labelledby="brief-title"><h3 id="brief-title" data-t="fieldNotes">投递手记</h3><p id="brief">今晚的第一封信从这里出发。点一下海面上的圆镜，让月光拐向信箱。</p></section>
+          <section id="hill-book" aria-labelledby="hill-book-title" hidden>
+            <div class="hill-book-head"><svg class="icon" aria-hidden="true"><use href="#i-switchback"/></svg><h3 id="hill-book-title" data-t="hillBook">缆车票夹</h3><span id="hill-count"></span></div>
+            <div id="hill-lines" role="group" data-aria="hillBook"></div>
+            <div id="hill-homeward" hidden><strong data-t="hillReturnTicket"></strong><p data-t="hillReturnNote"></p></div>
+            <p id="hill-clue" class="hill-caption" aria-live="polite" hidden></p><p id="hill-comparison" class="hill-caption" aria-live="polite" hidden></p>
+            <div class="hill-book-actions"><button id="hill-read" type="button" data-t="hillRead" hidden>翻看这张票根</button><button id="hill-again" type="button" data-t="hillAgain" hidden>同图再寄一封</button><button id="hill-return" type="button" aria-controls="chart" data-t="hillToChart"></button></div>
+          </section>
           <section id="watch-book" aria-labelledby="watch-book-title" hidden>
             <div class="watch-book-head"><svg class="icon"><use href="#i-book"/></svg><h3 id="watch-book-title" data-t="watchBook">听测手簿</h3><span id="watch-count"></span></div>
             <p id="watch-empty" data-t="watchEmpty">听测一次，岸灯的位置和回声就会记在这里。</p><ol id="watch-records"></ol>
@@ -163,6 +175,7 @@
       <div class="dialog-head"><div><h2 id="album-title" data-t="album">明信片夹</h2><p id="album-summary"></p></div><button class="close" type="button" data-aria="close" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
       <div id="chapters" class="chapters" role="group" data-aria="chapters"><button type="button" data-chapter="coast"><span data-t="coast">沿海夜邮</span> <small>6</small></button><button type="button" data-chapter="replies"><span data-t="replies">回信篇</span> <small>3</small></button><button type="button" data-chapter="together"><span data-t="together">两岸合邮</span> <small>3</small></button><button type="button" data-chapter="darkroom"><span data-t="darkroom">潮汐暗房</span> <small>3</small></button></div>
       <div id="album-grid" class="album-grid"></div>
+      <button id="album-hill" class="desk-entry hill-entry" type="button" hidden><svg class="icon"><use href="#i-switchback"/></svg><span><strong data-t="hillTitle">橘坡分岔线</strong><small data-t="hillAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-watch" class="desk-entry watch-entry" type="button" hidden><svg class="icon"><use href="#i-chime"/></svg><span><strong data-t="watchTitle">雾班听测</strong><small data-t="watchAlbumLink">去风铃栈桥听一班雾里的回信。</small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-desk" class="desk-entry" type="button" aria-haspopup="dialog" aria-controls="dispatch-desk"><svg class="icon"><use href="#i-anchor"/></svg><span><strong data-t="deskTitle">邮路调度台</strong><small data-t="deskAlbumLink">回到熟悉的渡口，试试另一种送法。</small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <section id="appointment" class="ticket" aria-labelledby="appointment-title" tabindex="-1" hidden>
@@ -177,6 +190,7 @@
       <div class="receipt-body">
         <h2 id="receipt-title"></h2><p id="letter-text"></p>
         <div id="watch-slip" hidden><strong data-t="watchSlipTitle">栈桥交班条</strong><p></p><small></small></div>
+        <div id="hill-slip" hidden><div class="hill-slip-map"></div><div><span data-t="hillStub">橘子坡 · 留存票根</span><strong></strong><small></small><p></p></div></div>
         <div class="postscript" id="postscript" hidden><strong data-t="onTheBack">票根背面</strong><p id="postscript-text"></p><button id="alternate-route" type="button">寻找合印邮路</button><button id="read-ending" type="button" data-t="readEnding" hidden>展开两人的约定</button></div>
         <figure id="film-proof" hidden><figcaption data-t="contactTitle">这次冲印的接触样片</figcaption><div id="contact-sheet"></div></figure>
         <div id="editor" hidden><label for="message" data-t="writeLabel">写给收信人的话</label><textarea id="message" rows="3" maxlength="200"></textarea>
@@ -185,6 +199,7 @@
         <div class="keepsakes"><button id="edit-message" type="button"><svg class="icon"><use href="#i-edit"/></svg><span data-t="edit">改写寄语</span></button><button id="save-image" type="button"><svg class="icon"><use href="#i-save"/></svg><span data-t="saveImage">保存图片</span></button></div>
         <button id="receipt-desk" class="desk-entry" type="button" aria-haspopup="dialog" aria-controls="dispatch-desk" hidden><svg class="icon"><use href="#i-anchor"/></svg><span data-t="deskLocal">调度这条邮路</span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-watch" class="desk-entry watch-entry" type="button" hidden><svg class="icon"><use href="#i-chime"/></svg><span data-t="watchOpen">回风铃栈桥值雾班</span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
+        <button id="receipt-hill" class="desk-entry hill-entry" type="button" hidden><svg class="icon"><use href="#i-switchback"/></svg><span></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <p class="export-status"><span id="export-status" role="status"></span> <a id="export-link" data-t="openImage" hidden>打开图片</a></p>
         <div class="receipt-footer"><button class="again" id="replay" type="button" data-t="replay">重走这段邮路</button><button class="primary" id="next" type="button"><span>下一站</span><svg class="icon"><use href="#i-next"/></svg></button></div>
       </div>

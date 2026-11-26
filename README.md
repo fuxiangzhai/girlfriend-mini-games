@@ -8,6 +8,10 @@
 
 从首页顶部点「月光邮局」，或打开 [月光邮局](./moon-mail/index.html)。转动海上的圆镜，让月光经过沿途的邮戳、照到收信箱，再点「寄出月光」拆信。「沿海夜邮」的六封信从白沙灯塔一路寄到晨光窗台。「回信篇」从海角温室出发，经过风铃栈桥，抵达望海天文台。回信的编号邮戳要按数字顺序首次经过。
 
+沿海夜邮的「山坡上的灯」可以切换到**橘坡分岔线**。四处方框道岔共用两片岔镜。点空位装镜，再点翻面，第三下取回。每次从相同的开班镜位出发，经过坡顶和坡脚两枚邮戳，把信投进同一个邮箱。先到哪枚戳、从哪一侧进站，都可能改变这趟拿到的车票。每档难度有四条实际可走的线路。[试玩橘坡分岔线](./moon-mail/index.html#funicular-switchbacks)
+
+缆车票夹中的空票可以翻看线索，签过的票可以叠回航图，查看两条路从哪一格分开。想再试一趟就点回执里的「同图再寄一封」。标准模式可对选中的车票求助，专家模式沿用橘子坡的山顶航图。旧票的盖戳顺序、里程和车窗小记随时可以重读，也会随明信片一起导出。集齐四张，司机会送来一份回程礼物。[查看缆车票夹实机画面](./docs/hillside-switchbacks.webp)
+
 回信篇的「风铃栈桥」还可以值**雾班**。从岸边选一盏灯，先沿纸图预测光会走到哪里，再发光听测。手簿记下两枚铃响起的次序和最后回光的一岸。有时两种镜向都能把光送到信箱，却只有一种会响铃。结合几盏岸灯的证词，把纸图画到只剩唯一的解释，再亲手修好真镜，让回信依次经过 1、2 号邮戳。[试玩雾班听测](./moon-mail/index.html#chimes-watch)
 
 同一班可反复尝试更省听测或修镜的做法。换班会改变雾中的镜向，每班可单独续玩。静音时能读到全部回声。签收的交班条会附在风铃栈桥的明信片和导出图上，日常回信的草稿和最佳步数单独保存。[查看听测手簿实机画面](./docs/fog-watch.webp)
@@ -38,9 +42,11 @@ Open the **Dispatch desk** in the album to revisit The Last Ferry, A Postmark in
 
 At **Wind Chime Pier**, select **Fog Watch**. Call from a shore lamp, compare the bells and return shore with your pencil forecast, and deduce the hidden mirror angles. After verification, repair the actual mail route and deliver the reply through both numbered bells. Each watch can be revisited with the same evidence problem. The album counts the pier once and keeps its handover slip with the postcard. All audible clues are also written in the listening log.
 
+At **Orange Hill Station**, choose **Hillside Switchbacks**. Fit, flip or lift two switch mirrors across four square sockets. Each difficulty has four distinct ways to collect both stamps and reach the same box from the same start. Select an unissued ticket for a clue or an issued ticket to overlay its actual route. Each ticket comes with a note from the journey.
+
 ![雾钟渡口的航图，两束光穿过同一枚菱形邮戳，分别照到月亮和星星信箱](./docs/moon-mail.webp)
 
-在仓库根目录运行 `node --test` 可验证全部关卡的光路、曝光组合、调度委托、雾班线索、存档恢复与提示（Node.js 18 及以上）。
+在仓库根目录运行 `node --test` 可验证全部关卡的光路、曝光组合、调度委托、雾班线索、橘坡分岔线的四种实际走法，以及存档恢复与提示（Node.js 18 及以上）。
 
 ## GitHub Pages
 

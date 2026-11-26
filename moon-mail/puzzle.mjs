@@ -35,7 +35,7 @@ export function isNumbered(tile) {
   return tile === "1" || tile === "2" || tile === "3";
 }
 
-function traceBeam(board, mask, x, y, direction, mailbox, fromEdge = false) {
+function traceBeam(board, mask, x, y, direction, mailbox, fromEdge = false, straightMirrors = 0) {
   const { width, height, tiles, mirrorAt, gates, marks } = board;
   const [entryX, entryY] = fromEdge ? offsets[direction] : [0, 0];
   let line = [[x + 0.5 + entryX / 2, y + 0.5 + entryY / 2]];
@@ -73,8 +73,10 @@ function traceBeam(board, mask, x, y, direction, mailbox, fromEdge = false) {
     visited.add(entry);
     if (mirrorAt.has(cell)) {
       const index = mirrorAt.get(cell);
-      turns.push(index);
-      direction = (mask & (1 << index) ? falling : rising)[direction];
+      if (!(straightMirrors & (1 << index))) {
+        turns.push(index);
+        direction = (mask & (1 << index) ? falling : rising)[direction];
+      }
     } else if (tile === "*" || isNumbered(tile)) {
       if (isNumbered(tile) && !lit.has(cell)) {
         const number = Number(tile);
@@ -103,8 +105,8 @@ function traceBeam(board, mask, x, y, direction, mailbox, fromEdge = false) {
   return { lines, lit, sequence, wrongOrder, turns, end, crossed, exposure };
 }
 
-export function trace(board, mask) {
-  const lamp = (cell, headings, box) => traceBeam(board, mask, cell % board.width, Math.floor(cell / board.width), headings.indexOf(board.tiles[cell]), box);
+export function trace(board, mask, straightMirrors = 0) {
+  const lamp = (cell, headings, box) => traceBeam(board, mask, cell % board.width, Math.floor(cell / board.width), headings.indexOf(board.tiles[cell]), box, false, straightMirrors);
   const moon = lamp(board.source, arrows, "M");
   const rays = [moon];
   if (board.starSource === undefined) return { ...moon, rays };

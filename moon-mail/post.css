@@ -488,6 +488,62 @@ html:lang(en) .legend span { white-space: normal; }
 }
 
 .on-watch .counters, .on-watch > .transit, .on-watch > .actions { display: none; }
+.on-hill { background: radial-gradient(ellipse at 85% 4%, #505448, transparent 62%), #213c38; }
+#hill-switch { margin-block: 4px 10px; }
+#hill-tray { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; padding: 7px 2px; color: #ffe1a9; border-block: 1px solid #738375; font-size: .78rem; }
+#hill-tray .icon { width: 16px; height: 16px; }
+#hill-stock { font-weight: 700; }
+#hill-wallet-link, #hill-return { display: none; }
+.hill-cycle { margin-left: auto; color: #e5e4d3; }
+.tile.siding svg { position: absolute; }
+.tile.siding.falling svg:first-child { transform: none; }
+.tile.siding.empty svg:nth-child(2) { visibility: hidden; }
+.tile.siding:not(.empty) svg:first-child { filter: brightness(1.18); }
+.hill-stop { position: absolute; right: 8%; bottom: 8%; display: grid; place-items: center; width: 1.25em; height: 1.25em; background: #ffe2a5; color: #304437; border: 1px solid #354c40; border-radius: 50%; font: bold clamp(.65rem, 1.1vw, .83rem)/1 var(--mono); }
+.on-hill #film-overlay polyline { stroke: #ffd2ac; stroke-width: 5; stroke-dasharray: 9 9; transform: translate(5px, -5px); }
+#hill-book { border-block: 1px solid #baac90; padding: 10px 0 9px; }
+.hill-book-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.hill-book-head .icon { color: #935533; }
+.hill-book-head h3 { font-size: .94rem; }
+#hill-count { margin-left: auto; color: #75573a; font-size: .78rem; font-variant-numeric: tabular-nums; }
+#hill-lines { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+#hill-lines button { display: grid; position: relative; align-content: center; grid-template-columns: 35px 1fr; column-gap: 6px; min-height: 51px; padding: 5px 6px 5px 4px; text-align: start; color: #4b5147; border: 1px dashed #aa9f86; border-radius: 5px; background: #f1eddf; }
+#hill-lines button[data-filed="true"] { border-style: solid; border-color: #bc9972; background: #f6e9ce; color: #684321; }
+#hill-lines button[aria-pressed="true"] { box-shadow: inset 0 0 0 1px #955b36; border-color: #955b36; background: #f5e2c2; }
+#hill-lines strong { align-self: end; font-size: .80rem; line-height: 1.25; overflow-wrap: anywhere; }
+#hill-lines small { align-self: start; margin-top: 3px; font-size: .70rem; line-height: 1.2; }
+.hill-stamp { grid-column: 1; grid-row: 1 / 3; display: grid; align-items: center; justify-items: center; align-self: stretch; padding-right: 4px; border-right: 1px dashed #b9ab94; color: #856544; font-size: 1.35rem; }
+.hill-stamp svg, .hill-slip-map svg { width: 100%; color: #744622; }
+.hill-stamp polyline, .hill-slip-map polyline { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.hill-stamp circle, .hill-slip-map circle { fill: #fcf2d9; stroke: currentColor; stroke-width: 1.6; }
+.hill-caption { margin-top: 7px; color: #604f3c; font-size: .80rem; line-height: 1.55; }
+#hill-homeward { margin-top: 9px; padding: 7px 10px; background: #eee3ca; color: #604628; border-inline-start: 3px double #93683d; }
+#hill-homeward strong { font-size: .8rem; }
+#hill-homeward p { margin-top: 3px; font: .84rem/1.6 var(--serif); }
+.hill-book-actions { display: flex; flex-wrap: wrap; gap: 0 8px; align-items: center; }
+.hill-book-actions button { margin-top: 7px; min-height: 38px; padding: 3px 10px; color: #67401f; background: #f1debc; border: 1px solid #ac8254; border-radius: 4px; font-size: .8rem; }
+.hill-entry { margin-top: 8px; }
+.hill-entry small { display: block; font-weight: 400; font-size: .77rem; }
+#hill-slip { display: grid; grid-template-columns: 74px 1fr; gap: 12px; align-items: center; margin-block: 12px; padding: 10px; color: #613f26; background: #f7e7cb; border-block: 1px dashed #a57e54; }
+.hill-slip-map { padding-right: 10px; border-right: 1px dashed #ad8a60; }
+#hill-slip span, #hill-slip small, #hill-slip strong { display: block; }
+#hill-slip span, #hill-slip small { font-size: .72rem; }
+#hill-slip strong { margin: 2px 0; font: 700 1.13rem/1.4 var(--serif); }
+#hill-slip p { margin: 6px 0 0; font: .87rem/1.55 var(--serif); }
+@media (max-width: 680px) {
+  #hill-book { grid-area: guide; }
+  .hill-book-actions button, #hill-switch button { min-height: 44px; }
+  #hill-wallet-link { display: block; margin-left: auto; padding-inline: 6px; min-height: 44px; color: #ffe1a9; text-decoration: underline; text-underline-offset: 3px; }
+  #hill-return { display: block; margin-left: auto; padding-inline: 4px; border-color: transparent; background: none; text-decoration: underline; text-underline-offset: 3px; }
+  .hill-cycle { flex-basis: 100%; margin-left: 0; }
+  #hill-switch { margin-left: 0; }
+  #hill-tray { font-size: .72rem; }
+}
+@media (max-width: 360px) {
+  #hill-lines button { grid-template-columns: 27px 1fr; }
+  #hill-slip { grid-template-columns: 50px 1fr; }
+  .hill-cycle { margin-left: 0; }
+}
 .on-watch { background: radial-gradient(ellipse at 88% 0%,#38565e,transparent 65%),#1b3841; }
 #watch-switch { margin-block: 4px 10px; }
 .watch-ribbon, #watch-shores, #watch-ports, .watch-actions, .watch-actions button, .watch-book-head { display: flex; align-items: center; }

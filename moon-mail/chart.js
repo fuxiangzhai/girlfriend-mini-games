@@ -69,10 +69,11 @@ export function mountChart(board, onRotate, t, options = {}) {
     if (paired && tile === "M") name = "moonBox";
     if (board.film && tile === "M") name = "filmCamera";
     if (board.film && "abcd".includes(tile)) name = "sensor";
-    if (isMirror) name = "mirror";
+    const isSiding = isMirror && board.hill && index >= board.hill.fixed;
+    if (isMirror) name = isSiding ? "siding" : "mirror";
     if (isNumbered(tile)) name = "number";
     if (berth >= 0) name = "berth";
-    element.className = "tile " + name + (name === "number" ? " mark" : "");
+    element.className = "tile " + name + (name === "number" ? " mark" : isSiding ? " mirror" : "");
     if (isMirror) {
       element.type = "button";
       element.dataset.mirror = index;
@@ -93,6 +94,13 @@ export function mountChart(board, onRotate, t, options = {}) {
     }
     if (name !== "water" || (cell * 7 + Math.floor(cell / board.width)) % 5 < 2) {
       element.append(glyph(name, name === "sensor" ? tile.toUpperCase() : name === "number" ? tile : null));
+    }
+    if (isSiding) element.append(glyph("blade"));
+    if (board.hill && name === "mark") {
+      const order = document.createElement("span");
+      order.className = "hill-stop";
+      order.setAttribute("aria-hidden", "true");
+      element.append(order);
     }
     if (direction !== -1) {
       const arrow = document.createElement("i");
@@ -121,12 +129,15 @@ export function mountChart(board, onRotate, t, options = {}) {
     board.mirrors.forEach((cell, index) => {
       const mirror = cells[cell];
       const falling = !!(mask & (1 << index));
+      const isSiding = board.hill && index >= board.hill.fixed;
+      const empty = Boolean(route.straight & (1 << index));
+      if (isSiding) mirror.classList.toggle("empty", empty);
       mirror.classList.toggle("falling", falling);
       mirror.classList.toggle("hinted", index === hint);
       mirror.disabled = locked;
       const realigned = options.trackInitial && Boolean((mask ^ board.initial) & (1 << index));
       mirror.classList.toggle("realigned", Boolean(realigned));
-      mirror.setAttribute("aria-label", t("mirrorLabel", {cell: coordinate(board, cell), slope: t(falling ? "falling" : "rising")})
+      mirror.setAttribute("aria-label", t(isSiding ? "hillSocket" : "mirrorLabel", {cell: coordinate(board, cell), slope: t(empty ? "hillStraight" : falling ? "falling" : "rising")})
         + (realigned ? t("deskShifted") : "") + (index === hint ? t("hinted") : ""));
     });
     board.marks.forEach(cell => {
@@ -134,6 +145,11 @@ export function mountChart(board, onRotate, t, options = {}) {
       const tile = board.tiles[cell];
       const name = isNumbered(tile) ? t("sealLabel", {n: tile}) : t("mark");
       cells[cell].setAttribute("aria-label", [coordinate(board, cell), name, t(route.lit.has(cell) ? "lit" : "unlit")].join(" "));
+      if (board.hill) {
+        const order = cells[cell].querySelector(".hill-stop");
+        order.hidden = !route.lit.has(cell);
+        order.textContent = String([...route.lit].indexOf(cell) + 1);
+      }
     });
     if (paired) {
       const seal = cells[board.jointCell];
@@ -153,7 +169,7 @@ export function mountChart(board, onRotate, t, options = {}) {
       return [
         paired ? t("beamFrom", {ray: t(i === 0 ? "moonRay" : "starRay"), cell: coordinate(board, i === 0 ? board.source : board.starSource)})
           : t("routeFrom", {cell: coordinate(board, board.source)}),
-        via.length ? t("routeVia", {cells: via.join(" → ")}) : "",
+        via.length ? t(board.hill ? "hillVia" : "routeVia", {cells: via.join(" → ")}) : "",
         t(board.film ? "cameraTo" : "routeTo", {cell: coordinate(board, boxCell)}),
         paired ? t(ray.end === "ready" ? "arrived" : ray.end === "wrongBox" ? "wrongBox" : "inTransit") : "",
       ].filter(Boolean).join(" ");
