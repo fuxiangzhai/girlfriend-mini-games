@@ -13,12 +13,19 @@ import { createFogWatch, watchSlip } from "./fogwatch-ui.js";
 import { prepareHill, moveHill, restoreHill, hillSetting, traceHill, hillTrip, hillHint } from "./hillside.mjs";
 import { hillKey, hillTickets, hillSummary, drawHillBook, drawHillSlip } from "./hillside-ui.js";
 import { createSignalDuet, duetKey, duetSummary } from "./duet-ui.js";
+import { createStarAtlas, atlasKey, atlasStory, atlasSummary, starPrint } from "./atlas-ui.js";
 
 const byId = id => document.getElementById(id);
 const pad = value => String(value).padStart(2, "0");
 const memory = new Map();
 const memoryOnly = new Set();
 const prefix = "moon-mail:v1:";
+const services = {
+  atlas: {station:"observatory", hash:"observatory-atlas", access:"atlasAccess", map:"atlasMap", icon:"#i-atlas"},
+  duet: {station:"signals", hash:"signals-duet", access:"duetAccess", map:"duetMap", icon:"#i-duet"},
+  watch: {station:"chimes", hash:"chimes-watch", access:"watchChartAccess", map:"watchTitle", icon:"#i-chime"},
+  hill: {station:"funicular", hash:"funicular-switchbacks", access:"hillChartAccess", map:"hillMap", icon:"#i-switchback"},
+};
 
 function read(key) {
   if (memoryOnly.has(key)) return memory.get(key);
@@ -76,10 +83,11 @@ const dispatchDesk = createDispatchDesk({ context: () => ({ language, t, difficu
 const pier = letters.findIndex(letter => letter.id === "chimes");
 const slope = letters.findIndex(letter => letter.id === "funicular");
 const huts = letters.findIndex(letter => letter.id === "signals");
+const dome = letters.findIndex(letter => letter.id === "observatory");
+const atlas = createStarAtlas({ letter: letters[dome], read, write, cue, delivered: updateCount, receipt: ink => showReceipt(dome, false, ink) });
 const duet = createSignalDuet({ letter: letters[huts], read, write, cue, delivered: updateCount, receipt: id => showReceipt(huts, false, id) });
 const fog = createFogWatch({ letter: letters[pier], read, write, cue, delivered: updateCount, openReceipt: record => showReceipt(pier, true, record) });
-let onWatch = false;
-let onDuet = false, receiptDuet;
+let activeService, receiptDuet, receiptAtlas;
 let active, board, chart, mask, path, history, sent, hint;
 let frames = [], reading;
 let compared = -1, justExposed = false;
@@ -96,7 +104,8 @@ function delivered(index) {
   return bestFor(index) !== null || (letters[index].chapter === "together" && bestFor(index, "joint") !== null)
     || (index === pier && Boolean(fog.latest(difficulty)))
     || (index === slope && hillTickets(letters[slope], difficulty, read).size > 0)
-    || (index === huts && Boolean(duet.record(difficulty)));
+    || (index === huts && Boolean(duet.record(difficulty)))
+    || (index === dome && Boolean(atlas.record(difficulty)));
 }
 function hasImprint(index) { return read(routeKey(index, "imprint")) === true; }
 const meetingStops = letters.map((letter, index) => ({letter, index})).filter(stop => stop.letter.chapter === "together");
@@ -235,22 +244,22 @@ function render() {
     });
     byId("joint-count").textContent = t("sealCount", {n: path.jointCount});
   }
-  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter", "hill-enter", "hill-normal", "duet-enter"]) byId(id).disabled = sending;
+  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter", "hill-enter", "hill-normal", "duet-enter", "atlas-enter"]) byId(id).disabled = sending;
 }
 
 function openRoute(index, fresh = false, requestedGoal, service) {
-  if (onWatch) fog.leave();
-  if (onDuet) duet.leave();
-  onDuet = index === huts && service === "duet";
-  onWatch = index === pier && service === "watch";
-  const hillside = index === slope && service === "hill";
+  if (activeService === "atlas") atlas.leave();
+  if (activeService === "watch") fog.leave();
+  if (activeService === "duet") duet.leave();
   active = index;
   const letter = letters[index];
+  activeService = services[service]?.station === letter.id ? service : undefined;
+  const hillside = activeService === "hill";
   const paired = letter.chapter === "together";
   const choice = requestedGoal ?? (paired ? read(routeKey(index, "goal")) : "direct");
   const goal = paired && choice === "joint" ? "joint" : "direct";
   board = hillside ? prepareHill(letter, difficulty) : letter.plate ? prepareFilm(letter, difficulty) : prepareRoute(letter, difficulty, goal);
-  if (paired && !onDuet) write(routeKey(index, "goal"), goal);
+  if (paired && activeService !== "duet") write(routeKey(index, "goal"), goal);
   const draft = fresh ? null : read(hillside ? hillKey(difficulty, "draft") : routeKey(index, "route", goal));
   const hillState = hillside ? restoreHill(board, draft?.history) : null;
   tickets = hillside ? hillTickets(letter, difficulty, read) : new Map();
@@ -273,8 +282,8 @@ function openRoute(index, fresh = false, requestedGoal, service) {
   write("active", letter.id);
   delete byId("chart").dataset.focus;
   const fragment = location.hash.slice(1);
-  const target = onDuet ? "signals-duet" : hillside ? "funicular-switchbacks" : onWatch ? "chimes-watch" : letter.id;
-  if (fragment !== target && (service || ["chimes-watch", "funicular-switchbacks", "signals-duet"].includes(fragment) || letters.some(station => station.id === fragment))) {
+  const target = services[activeService]?.hash ?? letter.id;
+  if (fragment !== target && (activeService || Object.values(services).some(link => link.hash === fragment) || letters.some(station => station.id === fragment))) {
     try { window.history.replaceState(null, "", "#" + target); } catch { /* Optional shortcut in local files. */ }
   }
   if (fresh) saveDraft();
@@ -283,16 +292,23 @@ function openRoute(index, fresh = false, requestedGoal, service) {
 
 function presentRoute() {
   const letter = localLetter(letters[active], language);
+  const service = services[activeService];
+  const onAtlas = activeService === "atlas", onDuet = activeService === "duet", onWatch = activeService === "watch";
   byId("serial").textContent = "NO. " + pad(active + 1) + " / " + pad(letters.length);
   byId("scene").src = letter.image;
   byId("scene").alt = letter.artAlt;
   byId("station-title").textContent = letter.title;
   byId("place").textContent = letter.place;
   byId("time").textContent = letter.time;
-  byId("brief").textContent = onDuet ? t("duetBrief") : board.hill ? t("hillBrief") : onWatch ? t("watchBrief") : difficulty === "expert" ? letter.expertNote : letter.brief;
+  byId("brief").textContent = service ? t(activeService + "Brief") : difficulty === "expert" ? letter.expertNote : letter.brief;
   const chartPanel = document.querySelector(".chart-panel");
   chartPanel.classList.toggle("on-watch", onWatch);
   chartPanel.classList.toggle("on-duet", onDuet);
+  chartPanel.classList.toggle("on-atlas", onAtlas);
+  byId("atlas-service").hidden = active !== dome;
+  byId("atlas-enter").setAttribute("aria-pressed", String(onAtlas));
+  byId("atlas-normal").setAttribute("aria-pressed", String(!onAtlas));
+  for (const id of ["atlas-head", "atlas-controls", "atlas-book"]) byId(id).hidden = !onAtlas;
   byId("duet-service").hidden = active !== huts;
   byId("duet-enter").setAttribute("aria-pressed", String(onDuet));
   byId("duet-normal").setAttribute("aria-pressed", String(!onDuet));
@@ -306,8 +322,8 @@ function presentRoute() {
   byId("watch-normal").setAttribute("aria-pressed", String(!onWatch));
   byId("watch-enter").setAttribute("aria-pressed", String(onWatch));
   for (const id of ["watch-head", "watch-panel", "watch-book"]) byId(id).hidden = !onWatch;
-  byId("guide").hidden = onDuet || onWatch || Boolean(board.hill);
-  byId("chart").setAttribute("aria-label", t(onDuet ? "duetAccess" : board.hill ? "hillChartAccess" : onWatch ? "watchChartAccess" : "chartAccess"));
+  byId("guide").hidden = Boolean(service);
+  byId("chart").setAttribute("aria-label", t(service?.access ?? "chartAccess"));
   byId("mode-label").textContent = t(difficulty);
   byId("mode-open").setAttribute("aria-label", t("modeControl", { mode: t(difficulty) }));
   byId("station-desk").hidden = !dispatchStations.includes(letter.id);
@@ -316,14 +332,15 @@ function presentRoute() {
   byId("goals").hidden = byId("ray-key").hidden = !paired || onDuet;
   byId("film-tray").hidden = !film;
   byId("send").classList.remove("suggested");
-  byId("chart-title").querySelector("span").textContent = t(onDuet ? "duetMap" : board.hill ? "hillMap" : onWatch ? "watchTitle" : film ? "filmChart" : "chart");
-  byId("chart-title").querySelector("use").setAttribute("href", onDuet ? "#i-duet" : board.hill ? "#i-switchback" : onWatch ? "#i-chime" : film ? "#i-camera" : "#i-compass");
+  byId("chart-title").querySelector("span").textContent = t(service?.map ?? (film ? "filmChart" : "chart"));
+  byId("chart-title").querySelector("use").setAttribute("href", service?.icon ?? (film ? "#i-camera" : "#i-compass"));
   document.querySelector(".chart-panel").classList.toggle("darkroom-chart", film);
   for (const key of document.querySelectorAll(".bay-symbol")) key.hidden = !paired;
   for (const key of document.querySelectorAll(".single-symbol")) key.hidden = paired || film;
   for (const key of document.querySelectorAll(".film-symbol")) key.hidden = !film;
   byId("guide-instructions").textContent = t(film ? "filmGuide" : paired ? "pairInstructions" : "instructions");
-  if (onDuet) duet.mount(difficulty, t);
+  if (onAtlas) atlas.mount(difficulty, t);
+  else if (onDuet) duet.mount(difficulty, t);
   else if (onWatch) fog.mount(difficulty, t);
   else {
     chart = mountChart(board, rotate, t);
@@ -482,10 +499,11 @@ byId("send").addEventListener("click", async () => {
     }
     if (!document.hidden) sound.play(board.hill ? "punchTicket" : "sent");
   }
-  showReceipt(active, !firstDelivery, board.hill ? hillTrip(board, path).id : active === slope || active === huts ? null : undefined);
+  showReceipt(active, !firstDelivery, board.hill ? hillTrip(board, path).id : active === slope || active === huts || active === dome ? null : undefined);
 });
 
 function fillAlbum() {
+  byId("album-atlas").hidden = chapter !== "replies";
   byId("album-duet").hidden = chapter !== "together";
   byId("album-watch").hidden = chapter !== "replies";
   byId("album-hill").hidden = chapter !== "coast";
@@ -511,6 +529,7 @@ function fillAlbum() {
     const status = document.createElement("small");
     status.textContent = best !== null ? t(best === 1 ? "albumBestOne" : "albumBest", {n: best}) : t(active === index ? "inProgress" : "visit");
     if (index === pier && wasDelivered && best === null) status.textContent = t("watchDelivered");
+    if (index === dome && wasDelivered && best === null) status.textContent = t("atlasFiled");
     if (index === slope && wasDelivered && best === null) status.textContent = t("hillFiled", {n: hillTickets(station, difficulty, read).size, total: 4});
     button.append(image, title, status);
     if (station.chapter === "together") {
@@ -557,13 +576,28 @@ function fillAlbum() {
 }
 
 function showAlbum(selectedChapter = letters[active].chapter) {
-  if (onDuet) duet.stop();
+  if (activeService === "duet") duet.stop();
   chapter = selectedChapter;
   cue("paper");
   fillAlbum();
   album.showModal();
 }
 byId("open-album").addEventListener("click", () => showAlbum());
+function openAtlas(reference, branch = false) {
+  if (album.open) album.close();
+  if (receipt.open) receipt.close();
+  cue("paper");
+  openRoute(dome, false, undefined, "atlas");
+  if (branch) atlas.branch(reference);
+  else if (reference && read(atlasKey(difficulty, "draft"))?.sent === true) atlas.fresh(reference);
+  byId("chart").focus({preventScroll:true});
+  byId("atlas-head").scrollIntoView({block:"nearest"});
+}
+byId("atlas-enter").addEventListener("click", () => { if (activeService !== "atlas" && !sending) openAtlas(); });
+byId("atlas-normal").addEventListener("click", () => { if (activeService === "atlas") { cue("paper"); openRoute(dome); } });
+byId("album-atlas").addEventListener("click", () => openAtlas());
+byId("receipt-atlas").addEventListener("click", () => openAtlas(receiptAtlas?.sketch.ink));
+byId("receipt-atlas-fork").addEventListener("click", () => openAtlas(receiptAtlas?.sketch.ink, true));
 function openDuet(restart = false) {
   if (album.open) album.close();
   if (receipt.open) receipt.close();
@@ -573,8 +607,8 @@ function openDuet(restart = false) {
   byId("duet-phase").scrollIntoView({block: "nearest"});
   (byId("tiles").querySelector("button:not(:disabled)") || byId("duet-main")).focus({preventScroll:true});
 }
-byId("duet-enter").addEventListener("click", () => { if (!onDuet && !sending) openDuet(); });
-byId("duet-normal").addEventListener("click", () => { if (onDuet) { cue("paper"); openRoute(huts); } });
+byId("duet-enter").addEventListener("click", () => { if (activeService !== "duet" && !sending) openDuet(); });
+byId("duet-normal").addEventListener("click", () => { if (activeService === "duet") { cue("paper"); openRoute(huts); } });
 byId("album-duet").addEventListener("click", () => openDuet());
 byId("receipt-duet").addEventListener("click", () => openDuet(read(duetKey(difficulty, "draft"))?.sent === true));
 function openWatchFromBook() {
@@ -586,8 +620,8 @@ function openWatchFromBook() {
 }
 byId("album-watch").addEventListener("click", openWatchFromBook);
 byId("receipt-watch").addEventListener("click", openWatchFromBook);
-byId("watch-enter").addEventListener("click", () => { if (!onWatch && !sending) { cue("paper"); openRoute(pier, false, undefined, "watch"); } });
-byId("watch-normal").addEventListener("click", () => { if (onWatch) { cue("paper"); openRoute(pier); } });
+byId("watch-enter").addEventListener("click", () => { if (activeService !== "watch" && !sending) { cue("paper"); openRoute(pier, false, undefined, "watch"); } });
+byId("watch-normal").addEventListener("click", () => { if (activeService === "watch") { cue("paper"); openRoute(pier); } });
 function openHill(fresh = false) {
   if (receipt.open) receipt.close();
   if (album.open) album.close();
@@ -652,6 +686,11 @@ function clearExport() {
 }
 
 function setEditing(value) {
+  byId("atlas-slip").hidden = value || !receiptAtlas;
+  byId("receipt-atlas").hidden = value || viewed !== dome;
+  const forkCell = receiptAtlas && atlas.forkCell(difficulty, receiptAtlas.sketch.ink);
+  byId("receipt-atlas-fork").hidden = value || !forkCell;
+  if (forkCell) byId("receipt-atlas-fork").querySelector("span").textContent = t("atlasFork", {cell: forkCell});
   byId("duet-slip").hidden = value || !receiptDuet;
   byId("receipt-duet").hidden = value || viewed !== huts;
   byId("editor").hidden = !value;
@@ -673,7 +712,8 @@ function setEditing(value) {
 
 function showReceipt(index, rustle = true, record) {
   viewed = index;
-  if (onDuet) duet.stop();
+  receiptAtlas = index === dome && record !== null && (record !== undefined || bestFor(dome) === null) ? atlas.record(difficulty, record) : null;
+  if (activeService === "duet") duet.stop();
   receiptDuet = null;
   if (index === huts && record !== null) {
     const onlyDuet = bestFor(huts) === null && bestFor(huts, "joint") === null && !hasImprint(huts);
@@ -690,6 +730,11 @@ function showReceipt(index, rustle = true, record) {
   byId("receipt-image").alt = letter.artAlt;
   byId("receipt-title").textContent = letter.title;
   byId("letter-text").textContent = messageFor(index);
+  if (index === dome) {
+    const draft = read(atlasKey(difficulty, "draft"));
+    byId("receipt-atlas").querySelector("span").textContent = t(receiptAtlas ? draft?.ink && !draft.sent ? "atlasResume" : "atlasAgain" : "atlasTitle");
+    if (receiptAtlas) byId("atlas-slip").textContent = atlasStory(receiptAtlas, t);
+  }
   if (receiptDuet) {
     const slip = byId("duet-slip");
     slip.querySelector("strong").textContent = t("duetName_" + receiptDuet.id);
@@ -706,6 +751,8 @@ function showReceipt(index, rustle = true, record) {
   }
   const proof = byId("contact-sheet");
   proof.replaceChildren();
+  byId("film-proof").querySelector("figcaption").textContent = t(receiptAtlas ? "atlasProof" : "contactTitle");
+  if (receiptAtlas) proof.append(starPrint(receiptAtlas, t));
   if (letter.plate) {
     const printBoard = index === active ? board : prepareFilm(letter, difficulty);
     const saved = read(routeKey(index, "print"));
@@ -723,7 +770,7 @@ function updateReceiptRoutes() {
   const paired = station.chapter === "together";
   const goal = paired && read(routeKey(viewed, "goal")) === "joint" ? "joint" : "direct";
   const draft = read(routeKey(viewed, "route", goal));
-  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty)) || viewed === slope) && draft?.sent === false && draft.history?.length > 0;
+  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty)) || viewed === slope || viewed === dome) && draft?.sent === false && draft.history?.length > 0;
   byId("replay").textContent = t(resume ? "continueRoute" : "replay");
   byId("replay").dataset.resume = String(resume);
   if (!paired) return;
@@ -766,10 +813,10 @@ byId("save-image").addEventListener("click", async () => {
     const letter = localLetter(letters[index], language);
     const last = receiptWatch;
     const trip = receiptHill?.trip;
-    const back = receiptDuet ? [t("duetName_" + receiptDuet.id), duetSummary(receiptDuet.score, t), t("duetStory_" + receiptDuet.id)].join("\n")
+    const back = receiptAtlas ? [atlasStory(receiptAtlas, t), atlasSummary(receiptAtlas, t)].join("\n") : receiptDuet ? [t("duetName_" + receiptDuet.id), duetSummary(receiptDuet.score, t), t("duetStory_" + receiptDuet.id)].join("\n")
       : trip ? t("hillName_" + trip.id) + "\n" + hillSummary(prepareHill(letters[slope], difficulty), trip, t) + "\n" + t("hillStory_" + trip.id)
       : last ? t("watchStory") + "\n" + watchSlip(t, last.shift, last) : hasImprint(index) ? letter.postscript : undefined;
-    const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, back, byId("contact-sheet").firstElementChild, receiptDuet ? "duetSlip" : trip ? "hillStub" : last ? "watchSlipTitle" : "onTheBack");
+    const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, back, byId("contact-sheet").firstElementChild, receiptAtlas ? "atlasLog" : receiptDuet ? "duetSlip" : trip ? "hillStub" : last ? "watchSlipTitle" : "onTheBack", receiptAtlas ? "atlasProof" : "contactTitle");
     if (version !== exportVersion || !receipt.open) return;
     exportURL = URL.createObjectURL(blob);
     const download = document.createElement("a");
@@ -816,16 +863,16 @@ function switchLanguage() {
   applyLanguage();
   presentRoute();
   if (album.open) fillAlbum();
-  if (receipt.open) showReceipt(viewed, false, viewed === huts ? receiptDuet?.id ?? null : viewed === slope ? receiptHill?.trip.id ?? null : receiptWatch);
+  if (receipt.open) showReceipt(viewed, false, viewed === dome ? receiptAtlas?.sketch.ink ?? null : viewed === huts ? receiptDuet?.id ?? null : viewed === slope ? receiptHill?.trip.id ?? null : receiptWatch);
   dispatchDesk.refresh();
 }
 byId("language-switch").addEventListener("click", switchLanguage);
 
 function openSettings(focusMode = false) {
-  if (onDuet) duet.stop();
+  if (activeService === "duet") duet.stop();
   const inDesk = byId("dispatch-desk").open;
   for (const mode of difficulties) {
-    settings.querySelector('[data-t="' + mode + 'Help"]').textContent = t(inDesk ? "deskMode_" + mode : onDuet ? "duetMode_" + mode : onWatch ? "watchMode_" + mode : board.hill ? "hillMode_" + mode : mode + "Help");
+    settings.querySelector('[data-t="' + mode + 'Help"]').textContent = t(inDesk ? "deskMode_" + mode : activeService ? activeService + "Mode_" + mode : mode + "Help");
   }
   const selected = settings.querySelector('input[value="' + difficulty + '"]');
   selected.checked = true;
@@ -840,7 +887,7 @@ for (const radio of settings.querySelectorAll('input[name="difficulty"]')) {
     if (!radio.checked || difficulty === radio.value) return;
     difficulty = radio.value;
     write("difficulty", difficulty);
-    openRoute(active, false, undefined, onDuet ? "duet" : onWatch ? "watch" : board.hill ? "hill" : undefined);
+    openRoute(active, false, undefined, activeService);
     if (album.open) fillAlbum();
     if (receipt.open && !delivered(viewed)) receipt.close();
     else if (receipt.open) showReceipt(viewed, false);
@@ -864,8 +911,14 @@ setVolume(Number.isInteger(savedVolume) && savedVolume >= 0 && savedVolume <= 10
 applyLanguage();
 window.addEventListener("pageshow", updateCount);
 window.addEventListener("storage", event => {
+  if (event.key?.startsWith(prefix + atlasKey(difficulty, "chart."))) {
+    if (activeService === "atlas") atlas.refresh();
+    updateCount();
+    if (album.open) fillAlbum();
+    return;
+  }
   if (event.key?.startsWith(prefix + duetKey(difficulty, "")) && !event.key.endsWith(".draft")) {
-    if (onDuet) duet.refresh();
+    if (activeService === "duet") duet.refresh();
     updateCount();
     if (album.open) fillAlbum();
     return;
@@ -898,7 +951,7 @@ window.addEventListener("storage", event => {
   if (receipt.open) updateReceiptRoutes();
 });
 const linked = location.hash.slice(1);
-const linkedService = linked === "signals-duet" ? "duet" : linked === "chimes-watch" ? "watch" : linked === "funicular-switchbacks" ? "hill" : undefined;
-const savedStation = linkedService === "duet" ? "signals" : linkedService === "watch" ? "chimes" : linkedService === "hill" ? "funicular" : letters.some(letter => letter.id === linked) ? linked : read("active");
+const linkedService = Object.keys(services).find(key => services[key].hash === linked);
+const savedStation = services[linkedService]?.station ?? (letters.some(letter => letter.id === linked) ? linked : read("active"));
 openRoute(Math.max(0, letters.findIndex(letter => letter.id === savedStation)), false, undefined, linkedService);
 if (dispatchStations.some(id => linked === "dispatch-" + id)) dispatchDesk.open(linked.slice("dispatch-".length));

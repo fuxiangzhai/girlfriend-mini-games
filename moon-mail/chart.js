@@ -61,7 +61,8 @@ export function mountChart(board, onRotate, t, options = {}) {
     const index = board.mirrorAt.get(cell);
     const isMirror = index !== undefined;
     const berth = options.berths?.indexOf(cell) ?? -1;
-    const element = document.createElement(isMirror || berth >= 0 ? "button" : "span");
+    const plotCell = options.onPlot && tile !== "#";
+    const element = document.createElement(plotCell || isMirror || berth >= 0 ? "button" : "span");
     const starDirection = starArrows.indexOf(tile);
     const direction = starDirection !== -1 ? starDirection : arrows.indexOf(tile);
     let name = features[tile] || "water";
@@ -70,11 +71,15 @@ export function mountChart(board, onRotate, t, options = {}) {
     if (board.film && tile === "M") name = "filmCamera";
     if (board.film && "abcd".includes(tile)) name = "sensor";
     const isSiding = isMirror && board.hill && index >= board.hill.fixed;
-    if (isMirror) name = isSiding ? "siding" : "mirror";
+    if (isMirror) name = plotCell ? "eyelet" : isSiding ? "siding" : "mirror";
     if (isNumbered(tile)) name = "number";
     if (berth >= 0) name = "berth";
     element.className = "tile " + name + (name === "number" ? " mark" : isSiding ? " mirror" : "");
-    if (isMirror) {
+    if (plotCell) {
+      element.type = "button";
+      element.dataset.cell = cell;
+      element.addEventListener("click", () => options.onPlot(cell));
+    } else if (isMirror) {
       element.type = "button";
       element.dataset.mirror = index;
       element.addEventListener("click", () => onRotate(index));
@@ -92,7 +97,7 @@ export function mountChart(board, onRotate, t, options = {}) {
     } else {
       element.setAttribute("aria-hidden", "true");
     }
-    if (name !== "water" || (cell * 7 + Math.floor(cell / board.width)) % 5 < 2) {
+    if (name !== "water" || (!plotCell && (cell * 7 + Math.floor(cell / board.width)) % 5 < 2)) {
       element.append(glyph(name, name === "sensor" ? tile.toUpperCase() : name === "number" ? tile : null));
     }
     if (isSiding) element.append(glyph("blade"));
@@ -112,8 +117,8 @@ export function mountChart(board, onRotate, t, options = {}) {
   });
   tiles.replaceChildren(...cells);
 
-  function draw(mask, route, hint, locked) {
-    route.rays.forEach((ray, i) => {
+  function drawLines(rays) {
+    rays.forEach((ray, i) => {
       const strokes = [];
       for (const line of ray.lines) {
         const points = line.map(([x, y]) => [x * 100, y * 100].join(",")).join(" ");
@@ -126,6 +131,10 @@ export function mountChart(board, onRotate, t, options = {}) {
       }
       groups[i].replaceChildren(...strokes);
     });
+  }
+
+  function draw(mask, route, hint, locked) {
+    drawLines(route.rays);
     board.mirrors.forEach((cell, index) => {
       const mirror = cells[cell];
       const falling = !!(mask & (1 << index));
@@ -225,7 +234,7 @@ export function mountChart(board, onRotate, t, options = {}) {
       return path;
     })));
   }
-  return { draw, carryLetter, compareRays, compareExposure: ray => compareRays(ray ? [ray] : []) };
+  return { cells, draw, drawLines, carryLetter, compareRays, compareExposure: ray => compareRays(ray ? [ray] : []) };
 }
 
 function moveEnvelope({ courier, total, parts }, progress) {

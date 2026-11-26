@@ -13,6 +13,8 @@
   <body>
     <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
+        <symbol id="i-atlas" viewBox="0 0 24 24"><path d="m4 16 5-10 6 7 5-9"/><circle cx="4" cy="16" r="2"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="13" r="2"/><path d="M20 1v6m-3-3h6"/></symbol>
+        <symbol id="g-eyelet" viewBox="0 0 64 64"><circle cx="32" cy="32" r="12" fill="#26374f" stroke="#bca279" stroke-width="2.3"/><circle cx="32" cy="32" r="7.5" fill="none" stroke="#ead499" stroke-width="2"/><path d="M32 14v4m14 14h4M32 46v4M14 32h4" stroke="#bcaa86" stroke-width="1.8"/></symbol>
         <symbol id="i-duet" viewBox="0 0 24 24"><path d="M7 16V6l12-3v11M7 9l12-3"/><ellipse cx="4.5" cy="17.5" rx="2.5" ry="1.8"/><ellipse cx="16.5" cy="15.5" rx="2.5" ry="1.8"/></symbol>
         <symbol id="i-switchback" viewBox="0 0 24 24"><path d="M3 20h12q5 0 5-4t-5-4H9q-4 0-4-3t4-3h9M15 3l4 3-4 3"/><circle cx="4" cy="20" r="1.3"/></symbol>
         <symbol id="g-siding" viewBox="0 0 64 64"><rect x="10" y="10" width="44" height="44" rx="8" fill="#273f3c" stroke="#e0b272" stroke-width="2.4" stroke-dasharray="6 3"/><path d="M20 23v-3h4m16 0h4v3m0 17v4h-4m-16 0h-4v-4" fill="none" stroke="#e4bb81" stroke-width="2"/><circle cx="32" cy="32" r="2.7" fill="#edce8b"/></symbol>
@@ -86,6 +88,12 @@
           <div id="hill-switch" class="goal-strip" role="group" data-aria="hillService" hidden><span data-t="hillService">山坡邮班</span><div class="goal-options"><button id="hill-normal" type="button" data-t="hillOrdinary">日常投递</button><button id="hill-enter" type="button" data-t="hillTitle">橘坡分岔线</button></div></div>
           <div id="hill-tray" hidden><svg class="icon" aria-hidden="true"><use href="#i-switchback"/></svg><span id="hill-stock"></span><button id="hill-wallet-link" type="button" aria-controls="hill-book" data-t="hillToWallet"></button><span class="hill-cycle" data-t="hillCycle"></span></div>
           <div id="duet-head" hidden><strong id="duet-phase"></strong><span id="duet-station"></span></div>
+          <div id="atlas-service" class="goal-strip" role="group" data-aria="atlasService" hidden><span data-t="atlasService"></span><div class="goal-options"><button id="atlas-normal" type="button" data-t="watchOrdinary"></button><button id="atlas-enter" type="button" data-t="atlasTitle"></button></div></div>
+          <div id="atlas-head" hidden>
+            <div class="atlas-strip"><span id="atlas-stars"></span><span id="atlas-steps"></span><strong id="atlas-pin"></strong><button type="button" id="atlas-to-book" data-t="atlasNotebookLink" data-aria="atlasBook" aria-controls="atlas-book"></button></div>
+            <p data-t="atlasQuick"></p>
+            <p id="atlas-quest" hidden></p>
+          </div>
           <div id="watch-head" hidden>
             <div class="watch-ribbon"><label for="watch-shift" data-t="watchShift">班次</label><select id="watch-shift"></select><span id="watch-phase"></span></div>
             <div id="watch-shores"><span data-t="watchChoose">从哪盏岸灯发光</span><div id="watch-ports" role="group" data-aria="watchChoose"></div></div>
@@ -105,6 +113,13 @@
             </div>
           </div>
           <p id="route-description" class="sr-only"></p>
+          <section id="atlas-controls" data-aria="atlasTitle" hidden>
+            <p id="atlas-status" role="status"></p>
+            <div class="actions"><div class="chart-tools"><button id="atlas-undo" type="button" data-t="undo"></button><button id="atlas-reset" type="button" data-t="atlasErase"></button><button id="atlas-hint" type="button" data-t="hint"></button></div><button id="atlas-send" type="button" class="dispatch"></button></div>
+            <button id="atlas-again" type="button" data-t="atlasAgain" hidden></button>
+            <button id="atlas-fork" type="button" hidden></button>
+            <details class="atlas-guide"><summary data-t="atlasGuideTitle"></summary><p data-t="atlasRules"></p></details>
+          </section>
           <section id="duet-controls" data-aria="duetTitle" hidden>
             <div id="duet-console" hidden>
               <label><span data-t="duetMoonBearing"></span><select id="duet-moon"></select></label>
@@ -156,6 +171,12 @@
             </div>
           </article>
           <section class="brief" aria-labelledby="brief-title"><h3 id="brief-title" data-t="fieldNotes">投递手记</h3><p id="brief">今晚的第一封信从这里出发。点一下海面上的圆镜，让月光拐向信箱。</p></section>
+          <section id="atlas-book" aria-labelledby="atlas-book-title" hidden>
+            <div class="atlas-book-head"><svg class="icon" aria-hidden="true"><use href="#i-atlas"/></svg><h3 id="atlas-book-title" data-t="atlasBook"></h3><span id="atlas-count"></span></div>
+            <p data-t="atlasBookHelp"></p>
+            <div id="atlas-tasks" role="group" data-aria="atlasBook"></div>
+            <label id="atlas-tracing"><span data-t="atlasOverlay"></span><select id="atlas-overlay"></select></label><p id="atlas-compare"></p><button type="button" id="atlas-read" data-t="atlasRead" hidden></button>
+          </section>
           <section id="duet-book" aria-labelledby="duet-book-title" hidden>
             <div class="duet-book-head"><svg class="icon" aria-hidden="true"><use href="#i-duet"/></svg><h3 id="duet-book-title" data-t="duetScore"></h3><span id="duet-count"></span></div>
             <label class="duet-choice"><span data-t="duetRehearse"></span><select id="duet-piece"></select></label>
@@ -199,6 +220,7 @@
       <div class="dialog-head"><div><h2 id="album-title" data-t="album">明信片夹</h2><p id="album-summary"></p></div><button class="close" type="button" data-aria="close" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
       <div id="chapters" class="chapters" role="group" data-aria="chapters"><button type="button" data-chapter="coast"><span data-t="coast">沿海夜邮</span> <small>6</small></button><button type="button" data-chapter="replies"><span data-t="replies">回信篇</span> <small>3</small></button><button type="button" data-chapter="together"><span data-t="together">两岸合邮</span> <small>3</small></button><button type="button" data-chapter="darkroom"><span data-t="darkroom">潮汐暗房</span> <small>3</small></button></div>
       <div id="album-grid" class="album-grid"></div>
+      <button id="album-atlas" class="desk-entry atlas-entry" type="button" hidden><svg class="icon"><use href="#i-atlas"/></svg><span><strong data-t="atlasTitle"></strong><small data-t="atlasAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-duet" class="desk-entry duet-entry" type="button" hidden><svg class="icon"><use href="#i-duet"/></svg><span><strong data-t="duetTitle"></strong><small data-t="duetAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-hill" class="desk-entry hill-entry" type="button" hidden><svg class="icon"><use href="#i-switchback"/></svg><span><strong data-t="hillTitle">橘坡分岔线</strong><small data-t="hillAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-watch" class="desk-entry watch-entry" type="button" hidden><svg class="icon"><use href="#i-chime"/></svg><span><strong data-t="watchTitle">雾班听测</strong><small data-t="watchAlbumLink">去风铃栈桥听一班雾里的回信。</small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
@@ -219,6 +241,7 @@
         <div id="hill-slip" hidden><div class="hill-slip-map"></div><div><span data-t="hillStub">橘子坡 · 留存票根</span><strong></strong><small></small><p></p></div></div>
         <div class="postscript" id="postscript" hidden><strong data-t="onTheBack">票根背面</strong><p id="postscript-text"></p><button id="alternate-route" type="button">寻找合印邮路</button><button id="read-ending" type="button" data-t="readEnding" hidden>展开两人的约定</button></div>
         <figure id="film-proof" hidden><figcaption data-t="contactTitle">这次冲印的接触样片</figcaption><div id="contact-sheet"></div></figure>
+        <p id="atlas-slip" hidden></p>
         <div id="editor" hidden><label for="message" data-t="writeLabel">写给收信人的话</label><textarea id="message" rows="3" maxlength="200"></textarea>
           <div class="edit-actions"><span data-t="noteLimit">限 200 字，留空恢复原文</span><button id="use-message" type="button" data-t="saveNote">保存寄语</button><button id="cancel-edit" type="button" data-t="cancel">取消</button></div>
         </div>
@@ -227,6 +250,8 @@
         <button id="receipt-watch" class="desk-entry watch-entry" type="button" hidden><svg class="icon"><use href="#i-chime"/></svg><span data-t="watchOpen">回风铃栈桥值雾班</span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-hill" class="desk-entry hill-entry" type="button" hidden><svg class="icon"><use href="#i-switchback"/></svg><span></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <p class="export-status"><span id="export-status" role="status"></span> <a id="export-link" data-t="openImage" hidden>打开图片</a></p>
+        <button id="receipt-atlas" class="desk-entry atlas-entry" type="button" hidden><svg class="icon"><use href="#i-atlas"/></svg><span data-t="atlasAgain"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
+        <button id="receipt-atlas-fork" class="desk-entry atlas-entry" type="button" hidden><svg class="icon"><use href="#i-undo"/></svg><span></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-duet" class="desk-entry duet-entry" type="button" hidden><svg class="icon"><use href="#i-duet"/></svg><span data-t="duetReturn"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <div class="receipt-footer"><button class="again" id="replay" type="button" data-t="replay">重走这段邮路</button><button class="primary" id="next" type="button"><span>下一站</span><svg class="icon"><use href="#i-next"/></svg></button></div>
       </div>
