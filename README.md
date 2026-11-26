@@ -16,6 +16,12 @@
 
 ![晒网台的曝光台，底片上已保存一曝，虚线显示它与当前光路的差别](./docs/tidewater-darkroom.webp)
 
+「邮路调度台」在末班渡船、雨巷里的邮戳、雾里第三盏灯复用已有的航图。从信夹进入，也可以在这三站的手记或回执上点「调度这条邮路」。转镜直航，或从四个锚形泊位中选两个租船接驳。每面偏离开班朝向的镜子计 1 工时，租船另计 3 工时。光走一格算一拍，接驳保持方向、瞬间过渡。雨巷仍要先盖邮戳，雾钟渡口以两封信中较晚的一封计时。[从末班渡船开始值班](./moon-mail/index.html#dispatch-ferry)
+
+每张工单同时限定用工和到站时刻。雾钟渡口的标准图可以用 3 工时走 14 拍，也可以用 5 工时赶到第 6 拍。试航后，航簿会留住各有优势的送法。点「叠图」对照光路，点「载入」从旧方案接着改。签完一站的所有委托可以读到值班员的手记。三档难度分别保存航簿和草稿。
+
+![雾钟渡口调度台，平衡班的旧航线叠在加急班的航图上，工时多一小时，两封信早四拍到齐](./docs/dispatch-desk.webp)
+
 点航图上的难度名或顶部「设置」即可换档。轻松档会先调好一部分镜片并标出下一步。标准档提供按需提示。挑战档每站都有独立的航图，须在最少步数内送达，撤销可以返还步数。各档独立保存路线、撤销记录与最佳步数。原版存档可在标准档继续。
 
 顶部的语言按钮可随时切换简体中文和 English。设置内可试听、静音或调节音量。转镜、邮戳、潮门、寄送和拆信等声音由浏览器实时合成。键盘可用 Tab 选中镜片后按空格或回车旋转。「信夹」可以选关、重读、改写寄语并导出 PNG。自写的寄语在切换语言和难度后保留。
@@ -24,9 +30,11 @@
 
 The final three postcards are made in the *Tidewater Darkroom*. Take two or three exposures on the same negative. Match each lettered site's layer count, keeping any zero targets clear. Tap a recorded shot to compare its route with the live beam. The developed postcard includes a contact sheet of your exposures. Expert counts every mirror turn across the whole negative.
 
+Open the **Dispatch desk** in the album to revisit The Last Ferry, A Postmark in the Rain and The Third Lamp. Charter a crossing between any two anchors or sail direct. A changed mirror costs one crew-hour, a charter costs three more, and a ferry crossing takes zero beats. Try the same delivery on a smaller crew or an earlier schedule. Log a sailing, overlay it on your next attempt, or reload it to explore another tradeoff. Sign every work order at a station to read the keeper’s note.
+
 ![雾钟渡口的航图，两束光穿过同一枚菱形邮戳，分别照到月亮和星星信箱](./docs/moon-mail.webp)
 
-在仓库根目录运行 `node --test` 可验证全部关卡的光路、曝光组合、存档恢复与提示（Node.js 18 及以上）。
+在仓库根目录运行 `node --test` 可验证全部关卡的光路、曝光组合、调度委托、存档恢复与提示（Node.js 18 及以上）。
 
 ## GitHub Pages
 

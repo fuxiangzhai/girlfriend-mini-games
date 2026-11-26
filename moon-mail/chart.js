@@ -30,22 +30,23 @@ function glyph(name, number) {
   return icon;
 }
 
-function axis(id, labels) {
-  document.getElementById(id).replaceChildren(...labels.map(label => {
+function axis(element, labels) {
+  element.replaceChildren(...labels.map(label => {
     const span = document.createElement("span");
     span.textContent = label;
     return span;
   }));
 }
 
-export function mountChart(board, onRotate, t) {
-  const chart = document.getElementById("chart");
-  const tiles = document.getElementById("tiles");
-  const beam = document.getElementById("beam");
-  const groups = [...beam.querySelectorAll(".beam-lines [data-ray]")];
-  const overlay = document.getElementById("film-overlay");
+export function mountChart(board, onRotate, t, options = {}) {
+  const part = id => options.root ? options.root.querySelector('[data-chart-part="' + id + '"]') : document.getElementById(id);
+  const chart = part("chart");
+  const tiles = part("tiles");
+  const beam = part("beam");
+  const groups = [...beam.querySelectorAll("[data-ray]")];
+  const overlay = part("film-overlay");
   overlay.replaceChildren();
-  const couriers = [document.getElementById("courier"), document.getElementById("star-courier")];
+  const couriers = [part("courier"), part("star-courier")];
   const paired = board.starSource !== undefined;
   groups.forEach(group => group.replaceChildren());
   const frame = chart.parentElement;
@@ -53,13 +54,14 @@ export function mountChart(board, onRotate, t) {
   frame.style.setProperty("--rows", board.height);
   beam.setAttribute("viewBox", [0, 0, board.width * 100, board.height * 100].join(" "));
   beam.setAttribute("preserveAspectRatio", "none");
-  axis("col-labels", Array.from({ length: board.width }, (_, i) => String.fromCharCode(65 + i)));
-  axis("row-labels", Array.from({ length: board.height }, (_, i) => i + 1));
+  axis(part("col-labels"), Array.from({ length: board.width }, (_, i) => String.fromCharCode(65 + i)));
+  axis(part("row-labels"), Array.from({ length: board.height }, (_, i) => i + 1));
 
   const cells = Array.from(board.tiles, (tile, cell) => {
     const index = board.mirrorAt.get(cell);
     const isMirror = index !== undefined;
-    const element = document.createElement(isMirror ? "button" : "span");
+    const berth = options.berths?.indexOf(cell) ?? -1;
+    const element = document.createElement(isMirror || berth >= 0 ? "button" : "span");
     const starDirection = starArrows.indexOf(tile);
     const direction = starDirection !== -1 ? starDirection : arrows.indexOf(tile);
     let name = features[tile] || "water";
@@ -69,11 +71,18 @@ export function mountChart(board, onRotate, t) {
     if (board.film && "abcd".includes(tile)) name = "sensor";
     if (isMirror) name = "mirror";
     if (isNumbered(tile)) name = "number";
+    if (berth >= 0) name = "berth";
     element.className = "tile " + name + (name === "number" ? " mark" : "");
     if (isMirror) {
       element.type = "button";
       element.dataset.mirror = index;
       element.addEventListener("click", () => onRotate(index));
+    } else if (berth >= 0) {
+      element.type = "button";
+      element.dataset.berth = berth;
+      element.setAttribute("aria-pressed", String(Boolean(options.selected & (1 << berth))));
+      element.setAttribute("aria-label", t("deskBerthAt", { cell: coordinate(board, cell) }));
+      element.addEventListener("click", () => options.onBerth(berth));
     } else if (name !== "water") {
       element.setAttribute("role", "img");
       const label = direction !== -1 ? t(starDirection !== -1 ? "starLampLabel" : "lampLabel", {direction: t(directions[direction])})
@@ -115,7 +124,10 @@ export function mountChart(board, onRotate, t) {
       mirror.classList.toggle("falling", falling);
       mirror.classList.toggle("hinted", index === hint);
       mirror.disabled = locked;
-      mirror.setAttribute("aria-label", t("mirrorLabel", {cell: coordinate(board, cell), slope: t(falling ? "falling" : "rising")}) + (index === hint ? t("hinted") : ""));
+      const realigned = options.trackInitial && Boolean((mask ^ board.initial) & (1 << index));
+      mirror.classList.toggle("realigned", Boolean(realigned));
+      mirror.setAttribute("aria-label", t("mirrorLabel", {cell: coordinate(board, cell), slope: t(falling ? "falling" : "rising")})
+        + (realigned ? t("deskShifted") : "") + (index === hint ? t("hinted") : ""));
     });
     board.marks.forEach(cell => {
       cells[cell].classList.toggle("lit", route.lit.has(cell));
@@ -134,7 +146,7 @@ export function mountChart(board, onRotate, t) {
       const name = board.tiles[cell].toUpperCase();
       cells[cell].setAttribute("aria-label", [coordinate(board, cell), t("sensorLabel", {name}), t(lit ? "lit" : "unlit")].join(" "));
     });
-    document.getElementById("route-description").textContent = route.rays.map((ray, i) => {
+    part("route-description").textContent = route.rays.map((ray, i) => {
       const boxCell = board.tiles.indexOf(i === 0 ? "M" : "S");
       cells[boxCell].classList.toggle("arrived", ray.end === "ready");
       const via = ray.turns.map(index => coordinate(board, board.mirrors[index]));
@@ -148,13 +160,16 @@ export function mountChart(board, onRotate, t) {
     }).join(" ");
   }
 
-  async function carryLetter() {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches || document.hidden) return;
+  let animation = 0;
+  async function carryLetter({ arrivals, signal, onBeat } = {}) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || document.hidden || signal?.aborted) return;
+    const version = ++animation;
     const journeys = groups.slice(0, paired ? 2 : 1).map((group, i) => {
       const parts = Array.from(group.querySelectorAll(".beam-core"), path => ({ path, length: path.getTotalLength() }));
       return { parts, courier: couriers[i], total: parts.reduce((sum, part) => sum + part.length, 0) };
     });
-    const duration = Math.min(1700, 520 + Math.max(...journeys.map(journey => journey.total)) * 0.6);
+    const lastBeat = arrivals ? Math.max(...arrivals) : 0;
+    const duration = lastBeat ? Math.min(1900, 180 * lastBeat) : Math.min(1700, 520 + Math.max(...journeys.map(journey => journey.total)) * 0.6);
     chart.classList.add("sending");
     journeys.forEach(({ courier }) => courier.removeAttribute("hidden"));
     try {
@@ -164,31 +179,37 @@ export function mountChart(board, onRotate, t) {
         function finish() {
           cancelAnimationFrame(frameId);
           document.removeEventListener("visibilitychange", visibility);
+          signal?.removeEventListener("abort", finish);
           resolve();
         }
         function visibility() { if (document.hidden) finish(); }
         function frame(now) {
           const progress = Math.min(1, (now - start) / duration);
-          for (const journey of journeys) moveEnvelope(journey, progress);
+          journeys.forEach((journey, i) => moveEnvelope(journey, lastBeat ? Math.min(1, progress * lastBeat / arrivals[i]) : progress));
+          if (lastBeat) onBeat?.(Math.floor(progress * lastBeat));
           if (progress === 1) finish();
           else frameId = requestAnimationFrame(frame);
         }
         document.addEventListener("visibilitychange", visibility);
+        signal?.addEventListener("abort", finish, { once: true });
         frame(start);
       });
     } finally {
-      journeys.forEach(({ courier }) => courier.setAttribute("hidden", ""));
-      chart.classList.remove("sending");
+      if (animation === version) {
+        journeys.forEach(({ courier }) => courier.setAttribute("hidden", ""));
+        chart.classList.remove("sending");
+      }
     }
   }
-  function compareExposure(ray) {
-    overlay.replaceChildren(...(ray?.lines ?? []).map(line => {
+  function compareRays(rays) {
+    overlay.replaceChildren(...rays.flatMap((ray, index) => ray.lines.map(line => {
       const path = document.createElementNS(svgNS, "polyline");
       path.setAttribute("points", line.map(([x, y]) => [x * 100, y * 100].join(",")).join(" "));
+      path.dataset.comparisonRay = index;
       return path;
-    }));
+    })));
   }
-  return { draw, carryLetter, compareExposure };
+  return { draw, carryLetter, compareRays, compareExposure: ray => compareRays(ray ? [ray] : []) };
 }
 
 function moveEnvelope({ courier, total, parts }, progress) {

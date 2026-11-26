@@ -7,6 +7,8 @@ import { coordinate, mountChart } from "./chart.js";
 import { postcardPNG } from "./postcard.js";
 import { prepareFilm, readFilm, restoreFilm, filmHint, isDevelopedFilm, shutter } from "./darkroom.mjs";
 import { showFilmTray, filmStatus, contactSheet, developPrint } from "./darkroom-ui.js";
+import { dispatchStations } from "./dispatch.mjs";
+import { createDispatchDesk } from "./dispatch-ui.js";
 
 const byId = id => document.getElementById(id);
 const pad = value => String(value).padStart(2, "0");
@@ -66,6 +68,7 @@ function cue(name) {
 const album = byId("album");
 const receipt = byId("receipt");
 const settings = byId("settings");
+const dispatchDesk = createDispatchDesk({ context: () => ({ language, t, difficulty }), read, write, cue, openSettings, switchLanguage });
 let active, board, chart, mask, path, history, sent, hint;
 let frames = [], reading;
 let compared = -1, justExposed = false;
@@ -176,7 +179,7 @@ function render() {
     });
     byId("joint-count").textContent = t("sealCount", {n: path.jointCount});
   }
-  for (const id of ["open-album", "open-settings", "mode-open", "language-switch"]) byId(id).disabled = sending;
+  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk"]) byId(id).disabled = sending;
 }
 
 function openRoute(index, fresh = false, requestedGoal) {
@@ -219,6 +222,7 @@ function presentRoute() {
   byId("place").textContent = letter.place;
   byId("time").textContent = letter.time;
   byId("brief").textContent = difficulty === "expert" ? letter.expertNote : letter.brief;
+  byId("station-desk").hidden = !dispatchStations.includes(letter.id);
   const paired = board.starSource !== undefined;
   const film = Boolean(board.film);
   byId("goals").hidden = byId("ray-key").hidden = !paired;
@@ -433,6 +437,9 @@ function showAlbum(selectedChapter = letters[active].chapter) {
   album.showModal();
 }
 byId("open-album").addEventListener("click", () => showAlbum());
+byId("station-desk").addEventListener("click", () => { cue("paper"); dispatchDesk.open(letters[active].id); });
+byId("receipt-desk").addEventListener("click", () => { cue("paper"); dispatchDesk.open(letters[viewed].id); });
+byId("album-desk").addEventListener("click", () => { cue("paper"); dispatchDesk.open(); });
 for (const tab of byId("chapters").querySelectorAll("button")) {
   tab.addEventListener("click", () => { chapter = tab.dataset.chapter; cue("paper"); fillAlbum(); });
 }
@@ -458,6 +465,7 @@ function clearExport() {
 
 function setEditing(value) {
   byId("editor").hidden = !value;
+  byId("receipt-desk").hidden = value || !dispatchStations.includes(letters[viewed].id);
   byId("letter-text").hidden = value;
   byId("postscript").hidden = value || letters[viewed].chapter !== "together";
   byId("film-proof").hidden = value || !byId("contact-sheet").firstElementChild;
@@ -581,14 +589,22 @@ function applyLanguage() {
   byId("language-switch").lang = language === "zh" ? "en" : "zh-CN";
   sound.refreshLabel();
 }
-byId("language-switch").addEventListener("click", () => {
+function switchLanguage() {
   language = language === "zh" ? "en" : "zh";
   write("language", language);
   applyLanguage();
   presentRoute();
-});
+  if (album.open) fillAlbum();
+  if (receipt.open) showReceipt(viewed, false);
+  dispatchDesk.refresh();
+}
+byId("language-switch").addEventListener("click", switchLanguage);
 
 function openSettings(focusMode = false) {
+  const inDesk = byId("dispatch-desk").open;
+  for (const mode of difficulties) {
+    settings.querySelector('[data-t="' + mode + 'Help"]').textContent = t(inDesk ? "deskMode_" + mode : mode + "Help");
+  }
   const selected = settings.querySelector('input[value="' + difficulty + '"]');
   selected.checked = true;
   settings.showModal();
@@ -603,6 +619,10 @@ for (const radio of settings.querySelectorAll('input[name="difficulty"]')) {
     difficulty = radio.value;
     write("difficulty", difficulty);
     openRoute(active);
+    if (album.open) fillAlbum();
+    if (receipt.open && !delivered(viewed)) receipt.close();
+    else if (receipt.open) showReceipt(viewed, false);
+    dispatchDesk.refresh();
   });
 }
 function setVolume(percent) {
@@ -634,3 +654,4 @@ window.addEventListener("storage", event => {
 const linked = location.hash.slice(1);
 const savedStation = letters.some(letter => letter.id === linked) ? linked : read("active");
 openRoute(Math.max(0, letters.findIndex(letter => letter.id === savedStation)));
+if (dispatchStations.some(id => linked === "dispatch-" + id)) dispatchDesk.open(linked.slice("dispatch-".length));

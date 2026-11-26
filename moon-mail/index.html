@@ -45,6 +45,8 @@
         <symbol id="g-jointSeal" viewBox="0 0 64 64"><path d="m32 4 27 28-27 28L5 32Z" fill="#23474d" stroke="currentColor" stroke-width="3"/><path d="m32 11 20 21-20 21-20-21Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="3 3"/><path d="M28 21a10 10 0 1 0 7 16c-7 1-12-6-7-16Z" fill="#ffda91"/><path d="m38 23 1.8 4.5 4.9.6-3.7 3.1 1 4.8-4-2.6-4.2 2.6 1-4.8-3.8-3.1 4.9-.6Z" fill="#a0eedc"/></symbol>
         <symbol id="g-filmCamera" viewBox="0 0 64 64"><path d="M9 24h11l4-7h16l4 7h11v27H9Z" fill="#54747b" stroke="#e3dfc3" stroke-width="2.5"/><circle cx="32" cy="37" r="12" fill="#173b45" stroke="#f4d798" stroke-width="2.5"/><circle cx="32" cy="37" r="6" fill="#9cd0cf"/><path d="M45 29h5" stroke="#f9ce99" stroke-width="3"/></symbol>
         <symbol id="g-sensor" viewBox="0 0 64 64"><rect x="11" y="11" width="42" height="42" rx="6" fill="currentColor"/><rect x="15" y="15" width="34" height="34" rx="3" fill="none" stroke="#345259" stroke-width="1.7" stroke-dasharray="4 2"/></symbol>
+        <symbol id="g-berth" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="10" width="44" height="44" rx="10" stroke-width="2" stroke-dasharray="4 4"/><path d="M32 23v21m-7-13h14m-19 4c1 6 6 9 12 10 6-1 11-4 12-10m-23 1-1-2-2 3m25-1 1-2 2 3" stroke-width="2.8"/><circle cx="32" cy="21" r="3.3" stroke-width="2.4"/></g></symbol>
+        <symbol id="i-anchor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M12 7v14M8 11h8M3 14c1 4 4 6 9 7 5-1 8-3 9-7m-20 2 2-3 3 2m12 0 3-2 2 3"/></symbol>
         <symbol id="i-camera" viewBox="0 0 24 24"><path d="M2.5 8h4l2-3h7l2 3h4v12h-19Z"/><circle cx="12" cy="13.5" r="3.5"/></symbol>
       </defs>
     </svg>
@@ -118,6 +120,7 @@
             </div>
           </article>
           <section class="brief" aria-labelledby="brief-title"><h3 id="brief-title" data-t="fieldNotes">投递手记</h3><p id="brief">今晚的第一封信从这里出发。点一下海面上的圆镜，让月光拐向信箱。</p></section>
+          <button id="station-desk" class="desk-entry" type="button" aria-haspopup="dialog" aria-controls="dispatch-desk" hidden><svg class="icon"><use href="#i-anchor"/></svg><span data-t="deskLocal">调度这条邮路</span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
           <details class="guide" id="guide"><summary><svg class="icon"><use href="#i-book"/></svg><strong data-t="guide">航图图例与玩法</strong><span aria-hidden="true">⌄</span></summary>
             <div class="legend">
               <span><svg><use href="#g-lamp"/></svg><b data-t="moon">月光源</b></span><span class="bay-symbol" hidden><svg><use href="#g-starLamp"/></svg><b data-t="starLamp">星光源</b></span>
@@ -137,6 +140,7 @@
       <div class="dialog-head"><div><h2 id="album-title" data-t="album">明信片夹</h2><p id="album-summary"></p></div><button class="close" type="button" data-aria="close" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
       <div id="chapters" class="chapters" role="group" data-aria="chapters"><button type="button" data-chapter="coast"><span data-t="coast">沿海夜邮</span> <small>6</small></button><button type="button" data-chapter="replies"><span data-t="replies">回信篇</span> <small>3</small></button><button type="button" data-chapter="together"><span data-t="together">两岸合邮</span> <small>3</small></button><button type="button" data-chapter="darkroom"><span data-t="darkroom">潮汐暗房</span> <small>3</small></button></div>
       <div id="album-grid" class="album-grid"></div>
+      <button id="album-desk" class="desk-entry" type="button" aria-haspopup="dialog" aria-controls="dispatch-desk"><svg class="icon"><use href="#i-anchor"/></svg><span><strong data-t="deskTitle">邮路调度台</strong><small data-t="deskAlbumLink">回到熟悉的渡口，试试另一种送法。</small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <section id="appointment" class="ticket" aria-labelledby="appointment-title" tabindex="-1" hidden>
         <div class="ticket-heading"><h3 id="appointment-title" data-t="appointment">两人的约定</h3><span id="appointment-count"></span></div>
         <dl id="ticket-pieces"></dl>
@@ -154,8 +158,47 @@
           <div class="edit-actions"><span data-t="noteLimit">限 200 字，留空恢复原文</span><button id="use-message" type="button" data-t="saveNote">保存寄语</button><button id="cancel-edit" type="button" data-t="cancel">取消</button></div>
         </div>
         <div class="keepsakes"><button id="edit-message" type="button"><svg class="icon"><use href="#i-edit"/></svg><span data-t="edit">改写寄语</span></button><button id="save-image" type="button"><svg class="icon"><use href="#i-save"/></svg><span data-t="saveImage">保存图片</span></button></div>
+        <button id="receipt-desk" class="desk-entry" type="button" aria-haspopup="dialog" aria-controls="dispatch-desk" hidden><svg class="icon"><use href="#i-anchor"/></svg><span data-t="deskLocal">调度这条邮路</span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <p class="export-status"><span id="export-status" role="status"></span> <a id="export-link" data-t="openImage" hidden>打开图片</a></p>
         <div class="receipt-footer"><button class="again" id="replay" type="button" data-t="replay">重走这段邮路</button><button class="primary" id="next" type="button"><span>下一站</span><svg class="icon"><use href="#i-next"/></svg></button></div>
+      </div>
+    </dialog>
+    <dialog id="dispatch-desk" aria-labelledby="desk-title">
+      <header class="desk-header">
+        <div class="desk-heading"><svg class="icon"><use href="#i-anchor"/></svg><h2 id="desk-title" data-t="deskTitle">邮路调度台</h2></div>
+        <div class="desk-preferences"><button id="desk-mode" type="button" aria-haspopup="dialog"><svg class="icon"><use href="#i-settings"/></svg><span></span></button><button id="desk-language" type="button" data-aria="switchLanguage" data-t="otherLanguage">English</button><button id="desk-close" class="close" type="button" data-aria="close"><svg class="icon"><use href="#i-close"/></svg></button></div>
+      </header>
+      <div class="desk-manifest">
+        <label for="desk-station" data-t="deskStation">值班渡口</label><select id="desk-station"></select>
+        <span id="desk-certified"></span>
+      </div>
+      <div class="desk-layout">
+        <section class="desk-bench" aria-labelledby="desk-orders-title">
+          <h3 id="desk-orders-title" data-t="deskOrders">本班委托</h3>
+          <div id="desk-orders" role="group" data-aria="deskOrders"></div>
+          <div class="desk-board">
+            <div class="desk-meters"><span><small data-t="deskHours">用工</small><b id="desk-hours"></b></span><span><small data-t="deskBeats">到站</small><b id="desk-beats"></b></span></div>
+            <div class="desk-breakdown"><span id="desk-work"></span><span id="desk-arrivals"></span></div>
+            <div class="chart-frame">
+              <div class="col-labels" data-chart-part="col-labels" aria-hidden="true"></div><div class="row-labels" data-chart-part="row-labels" aria-hidden="true"></div>
+              <div class="chart" data-chart-part="chart" role="group" data-aria="deskChart" aria-describedby="desk-description">
+                <svg class="desk-beam" data-chart-part="beam" aria-hidden="true"><g class="desk-ghost" data-chart-part="film-overlay"></g><g class="desk-lines"><g data-ray="moon"></g><g data-ray="star"></g></g><g class="courier" data-chart-part="courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g><g class="courier" data-chart-part="star-courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g></svg>
+                <div class="tiles" data-chart-part="tiles"></div>
+              </div>
+            </div>
+            <p id="desk-description" data-chart-part="route-description" class="sr-only"></p>
+            <div class="desk-crossing"><svg class="icon"><use href="#i-anchor"/></svg><span id="desk-pair"></span><button id="desk-recall" type="button" data-t="deskRecall">收船</button></div>
+            <p id="desk-status" role="status"></p>
+            <div class="desk-actions"><div class="chart-tools"><button id="desk-undo" type="button"><svg class="icon"><use href="#i-undo"/></svg><span data-t="undo">撤销</span></button><button id="desk-reset" type="button"><svg class="icon"><use href="#i-reset"/></svg><span data-t="reset">重来</span></button><button id="desk-hint" type="button"><svg class="icon"><use href="#i-hint"/></svg><span data-t="hint">提示</span></button></div><button id="desk-log" class="dispatch" type="button"><svg class="icon"><use href="#i-book"/></svg><span data-t="deskLog">试航登记</span></button></div>
+          </div>
+        </section>
+        <aside class="desk-ledger" data-aria="deskLedger">
+          <figure class="desk-postcard"><img id="desk-art" width="625" height="415" alt=""><figcaption><span id="desk-place"></span><time id="desk-time"></time></figcaption></figure>
+          <p id="desk-brief"></p>
+          <section class="desk-shelf" aria-labelledby="desk-shelf-title"><h3 id="desk-shelf-title" data-t="deskLedger">我的航簿</h3><p id="desk-empty" data-t="deskEmpty">试航后，能省工或更早到站的方案会留在这里。</p><div id="desk-records"></div><p id="desk-delta" hidden></p></section>
+          <section id="desk-letter" hidden><h3 data-t="deskLetter">值班手记</h3><p></p></section>
+          <details id="desk-guide"><summary data-t="deskGuide">调度台使用说明</summary><p data-t="deskGuideBerths"></p><p data-t="deskGuideScores"></p><p data-t="deskGuideModes"></p></details>
+        </aside>
       </div>
     </dialog>
     <dialog id="settings" aria-labelledby="settings-title">
