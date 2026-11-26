@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183e35">
+  <meta name="description" content="一间给两个人的彩绘玻璃工坊。拼合四季花窗，收藏日光里的十六个小故事。">
+  <title>借一束光 · 花窗工坊</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./studio.css">
+  <script type="module" src="./studio.mjs"></script>
+</head>
+<body>
+  <header class="mast">
+    <div class="mast-in">
+      <a class="brand" href="#bench" id="brand"><span class="brand-seal" data-icon="window"></span>花窗工坊</a>
+      <nav class="tabs" aria-label="工坊导航">
+        <button type="button" id="nav-bench" aria-current="page">工作台</button>
+        <button type="button" id="nav-book">花窗册</button>
+      </nav>
+      <div class="mast-end">
+        <a href="../index.html" class="home" id="home" aria-label="返回小游戏首页"><span data-icon="back"></span><span>小游戏首页</span></a>
+        <button type="button" class="sound round" id="sound" aria-label="工坊音效" aria-pressed="true"></button>
+      </div>
+    </div>
+  </header>
+  <main class="shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <div class="hero-name" lang="en">Petal Panes</div>
+        <h1 id="page-title">借一束光</h1>
+        <p id="hero-line">把彩色玻璃拼成花窗，留一束光给喜欢的人。</p>
+      </div>
+    </header>
+
+    <section id="bench" aria-label="花窗工作台">
+      <div class="workbench">
+        <section class="work-card">
+          <div class="work-heading">
+            <div class="heading-group">
+              <p class="overline" id="chapter-label"></p>
+              <h2 id="level-title"></h2>
+            </div>
+            <button type="button" class="subtle" id="guide"><span data-icon="guide"></span>玩法</button>
+          </div>
+          <div class="mat" id="mat">
+            <span class="screw nw" aria-hidden="true"></span><span class="screw ne" aria-hidden="true"></span>
+            <span class="screw sw" aria-hidden="true"></span><span class="screw se" aria-hidden="true"></span>
+            <div class="board" id="board">
+              <div id="col-labels" class="coordinates horizontal" aria-hidden="true"></div>
+              <div id="row-labels" class="coordinates vertical" aria-hidden="true"></div>
+              <svg id="drawing" aria-hidden="true" focusable="false"></svg>
+              <div class="hit-grid" id="hit-grid" role="group" aria-label="花窗格，方向键移动，空格或回车嵌入"></div>
+            </div>
+          </div>
+          <p class="live-message" id="message" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div class="board-tools">
+            <div class="board-actions">
+              <button type="button" class="subtle" id="undo"><span data-icon="undo"></span>撤销</button>
+              <button type="button" class="subtle" id="reset"><span data-icon="reset"></span>重拼</button>
+            </div>
+            <button type="button" class="hint-btn" id="hint"><span data-icon="hint"></span><span id="hint-label">看一步提示</span></button>
+          </div>
+        </section>
+
+        <aside class="tools-column">
+          <section class="tray-card">
+            <div class="tray-title"><h2><span data-icon="tray"></span>玻璃托盘</h2><span id="counter"></span></div>
+            <p class="instruction" id="instruction"></p>
+            <div class="pieces" id="pieces" role="group" aria-label="选择玻璃"></div>
+            <div class="shape-actions">
+              <button type="button" id="turn"><span data-icon="rotate"></span>旋转</button>
+              <button type="button" id="flip" hidden><span data-icon="flip"></span>翻面</button>
+            </div>
+            <div class="objective" id="objective" hidden></div>
+          </section>
+          <section class="note-card">
+            <div class="note-illustration"><img src="./art/daisy.webp" alt="" id="note-art"></div>
+            <div><h3>窗边来信</h3><p id="request"></p></div>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <section id="book" hidden aria-labelledby="book-heading">
+      <div class="book-heading">
+        <div><h2 id="book-heading">我的花窗册</h2><p id="collection-count"></p></div>
+        <button type="button" class="secondary" id="daily"><span data-icon="calendar"></span>今日图纸</button>
+      </div>
+      <div class="chapter-tabs" id="chapter-tabs" role="group" aria-label="按花选择章节"></div>
+      <div class="folio">
+        <figure class="folio-art">
+          <div class="print" id="folio-print"></div>
+          <figcaption><strong id="flower-name"></strong><i lang="la" id="latin"></i></figcaption>
+        </figure>
+        <div class="folio-list">
+          <div class="folio-head"><h3 id="chapter-title"></h3><span id="chapter-count"></span></div>
+          <p id="chapter-note"></p>
+          <div id="level-list"></div>
+          <details id="letters" hidden><summary id="letters-title">重读回信</summary><div id="letter-pages"></div></details>
+        </div>
+      </div>
+    </section>
+    <noscript>请开启 JavaScript，进入花窗工作台。</noscript>
+  </main>
+
+  <dialog id="guide-dialog" class="dialog">
+    <div class="dialog-inner">
+      <button type="button" class="round close" data-close aria-label="关闭玩法"><span data-icon="close"></span></button>
+      <p class="overline">工坊手册</p><h2>怎样拼一扇窗</h2>
+      <div class="guide-list">
+        <div><span data-icon="pin"></span><p><strong>让圆钉落在选中的格子</strong>先点托盘里的一片玻璃，再点窗格。也可以直接拖进去。</p></div>
+        <div><span data-icon="rotate"></span><p><strong>转个角度再试试</strong>玻璃要填满浅色窗格。点已嵌的玻璃可取回，随时都能撤销。</p></div>
+        <div><span data-icon="star"></span><p><strong>给作品加一枚金印</strong>遇见四角星时，让任意玻璃的圆钉正好落在星上。金印是额外挑战。</p></div>
+        <div><span data-icon="leaf"></span><p><strong>认花纹，巧翻面</strong>第二章要让玻璃对上刻纹。第三章可把玻璃翻到背面。第四章的金边铅条会隔开窗格，整片玻璃不能跨过它。</p></div>
+      </div>
+      <p class="keys">键盘操作：数字键选片，方向键选格，空格嵌入。R 旋转，F 翻面，Z 撤销。</p>
+      <button type="button" class="primary" data-close>回到工作台</button>
+    </div>
+  </dialog>
+  <dialog id="result-dialog" class="dialog result-dialog">
+    <div class="result-art print" id="result-print"></div>
+    <div class="dialog-inner">
+      <button type="button" class="round close" data-close aria-label="关闭完成页"><span data-icon="close"></span></button>
+      <p class="overline" id="result-kicker"></p><h2 id="result-title"></h2>
+      <p class="result-story" id="result-story"></p>
+      <p class="result-progress" id="result-progress"></p>
+      <div class="result-actions"><button type="button" class="primary" id="next"></button><button type="button" class="secondary" id="result-book">看花窗册</button><button type="button" class="subtle" id="retry-gold" hidden>重拼金印</button></div>
+    </div>
+  </dialog>
+</body>
+</html>

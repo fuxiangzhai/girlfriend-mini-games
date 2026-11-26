@@ -28,7 +28,19 @@ button:focus-visible { outline: 3px solid #f5ee7d; outline-offset: 4px; }
 .sound-button { min-height: 40px; color: #e8dbff; background: #2d2042; border-color: #4a3864; }
 .sound-note { width: 16px; display: inline-block; color: #d2aaff; font-size: 1.16rem; line-height: 1; }
 .sound-button[aria-pressed="false"] .sound-note { text-decoration: line-through; }
-.intro { padding: 34px 0 25px; }
+.intro { position: relative; padding: 34px 0 25px; }
+.studio-entry { position: absolute; right: 0; bottom: 28px; display: inline-flex; align-items: center; gap: 12px; padding: 8px 13px 8px 9px; border: 1px solid #8a9582; border-radius: 11px; color: #fcf2cf; background: #29483f; text-decoration: none; }
+.studio-entry img { border-radius: 16px 16px 3px 3px; object-fit: cover; }
+.studio-entry small,.studio-entry strong { display: block; }
+.studio-entry small { font-size: .71rem; color: #d7e4ce; }
+.studio-entry strong { margin-top: 1px; font-size: 1rem; letter-spacing: .1em; }
+.studio-entry:hover { background: #385d4e; }
+.studio-entry:focus-visible { outline: 3px solid #f5ee7d; outline-offset: 3px; }
+@media (max-width: 600px) {
+  .studio-entry { position: static; margin-top: 12px; gap: 9px; padding: 5px 10px 5px 6px; }
+  .studio-entry img { width: 33px; height: 35px; }
+  .studio-entry span:nth-child(2) { display: flex; align-items: baseline; gap: 7px; flex-direction: row-reverse; }
+}
 .eyebrow { display: inline-flex; align-items: center; gap: 7px; color: #dbc0ff; font-size: .88rem; font-weight: 800; letter-spacing: .13em; }
 .eyebrow span { color: #eba2fe; font-size: 1rem; }
 h1, h2, h3, p { margin: 0; }
