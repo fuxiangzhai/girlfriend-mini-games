@@ -9,6 +9,7 @@ import { prepareFilm, readFilm, restoreFilm, filmHint, isDevelopedFilm, shutter 
 import { showFilmTray, filmStatus, contactSheet, developPrint } from "./darkroom-ui.js";
 import { dispatchStations } from "./dispatch.mjs";
 import { createDispatchDesk } from "./dispatch-ui.js";
+import { createFogWatch, watchSlip } from "./fogwatch-ui.js";
 
 const byId = id => document.getElementById(id);
 const pad = value => String(value).padStart(2, "0");
@@ -69,17 +70,22 @@ const album = byId("album");
 const receipt = byId("receipt");
 const settings = byId("settings");
 const dispatchDesk = createDispatchDesk({ context: () => ({ language, t, difficulty }), read, write, cue, openSettings, switchLanguage });
+const pier = letters.findIndex(letter => letter.id === "chimes");
+const fog = createFogWatch({ letter: letters[pier], read, write, cue, delivered: updateCount, openReceipt: record => showReceipt(pier, true, record) });
+let onWatch = false;
 let active, board, chart, mask, path, history, sent, hint;
 let frames = [], reading;
 let compared = -1, justExposed = false;
 let chapter = "coast";
 let sending = false;
 let viewed = 0;
+let receiptWatch;
 let exportVersion = 0;
 let exportURL;
 
 function delivered(index) {
-  return bestFor(index) !== null || (letters[index].chapter === "together" && bestFor(index, "joint") !== null);
+  return bestFor(index) !== null || (letters[index].chapter === "together" && bestFor(index, "joint") !== null)
+    || (index === pier && Boolean(fog.latest(difficulty)));
 }
 function hasImprint(index) { return read(routeKey(index, "imprint")) === true; }
 const meetingStops = letters.map((letter, index) => ({letter, index})).filter(stop => stop.letter.chapter === "together");
@@ -141,8 +147,6 @@ function render() {
   byId("moves").textContent = pad(turns());
   byId("budget").textContent = board.budget === null ? "" : " / " + pad(board.budget);
   byId("turn-counter").title = board.budget === null ? t("turns") : t("budgetAccess", {used: turns(), total: board.budget});
-  byId("mode-label").textContent = t(difficulty);
-  byId("mode-open").setAttribute("aria-label", t("modeControl", {mode: t(difficulty)}));
   const counter = byId("mark-count");
   counter.hidden = board.marks.length === 0;
   counter.textContent = t("stamps") + " " + (board.sealOrder.length
@@ -179,10 +183,12 @@ function render() {
     });
     byId("joint-count").textContent = t("sealCount", {n: path.jointCount});
   }
-  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk"]) byId(id).disabled = sending;
+  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter"]) byId(id).disabled = sending;
 }
 
-function openRoute(index, fresh = false, requestedGoal) {
+function openRoute(index, fresh = false, requestedGoal, watch = false) {
+  if (onWatch) fog.leave();
+  onWatch = index === pier && watch;
   active = index;
   const letter = letters[index];
   const paired = letter.chapter === "together";
@@ -206,8 +212,9 @@ function openRoute(index, fresh = false, requestedGoal) {
   write("active", letter.id);
   delete byId("chart").dataset.focus;
   const fragment = location.hash.slice(1);
-  if (fragment && fragment !== letter.id && letters.some(station => station.id === fragment)) {
-    try { window.history.replaceState(null, "", "#" + letter.id); } catch { /* Optional shortcut in local files. */ }
+  const target = onWatch ? "chimes-watch" : letter.id;
+  if (fragment !== target && (onWatch || fragment === "chimes-watch" || letters.some(station => station.id === fragment))) {
+    try { window.history.replaceState(null, "", "#" + target); } catch { /* Optional shortcut in local files. */ }
   }
   if (fresh) saveDraft();
   presentRoute();
@@ -221,22 +228,35 @@ function presentRoute() {
   byId("station-title").textContent = letter.title;
   byId("place").textContent = letter.place;
   byId("time").textContent = letter.time;
-  byId("brief").textContent = difficulty === "expert" ? letter.expertNote : letter.brief;
+  byId("brief").textContent = onWatch ? t("watchBrief") : difficulty === "expert" ? letter.expertNote : letter.brief;
+  const chartPanel = document.querySelector(".chart-panel");
+  chartPanel.classList.toggle("on-watch", onWatch);
+  byId("watch-switch").hidden = active !== pier;
+  byId("watch-normal").setAttribute("aria-pressed", String(!onWatch));
+  byId("watch-enter").setAttribute("aria-pressed", String(onWatch));
+  for (const id of ["watch-head", "watch-panel", "watch-book"]) byId(id).hidden = !onWatch;
+  byId("guide").hidden = onWatch;
+  byId("chart").setAttribute("aria-label", t(onWatch ? "watchChartAccess" : "chartAccess"));
+  byId("mode-label").textContent = t(difficulty);
+  byId("mode-open").setAttribute("aria-label", t("modeControl", { mode: t(difficulty) }));
   byId("station-desk").hidden = !dispatchStations.includes(letter.id);
   const paired = board.starSource !== undefined;
   const film = Boolean(board.film);
   byId("goals").hidden = byId("ray-key").hidden = !paired;
   byId("film-tray").hidden = !film;
   byId("send").classList.remove("suggested");
-  byId("chart-title").querySelector("span").textContent = t(film ? "filmChart" : "chart");
-  byId("chart-title").querySelector("use").setAttribute("href", film ? "#i-camera" : "#i-compass");
+  byId("chart-title").querySelector("span").textContent = t(onWatch ? "watchTitle" : film ? "filmChart" : "chart");
+  byId("chart-title").querySelector("use").setAttribute("href", onWatch ? "#i-chime" : film ? "#i-camera" : "#i-compass");
   document.querySelector(".chart-panel").classList.toggle("darkroom-chart", film);
   for (const key of document.querySelectorAll(".bay-symbol")) key.hidden = !paired;
   for (const key of document.querySelectorAll(".single-symbol")) key.hidden = paired || film;
   for (const key of document.querySelectorAll(".film-symbol")) key.hidden = !film;
   byId("guide-instructions").textContent = t(film ? "filmGuide" : paired ? "pairInstructions" : "instructions");
-  chart = mountChart(board, rotate, t);
-  render();
+  if (onWatch) fog.mount(difficulty, t);
+  else {
+    chart = mountChart(board, rotate, t);
+    render();
+  }
   updateCount();
 }
 
@@ -365,6 +385,7 @@ byId("send").addEventListener("click", async () => {
 });
 
 function fillAlbum() {
+  byId("album-watch").hidden = chapter !== "replies";
   const count = savedCount();
   byId("album-summary").textContent = t(count === letters.length ? "albumComplete" : "albumSummary", {mode: t(difficulty), done: count, total: letters.length});
   for (const tab of byId("chapters").querySelectorAll("button")) tab.setAttribute("aria-pressed", String(tab.dataset.chapter === chapter));
@@ -386,6 +407,7 @@ function fillAlbum() {
     title.textContent = pad(index + 1) + " · " + letter.title;
     const status = document.createElement("small");
     status.textContent = best !== null ? t(best === 1 ? "albumBestOne" : "albumBest", {n: best}) : t(active === index ? "inProgress" : "visit");
+    if (index === pier && wasDelivered && best === null) status.textContent = t("watchDelivered");
     button.append(image, title, status);
     if (station.chapter === "together") {
       const jointBest = bestFor(index, "joint");
@@ -437,6 +459,17 @@ function showAlbum(selectedChapter = letters[active].chapter) {
   album.showModal();
 }
 byId("open-album").addEventListener("click", () => showAlbum());
+function openWatchFromBook() {
+  if (album.open) album.close();
+  if (receipt.open) receipt.close();
+  cue("paper");
+  openRoute(pier, false, undefined, true);
+  byId("watch-shift").focus();
+}
+byId("album-watch").addEventListener("click", openWatchFromBook);
+byId("receipt-watch").addEventListener("click", openWatchFromBook);
+byId("watch-enter").addEventListener("click", () => { if (!onWatch && !sending) { cue("paper"); openRoute(pier, false, undefined, true); } });
+byId("watch-normal").addEventListener("click", () => { if (onWatch) { cue("paper"); openRoute(pier); } });
 byId("station-desk").addEventListener("click", () => { cue("paper"); dispatchDesk.open(letters[active].id); });
 byId("receipt-desk").addEventListener("click", () => { cue("paper"); dispatchDesk.open(letters[viewed].id); });
 byId("album-desk").addEventListener("click", () => { cue("paper"); dispatchDesk.open(); });
@@ -465,6 +498,8 @@ function clearExport() {
 
 function setEditing(value) {
   byId("editor").hidden = !value;
+  byId("receipt-watch").hidden = value || viewed !== pier;
+  byId("watch-slip").hidden = value || !receiptWatch;
   byId("receipt-desk").hidden = value || !dispatchStations.includes(letters[viewed].id);
   byId("letter-text").hidden = value;
   byId("postscript").hidden = value || letters[viewed].chapter !== "together";
@@ -477,8 +512,9 @@ function setEditing(value) {
   }
 }
 
-function showReceipt(index, rustle = true) {
+function showReceipt(index, rustle = true, record) {
   viewed = index;
+  receiptWatch = index === pier ? record ?? fog.latest(difficulty) : null;
   const letter = localLetter(letters[index], language);
   if (rustle) cue("paper");
   clearExport();
@@ -488,6 +524,10 @@ function showReceipt(index, rustle = true) {
   byId("receipt-image").alt = letter.artAlt;
   byId("receipt-title").textContent = letter.title;
   byId("letter-text").textContent = messageFor(index);
+  if (receiptWatch) {
+    byId("watch-slip").querySelector("p").textContent = t("watchStory");
+    byId("watch-slip").querySelector("small").textContent = watchSlip(t, receiptWatch.shift, receiptWatch);
+  }
   const proof = byId("contact-sheet");
   proof.replaceChildren();
   if (letter.plate) {
@@ -507,7 +547,7 @@ function updateReceiptRoutes() {
   const paired = station.chapter === "together";
   const goal = paired && read(routeKey(viewed, "goal")) === "joint" ? "joint" : "direct";
   const draft = read(routeKey(viewed, "route", goal));
-  const resume = (paired || Boolean(station.plate)) && draft?.sent === false && draft.history?.length > 0;
+  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty))) && draft?.sent === false && draft.history?.length > 0;
   byId("replay").textContent = t(resume ? "continueRoute" : "replay");
   byId("replay").dataset.resume = String(resume);
   if (!paired) return;
@@ -548,7 +588,9 @@ byId("save-image").addEventListener("click", async () => {
   byId("export-status").textContent = t("printing");
   try {
     const letter = localLetter(letters[index], language);
-    const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, hasImprint(index) ? letter.postscript : undefined, byId("contact-sheet").firstElementChild);
+    const last = receiptWatch;
+    const back = last ? t("watchStory") + "\n" + watchSlip(t, last.shift, last) : hasImprint(index) ? letter.postscript : undefined;
+    const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, back, byId("contact-sheet").firstElementChild, last ? "watchSlipTitle" : "onTheBack");
     if (version !== exportVersion || !receipt.open) return;
     exportURL = URL.createObjectURL(blob);
     const download = document.createElement("a");
@@ -595,7 +637,7 @@ function switchLanguage() {
   applyLanguage();
   presentRoute();
   if (album.open) fillAlbum();
-  if (receipt.open) showReceipt(viewed, false);
+  if (receipt.open) showReceipt(viewed, false, receiptWatch);
   dispatchDesk.refresh();
 }
 byId("language-switch").addEventListener("click", switchLanguage);
@@ -603,7 +645,7 @@ byId("language-switch").addEventListener("click", switchLanguage);
 function openSettings(focusMode = false) {
   const inDesk = byId("dispatch-desk").open;
   for (const mode of difficulties) {
-    settings.querySelector('[data-t="' + mode + 'Help"]').textContent = t(inDesk ? "deskMode_" + mode : mode + "Help");
+    settings.querySelector('[data-t="' + mode + 'Help"]').textContent = t(inDesk ? "deskMode_" + mode : onWatch ? "watchMode_" + mode : mode + "Help");
   }
   const selected = settings.querySelector('input[value="' + difficulty + '"]');
   selected.checked = true;
@@ -618,7 +660,7 @@ for (const radio of settings.querySelectorAll('input[name="difficulty"]')) {
     if (!radio.checked || difficulty === radio.value) return;
     difficulty = radio.value;
     write("difficulty", difficulty);
-    openRoute(active);
+    openRoute(active, false, undefined, onWatch);
     if (album.open) fillAlbum();
     if (receipt.open && !delivered(viewed)) receipt.close();
     else if (receipt.open) showReceipt(viewed, false);
@@ -642,6 +684,12 @@ setVolume(Number.isInteger(savedVolume) && savedVolume >= 0 && savedVolume <= 10
 applyLanguage();
 window.addEventListener("pageshow", updateCount);
 window.addEventListener("storage", event => {
+  if (event.key === prefix + "watch.v1." + difficulty + ".last") {
+    updateCount();
+    if (album.open) fillAlbum();
+    if (receipt.open && viewed === pier && !receiptWatch && byId("editor").hidden) showReceipt(viewed, false);
+    return;
+  }
   if (!event.key?.startsWith(prefix) || !/\.(best|imprint)$/.test(event.key)) return;
   const key = event.key.slice(prefix.length);
   const previous = memory.get(key);
@@ -652,6 +700,6 @@ window.addEventListener("storage", event => {
   if (receipt.open) updateReceiptRoutes();
 });
 const linked = location.hash.slice(1);
-const savedStation = letters.some(letter => letter.id === linked) ? linked : read("active");
-openRoute(Math.max(0, letters.findIndex(letter => letter.id === savedStation)));
+const savedStation = linked === "chimes-watch" ? "chimes" : letters.some(letter => letter.id === linked) ? linked : read("active");
+openRoute(Math.max(0, letters.findIndex(letter => letter.id === savedStation)), false, undefined, linked === "chimes-watch");
 if (dispatchStations.some(id => linked === "dispatch-" + id)) dispatchDesk.open(linked.slice("dispatch-".length));

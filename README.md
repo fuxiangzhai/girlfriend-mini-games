@@ -8,6 +8,10 @@
 
 从首页顶部点「月光邮局」，或打开 [月光邮局](./moon-mail/index.html)。转动海上的圆镜，让月光经过沿途的邮戳、照到收信箱，再点「寄出月光」拆信。「沿海夜邮」的六封信从白沙灯塔一路寄到晨光窗台。「回信篇」从海角温室出发，经过风铃栈桥，抵达望海天文台。回信的编号邮戳要按数字顺序首次经过。
 
+回信篇的「风铃栈桥」还可以值**雾班**。从岸边选一盏灯，先沿纸图预测光会走到哪里，再发光听测。手簿记下两枚铃响起的次序和最后回光的一岸。有时两种镜向都能把光送到信箱，却只有一种会响铃。结合几盏岸灯的证词，把纸图画到只剩唯一的解释，再亲手修好真镜，让回信依次经过 1、2 号邮戳。[试玩雾班听测](./moon-mail/index.html#chimes-watch)
+
+同一班可反复尝试更省听测或修镜的做法。换班会改变雾中的镜向，每班可单独续玩。静音时能读到全部回声。签收的交班条会附在风铃栈桥的明信片和导出图上，日常回信的草稿和最佳步数单独保存。[查看听测手簿实机画面](./docs/fog-watch.webp)
+
 第三章「两岸合邮」从两座信号屋出发，经过雾钟渡口，在星湾转桥会合。前往「信夹 → 两岸合邮」或直接打开[本章第一站](./moon-mail/index.html#signals)。两束光共用镜片，金色实线送到月亮信箱，青色虚线送到星星信箱。点航图下的光路名称可以单独追踪其中一束。
 
 「直投」接通两只信箱即可寄出。「合印」还需要两束光同时穿过菱形邮戳，每站都有另一条走法。成功投递后，票根背面会展开一段留言，导出明信片时也会印上。集齐同一难度的三枚合印，信夹里就能拼出两个人见面的约定。两种投递方式分别保存进度和最佳步数。
@@ -32,9 +36,11 @@ The final three postcards are made in the *Tidewater Darkroom*. Take two or thre
 
 Open the **Dispatch desk** in the album to revisit The Last Ferry, A Postmark in the Rain and The Third Lamp. Charter a crossing between any two anchors or sail direct. A changed mirror costs one crew-hour, a charter costs three more, and a ferry crossing takes zero beats. Try the same delivery on a smaller crew or an earlier schedule. Log a sailing, overlay it on your next attempt, or reload it to explore another tradeoff. Sign every work order at a station to read the keeper’s note.
 
+At **Wind Chime Pier**, select **Fog Watch**. Call from a shore lamp, compare the bells and return shore with your pencil forecast, and deduce the hidden mirror angles. After verification, repair the actual mail route and deliver the reply through both numbered bells. Each watch can be revisited with the same evidence problem. The album counts the pier once and keeps its handover slip with the postcard. All audible clues are also written in the listening log.
+
 ![雾钟渡口的航图，两束光穿过同一枚菱形邮戳，分别照到月亮和星星信箱](./docs/moon-mail.webp)
 
-在仓库根目录运行 `node --test` 可验证全部关卡的光路、曝光组合、调度委托、存档恢复与提示（Node.js 18 及以上）。
+在仓库根目录运行 `node --test` 可验证全部关卡的光路、曝光组合、调度委托、雾班线索、存档恢复与提示（Node.js 18 及以上）。
 
 ## GitHub Pages
 

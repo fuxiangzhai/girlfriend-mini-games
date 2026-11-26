@@ -26,7 +26,7 @@ function wrapLines(ctx, text, width) {
   return lines;
 }
 
-export async function postcardPNG(letter, number, message, language, t, postscript, proof) {
+export async function postcardPNG(letter, number, message, language, t, postscript, proof, backTitle = "onTheBack") {
   const image = new Image();
   image.src = letter.image;
   await image.decode();
@@ -78,7 +78,7 @@ export async function postcardPNG(letter, number, message, language, t, postscri
     ctx.fillRect(margin, foldY, inside, foldHeight);
     ctx.fillStyle = "#315854";
     ctx.font = "bold 25px " + sans;
-    ctx.fillText("◇  " + t("onTheBack"), margin + 27, foldY + 41);
+    ctx.fillText("◇  " + t(backTitle), margin + 27, foldY + 41);
     ctx.font = replyFont;
     replyLines.forEach((line, i) => ctx.fillText(line, margin + 27, foldY + 88 + i * 47));
   }

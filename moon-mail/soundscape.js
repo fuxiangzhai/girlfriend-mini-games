@@ -22,6 +22,7 @@ const textures = {
   stamp: [[0, .05, 760, .19]],
 };
 const noiseBuffers = new WeakMap();
+const playingEcho = new WeakMap();
 
 function paperNoise(ctx) {
   if (!noiseBuffers.has(ctx)) {
@@ -44,7 +45,25 @@ function envelope(ctx, bus, start, duration, peak) {
 
 export function playMailSound(ctx, cue, bus) {
   const now = ctx.currentTime;
-  for (const [delay, pitch, length, peak] of phrases[cue] || []) {
+  const echo = cue?.kind === "echo";
+  const voices = echo ? new Set() : null;
+  if (echo) {
+    // A new call replaces the previous sequence so two replies cannot be
+    // mistaken for a single sequence of bells.
+    for (const previous of playingEcho.get(ctx) || []) {
+      if (previous.start > now) previous.voice.stop(now);
+      else {
+        const level = previous.gain.gain;
+        if (level.cancelAndHoldAtTime) level.cancelAndHoldAtTime(now);
+        else { const held = level.value; level.cancelScheduledValues(now); level.setValueAtTime(held, now); }
+        level.setTargetAtTime(.0001, now, .004);
+        previous.voice.stop(now + .02);
+      }
+    }
+    playingEcho.set(ctx, voices);
+  }
+  const notes = echo ? [[0, 294, .10, .045], ...Array.from(cue.bells, (bell, i) => [.15 + i * .28, bell === "1" ? 660 : 988, .36, .055])] : phrases[cue] || [];
+  for (const [delay, pitch, length, peak] of notes) {
     const start = now + delay;
     const voice = ctx.createOscillator();
     voice.type = ["turn", "stamp", "limit"].includes(cue) ? "triangle" : "sine";
@@ -52,7 +71,15 @@ export function playMailSound(ctx, cue, bus) {
     if (cue === "tide") voice.frequency.exponentialRampToValueAtTime(pitch * 1.12, start + length);
     const gain = envelope(ctx, bus, start, length, peak);
     voice.connect(gain);
-    voice.onended = () => { voice.disconnect(); gain.disconnect(); };
+    const sounding = { voice, gain, start };
+    voices?.add(sounding);
+    voice.onended = () => {
+      voice.disconnect(); gain.disconnect();
+      if (voices) {
+        voices.delete(sounding);
+        if (!voices.size && playingEcho.get(ctx) === voices) playingEcho.delete(ctx);
+      }
+    };
     voice.start(start);
     voice.stop(start + length);
   }

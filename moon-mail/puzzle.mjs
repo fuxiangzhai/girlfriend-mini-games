@@ -35,11 +35,10 @@ export function isNumbered(tile) {
   return tile === "1" || tile === "2" || tile === "3";
 }
 
-function traceBeam(board, mask, source, direction, mailbox) {
+function traceBeam(board, mask, x, y, direction, mailbox, fromEdge = false) {
   const { width, height, tiles, mirrorAt, gates, marks } = board;
-  let x = source % width;
-  let y = Math.floor(source / width);
-  let line = [[x + 0.5, y + 0.5]];
+  const [entryX, entryY] = fromEdge ? offsets[direction] : [0, 0];
+  let line = [[x + 0.5 + entryX / 2, y + 0.5 + entryY / 2]];
   const lines = [line];
   const lit = new Set();
   const sequence = [];
@@ -105,16 +104,36 @@ function traceBeam(board, mask, source, direction, mailbox) {
 }
 
 export function trace(board, mask) {
-  const moon = traceBeam(board, mask, board.source, arrows.indexOf(board.tiles[board.source]), "M");
+  const lamp = (cell, headings, box) => traceBeam(board, mask, cell % board.width, Math.floor(cell / board.width), headings.indexOf(board.tiles[cell]), box);
+  const moon = lamp(board.source, arrows, "M");
   const rays = [moon];
   if (board.starSource === undefined) return { ...moon, rays };
-  const star = traceBeam(board, mask, board.starSource, starArrows.indexOf(board.tiles[board.starSource]), "S");
+  const star = lamp(board.starSource, starArrows, "S");
   rays.push(star);
   const jointCount = Number(moon.crossed) + Number(star.crossed);
   const matched = rays.filter(ray => ray.end === "ready").length;
   let end = "unmatched";
   if (matched === 2) end = board.goal === "joint" && jointCount < 2 ? "needsJoint" : "ready";
   return { ...moon, rays, end, matched, jointCount, turns: moon.turns.concat(star.turns) };
+}
+
+// Shore stations send a test pulse half a cell into the chart. It obeys the
+// same mirror, gate, postmark and obstacle rules as a letter from the lamp.
+export function traceShore(board, mask, port) {
+  const lane = Number(port.slice(1)) - 1;
+  const side = port[0];
+  if (!"NESW".includes(side) || !Number.isInteger(lane) || lane < 0 || lane >= ("NS".includes(side) ? board.width : board.height)) throw new RangeError("Unknown shore lamp");
+  const x = side === "W" ? -1 : side === "E" ? board.width : lane;
+  const y = side === "N" ? -1 : side === "S" ? board.height : lane;
+  const ray = traceBeam(board, mask, x, y, "WNES".indexOf(side), "M", true);
+  let terminal = "quiet";
+  if (["ready", "missing", "order"].includes(ray.end)) terminal = "box";
+  if (ray.end === "sea") {
+    const [ex, ey] = ray.lines.at(-1).at(-1);
+    if (ex === 0 || ex === board.width) terminal = (ex === 0 ? "W" : "E") + (Math.floor(ey) + 1);
+    else terminal = (ey === 0 ? "N" : "S") + (Math.floor(ex) + 1);
+  }
+  return { ray, report: ray.sequence.join("") + "|" + terminal };
 }
 
 const cachedSolutions = new WeakMap();
