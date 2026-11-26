@@ -38,8 +38,16 @@ export function save(level,state,history) {
 }
 export function record(level) {
   const value = read(keyFor(level,'done:'));
-  return value?.id === level.id ? value : null;
+  const old=value?.id===level.id ? value : null;
+  const gold=Boolean(old?.gold || read(keyFor(level,'seal:'))===level.id);
+  if (!level.fork) return old || gold ? {id:level.id,gold} : null;
+  const endings=level.fork.routes.reduce((mask,_,i)=>
+    read('reply:'+level.id+':'+i)===true ? mask | (1<<i) : mask, old?.endings || 0);
+  return old || gold || endings ? {id:level.id,gold,endings} : null;
 }
-export function award(level,gold) {
-  write(keyFor(level,'done:'), { id:level.id, gold: Boolean(record(level)?.gold || gold) });
+export function award(level,gold,ending=-1) {
+  // Separate, write-once receipts let two open tabs earn different letters without losing either.
+  if (gold) write(keyFor(level,'seal:'),level.id);
+  if (level.fork?.routes[ending]) write('reply:'+level.id+':'+ending,true);
+  write(keyFor(level,'done:'),record(level) || {id:level.id,gold:false});
 }

@@ -1,4 +1,4 @@
-import { shapeAt } from './puzzle.mjs';
+import { etchAt, shapeAt, sideBySide, transform } from './puzzle.mjs';
 
 const icons = {
   window: '<path d="M4.5 21V10a7.5 7.5 0 0 1 15 0v11zM5 11h14M12 3v8m-6-6 6 6 6-6M8.5 21v-7m7 7v-7"/>',
@@ -46,11 +46,20 @@ function edgePath(points) {
   return lines.join('');
 }
 
-function pane(piece, points, pin, prefix, ghost = '') {
+function blossom(x,y,outline=false,color='#254842') {
+  const petals = [0,72,144,216,288].map(angle =>
+    '<ellipse cx="0" cy="-5.2" rx="3.4" ry="4.8" transform="rotate('+angle+')"/>').join('');
+  return '<g transform="translate('+((x+.5)*unit)+' '+((y+.5)*unit)+')" stroke="'+color+'" stroke-width="1.5" fill="'+
+    (outline?'none':'#fff4c6')+'">'+petals+'<circle r="3.1" fill="'+(outline?'none':'#f0ab51')+'"/></g>';
+}
+
+function pane(piece, points, pin, prefix, o, ghost = '') {
   const solid = points.map(square).join(''), edge = edgePath(points);
   const pivotX = (pin[0] + .5) * unit, pivotY = (pin[1] + .5) * unit;
   const gradient = prefix + 'g', clip = prefix + 'c', paneTexture = prefix + 't';
   const invalid = ghost === 'invalid';
+  const offset = piece.etch && transform(piece.etch,o);
+  const backFlower = offset ? blossom(pin[0]+offset[0],pin[1]+offset[1]) : '';
   return '<g opacity="' + (ghost ? '.77' : '1') + '"><defs>' +
     '<linearGradient id="'+gradient+'" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="'+piece.light+'"/><stop offset=".47" stop-color="'+piece.mid+'"/><stop offset="1" stop-color="'+piece.dark+'"/></linearGradient>' +
     '<pattern id="'+paneTexture+'" width="77" height="86" patternUnits="userSpaceOnUse" patternTransform="rotate(-18)"><path d="M-12 43 18 7 41 31 79-5M18 7 8 67l33-36 37 33" fill="none" stroke="#fff8d6" stroke-width="1.2" opacity=".43"/><path d="m18 7 23 24L8 67z" fill="#fff8df" opacity=".21"/><path d="m42 72 20-7m-18 10 9-3" stroke="#fcf3c9" opacity=".44"/></pattern>' +
@@ -59,7 +68,7 @@ function pane(piece, points, pin, prefix, ghost = '') {
     '<path d="'+edge+'" fill="none" stroke="#fff8df" stroke-width="5.8" opacity=".65"/></g>' +
     '<path d="'+edge+'" fill="none" stroke="'+(ghost ? (invalid ? '#9c2728' : '#f8fcbe') : '#324a42')+'" stroke-width="'+(ghost ? '2.8' : '2.1')+'" '+(ghost ? 'stroke-dasharray="5 3"' : '')+' stroke-linecap="round"/>' +
     '<g transform="translate('+pivotX+' '+pivotY+')"><circle r="5.3" fill="#614f38" stroke="#fff2ba" stroke-width="1.5"/><circle cx="-1" cy="-1.2" r="1.8" fill="#ffe7a3"/></g>' +
-    '<g transform="translate('+(pivotX+5)+' '+(pivotY+5)+') scale(.52)" color="#263f3b" opacity=".8">'+icon(piece.icon,22)+'</g></g>';
+    '<g transform="translate('+(pivotX+5)+' '+(pivotY+5)+') scale(.52)" color="#263f3b" opacity=".8">'+icon(piece.icon,22)+'</g>'+backFlower+'</g>';
 }
 
 export function thumbnail(piece, o, id) {
@@ -67,7 +76,27 @@ export function thumbnail(piece, o, id) {
   const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
   const x = Math.min(...xs), y = Math.min(...ys), w = Math.max(...xs)-x+1, h = Math.max(...ys)-y+1;
   const view = [x*unit-4,y*unit-4,w*unit+8,h*unit+8].join(' ');
-  return '<svg class="glass-thumb" aria-hidden="true" viewBox="'+view+'">'+pane(piece,points,[0,0],'t'+id)+'</svg>';
+  return '<svg class="glass-thumb" aria-hidden="true" viewBox="'+view+'">'+pane(piece,points,[0,0],'t'+id,o)+'</svg>';
+}
+
+function branchLines(level,slots,preview) {
+  const marks=slots.map((p,i)=>etchAt(level,i,preview?.id===i?preview.place:p));
+  let svg='';
+  for (const [a,b] of level.joints) {
+    const start=marks[a], end=marks[b];
+    if (start==null || end==null) continue;
+    const touches=sideBySide(level.width,start,end), testing=preview?.id===a || preview?.id===b;
+    if (!touches && !testing) continue;
+    const x=(start%level.width+.5)*unit, y=(Math.floor(start/level.width)+.5)*unit;
+    const dx=(end%level.width-start%level.width)*unit, dy=(Math.floor(end/level.width)-Math.floor(start/level.width))*unit;
+    const length=Math.hypot(dx,dy);
+    if (length<22) continue;
+    const color=touches?'#28594a':'#8f3337';
+    svg+='<g transform="translate('+x+' '+y+') rotate('+(Math.atan2(dy,dx)*180/Math.PI)+')">'+
+      '<path d="M10 0 Q'+length/2+' -4 '+(length-10)+' 0" fill="none" stroke="'+color+'" stroke-width="3"'+(testing?' stroke-dasharray="4 3"':'')+'/>'+
+      (touches?'<path d="M'+(length/2)+' -2q-6-10-11-8 1 7 11 8m0 0q4 8 10 7-2-6-10-7" fill="#b5df9c" stroke="#28594a" stroke-width="1.4"/>':'')+'</g>';
+  }
+  return svg;
 }
 
 export function drawBoard(svg, level, slots, preview, liftId) {
@@ -85,6 +114,13 @@ export function drawBoard(svg, level, slots, preview, liftId) {
       const s = level.clues.has(at) ? 15 : 25;
       shapes.push('<g transform="translate('+(x*unit+(level.clues.has(at)?2:12))+' '+(y*unit+(level.clues.has(at)?2:12))+')" color="#8d5a17">'+icon('star',s)+'</g>');
     }
+    const route = level.fork?.routes.findIndex(r=>r.at===at) ?? -1;
+    const owner = route>=0 ? level.fork.pane : level.rubbings.get(at);
+    if (owner!==undefined) {
+      const pigment=level.pieces[owner];
+      shapes.push('<circle cx="'+((x+.5)*unit)+'" cy="'+((y+.5)*unit)+'" r="16" fill="'+pigment.light+'" fill-opacity=".92" stroke="'+pigment.dark+'" stroke-width="1.4" stroke-dasharray="3 2"/>',blossom(x,y,true));
+      if (route>=0) shapes.push('<text x="'+(x*unit+4)+'" y="'+(y*unit+12)+'" font-family="Georgia,serif" font-size="12" font-weight="bold" fill="#514024">'+(route+1)+'</text>');
+    }
   });
   const outline = edgePath(frame);
   let drawing = '<defs><linearGradient id="empty-pane" x2=".75" y2="1"><stop stop-color="#fcf1d0"/><stop offset="1" stop-color="#decc9f"/></linearGradient></defs>' +
@@ -93,15 +129,16 @@ export function drawBoard(svg, level, slots, preview, liftId) {
   slots.forEach((p, i) => {
     if (!p) return;
     const points = shapeAt(level.pieces[i],p.o).map(([dx,dy])=>[p.x+dx,p.y+dy]);
-    drawing += pane(level.pieces[i],points,[p.x,p.y],'b'+i);
+    drawing += pane(level.pieces[i],points,[p.x,p.y],'b'+i,p.o);
     if (i === liftId) drawing += '<path d="'+edgePath(points)+'" stroke="#8a212b" fill="none" stroke-width="4" stroke-dasharray="7 3"/>';
   });
   if (preview) {
     const { id, place, valid } = preview;
     const points = shapeAt(level.pieces[id],place.o).map(([dx,dy])=>[place.x+dx,place.y+dy]);
-    drawing += pane(level.pieces[id],points,[place.x,place.y],'ghost',valid?'valid':'invalid');
+    drawing += pane(level.pieces[id],points,[place.x,place.y],'ghost',place.o,valid?'valid':'invalid');
     if (valid) drawing += '<circle cx="'+((place.x+.5)*unit)+'" cy="'+((place.y+.5)*unit)+'" r="9" fill="none" stroke="#fff8c3" stroke-width="2"/>';
   }
+  drawing += branchLines(level,slots,preview);
   for (const [a,b] of level.seams) {
     const x=(b%level.width)*unit, y=Math.floor(b/level.width)*unit;
     const d='M'+x+' '+y+(b-a===1?'v48':'h48');

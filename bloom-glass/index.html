@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#183e35">
-  <meta name="description" content="一间给两个人的彩绘玻璃工坊。拼合四季花窗，收藏日光里的十六个小故事。">
+  <meta name="description" content="一间给两个人的彩绘玻璃工坊。拼合七扇花窗，接起玻璃背面的花枝，用不同的拼法交换回信。">
   <title>借一束光 · 花窗工坊</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./studio.css">
@@ -25,11 +25,13 @@
     </div>
   </header>
   <main class="shell">
-    <header class="hero">
+    <header class="hero" id="hero">
+      <img id="jacket" alt="" hidden>
       <div class="hero-copy">
-        <div class="hero-name" lang="en">Petal Panes</div>
+        <div class="hero-name" id="volume-name" lang="en">Petal Panes</div>
         <h1 id="page-title">借一束光</h1>
         <p id="hero-line">把彩色玻璃拼成花窗，留一束光给喜欢的人。</p>
+        <button class="sequel-link" id="sequel" type="button" hidden>翻开续篇《花窗背面的信》<span data-icon="next"></span></button>
       </div>
     </header>
 
@@ -41,7 +43,10 @@
               <p class="overline" id="chapter-label"></p>
               <h2 id="level-title"></h2>
             </div>
-            <button type="button" class="subtle" id="guide"><span data-icon="guide"></span>玩法</button>
+            <div class="work-switches">
+              <button type="button" class="secondary" id="audition" aria-pressed="false" hidden><span data-icon="sun"></span>透光试摆</button>
+              <button type="button" class="subtle" id="guide"><span data-icon="guide"></span>玩法</button>
+            </div>
           </div>
           <div class="mat" id="mat">
             <span class="screw nw" aria-hidden="true"></span><span class="screw ne" aria-hidden="true"></span>
@@ -54,6 +59,7 @@
             </div>
           </div>
           <p class="live-message" id="message" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div class="trialbar" id="trialbar" hidden><span>试摆中 · 可选格、旋转、翻面</span><button type="button" class="primary" id="seat-trial">嵌入此处</button></div>
           <div class="board-tools">
             <div class="board-actions">
               <button type="button" class="subtle" id="undo"><span data-icon="undo"></span>撤销</button>
@@ -74,6 +80,15 @@
             </div>
             <div class="objective" id="objective" hidden></div>
           </section>
+          <section class="order-card" id="order-card" hidden aria-labelledby="order-heading">
+            <h3 id="order-heading">图纸上的约定</h3>
+            <ul id="order-lines"></ul>
+            <div id="route-picker" hidden>
+              <p>想找哪封回信？提示会按所选落点推演。</p>
+              <div id="routes" role="group" aria-label="回信提示优先寻找的落点"></div>
+            </div>
+            <details id="strategy"><summary>看一点解题思路</summary><p id="strategy-text"></p></details>
+          </section>
           <section class="note-card">
             <div class="note-illustration"><img src="./art/daisy.webp" alt="" id="note-art"></div>
             <div><h3>窗边来信</h3><p id="request"></p></div>
@@ -86,6 +101,10 @@
       <div class="book-heading">
         <div><h2 id="book-heading">我的花窗册</h2><p id="collection-count"></p></div>
         <button type="button" class="secondary" id="daily"><span data-icon="calendar"></span>今日图纸</button>
+      </div>
+      <div class="volume-tabs" id="volumes" role="group" aria-label="选择花窗册">
+        <button type="button" data-volume="0">上册 · 四时同窗</button>
+        <button type="button" data-volume="1">续篇 · 花窗背面的信</button>
       </div>
       <div class="chapter-tabs" id="chapter-tabs" role="group" aria-label="按花选择章节"></div>
       <div class="folio">
@@ -113,6 +132,7 @@
         <div><span data-icon="rotate"></span><p><strong>转个角度再试试</strong>玻璃要填满浅色窗格。点已嵌的玻璃可取回，随时都能撤销。</p></div>
         <div><span data-icon="star"></span><p><strong>给作品加一枚金印</strong>遇见四角星时，让任意玻璃的圆钉正好落在星上。金印是额外挑战。</p></div>
         <div><span data-icon="leaf"></span><p><strong>认花纹，巧翻面</strong>第二章要让玻璃对上刻纹。第三章可把玻璃翻到背面。第四章的金边铅条会隔开窗格，整片玻璃不能跨过它。</p></div>
+        <div id="afterlight-guide" hidden><span data-icon="flower"></span><p><strong>透光读背花</strong>实心小花刻在玻璃背面，会随玻璃移动。把它对准图纸的空心花，或让指定的两朵隔一条格边相邻。桂花巷的两个信位各藏着一封回信。</p></div>
       </div>
       <p class="keys">键盘操作：数字键选片，方向键选格，空格嵌入。R 旋转，F 翻面，Z 撤销。</p>
       <button type="button" class="primary" data-close>回到工作台</button>
@@ -125,7 +145,7 @@
       <p class="overline" id="result-kicker"></p><h2 id="result-title"></h2>
       <p class="result-story" id="result-story"></p>
       <p class="result-progress" id="result-progress"></p>
-      <div class="result-actions"><button type="button" class="primary" id="next"></button><button type="button" class="secondary" id="result-book">看花窗册</button><button type="button" class="subtle" id="retry-gold" hidden>重拼金印</button></div>
+      <div class="result-actions"><button type="button" class="primary" id="next"></button><button type="button" class="secondary" id="alternate" hidden></button><button type="button" class="secondary" id="result-book">看花窗册</button><button type="button" class="subtle" id="retry-gold" hidden>重拼金印</button></div>
     </div>
   </dialog>
 </body>

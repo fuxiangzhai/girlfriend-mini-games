@@ -1,4 +1,5 @@
 import { transform } from './puzzle.mjs';
+import { afterlightChapters, afterlightPlans } from './afterlight.mjs';
 
 export const pigments = [
   { name: '蜜金', mark: '太阳', icon: 'sun', light: '#ffe49b', mid: '#edb64d', dark: '#ad702f' },
@@ -18,6 +19,12 @@ export const chapters = [
     note: '西窗把夕阳剪成细小的花瓣。两个人的影子，刚好可以坐在花底下。' },
   { flower: '月光花', time: '深夜', art: 'moonflower', name: '深夜的月光花', latin: 'Ipomoea alba',
     note: '四扇窗终于齐了。即使我们回家的时间不同，也会看见同一朵花。' },
+  ...afterlightChapters,
+];
+
+export const volumes = [
+  { title:'四时同窗', chapters:[0,1,2,3] },
+  { title:'花窗背面的信', chapters:[4,5,6] },
 ];
 
 // Letters describe the artisan's cutting pattern. Only the frame and its etched clues are shown.
@@ -76,30 +83,53 @@ const plans = [
 function makeLevel(plan, index, id, chapter) {
   const width = plan.map[0].length, cells = plan.map.join('').split('');
   const letters = [...new Set(cells)].filter(c => c !== '.').sort();
-  const reference = [], clues = new Map();
+  const reference = [], clues = new Map(), rubbings = new Map(), engravings = [];
   const pieces = letters.map((letter, i) => {
     const points = cells.flatMap((c, n) => c === letter ? [[n % width, Math.floor(n / width)]] : []);
     const mean = points.reduce(([x, y], [a, b]) => [x + a / points.length, y + b / points.length], [0, 0]);
     const distance = ([x, y]) => (x - mean[0]) ** 2 + (y - mean[1]) ** 2;
-    const pin = points.reduce((a, b) => distance(a) <= distance(b) ? a : b);
+    const rivet = plan.pins?.split(' ').find(s=>s[0]===letter);
+    const pin = rivet ? points[Number(rivet.slice(1))] : points.reduce((a, b) => distance(a) <= distance(b) ? a : b);
     const cut = Number(plan.cuts[i]);
     reference.push({ x: pin[0], y: pin[1], o: (cut & 4) ? cut : (-cut & 3) });
     for (const clue of (plan.clues || '').split(' ').filter(s => s[0] === letter)) {
       const [x, y] = points[Number(clue.slice(1))];
       clues.set(y * width + x, i);
     }
-    return { ...pigments[i], cells: points.map(([x, y]) => transform([x - pin[0], y - pin[1]], cut)) };
+    const cutPoint = ([x,y]) => transform([x-pin[0],y-pin[1]],cut);
+    const piece = { ...pigments[i], cells:points.map(cutPoint) };
+    const mark = (plan.etches || '').split(' ').find(s=>s[0]===letter);
+    if (mark) {
+      const [x,y] = points[Number(mark.slice(1))];
+      piece.etch = cutPoint([x,y]);
+      engravings[i] = y*width+x;
+      if (plan.rubbings?.includes(letter)) {
+        piece.rubbing = engravings[i];
+        rubbings.set(piece.rubbing,i);
+      }
+    }
+    return piece;
   });
   const goldPin = reference[letters.indexOf(plan.gold)];
-  const seams = (plan.seams || []).map(pair => pair.split('-').map(pos =>
-    (Number(pos.slice(1)) - 1) * width + pos.charCodeAt(0) - 65));
+  const cellNumber = pos => (Number(pos.slice(1))-1)*width+pos.charCodeAt(0)-65;
+  const seams = (plan.seams || []).map(pair => pair.split('-').map(cellNumber));
+  const joints = (plan.joints || []).map(pair=>[letters.indexOf(pair[0]),letters.indexOf(pair[1])]);
+  const neighbors = pieces.map(()=>[]);
+  for (const [a,b] of joints) { neighbors[a].push(b); neighbors[b].push(a); }
+  let fork = null;
+  if (plan.fork) {
+    const pane = letters.indexOf(plan.fork.pane);
+    const cells = [engravings[pane],cellNumber(plan.fork.other)];
+    fork = { pane, routes:cells.map((at,i)=>({ at, name:plan.fork.names[i], reply:plan.fork.letters[i] })) };
+  }
   return { id, index, chapter, width, height: plan.map.length, cells, pieces, clues, flip: chapter >= 2 || Boolean(plan.daily),
-    seams, gold: goldPin ? goldPin.y * width + goldPin.x : null,
+    seams, rubbings, joints, neighbors, fork, hasEtches:pieces.some(p=>p.etch), tip:plan.tip,
+    gold: goldPin ? goldPin.y * width + goldPin.x : null,
     sample: letters.map((letter, i) => letter === plan.sample ? reference[i] : null),
     title: plan.title, request: plan.request, reply: plan.reply, daily: Boolean(plan.daily) };
 }
 
-export const levels = plans.map((plan, n) => makeLevel(plan, n, 'glass-' + (n + 1), Math.floor(n / 4)));
+export const levels = [...plans,...afterlightPlans].map((plan, n) => makeLevel(plan, n, 'glass-' + (n + 1), Math.floor(n / 4)));
 
 export function dateKey(date = new Date()) {
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');

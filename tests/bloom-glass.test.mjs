@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { levels, dailyLevel, dateKey } from '../bloom-glass/levels.mjs';
-import { describe, fits, shapeAt, turn, flip, solve, suggest, isGilded, transform } from '../bloom-glass/puzzle.mjs';
+import { describe, fits, shapeAt, turn, flip, solve, suggest, isGilded, transform, sideBySide, endingOf } from '../bloom-glass/puzzle.mjs';
 import { fresh, restore, save, record, award, read, write } from '../bloom-glass/save.mjs';
 
 const saved=new Map();
@@ -26,6 +26,20 @@ function checkTiling(l, solution) {
   });
   l.cells.forEach((c,n)=>assert.equal(grid[n]===-1,c==='.'));
   for (const [a,b] of l.seams) assert.notEqual(grid[a],grid[b]);
+  const marks=solution.map((p,i)=>{
+    const offset=l.pieces[i].etch;
+    if (!offset) return null;
+    const [dx,dy]=transform(offset,p.o);
+    return [p.x+dx,p.y+dy];
+  });
+  for (const [at,i] of l.rubbings) assert.deepEqual(marks[i],[at%l.width,Math.floor(at/l.width)]);
+  for (const [a,b] of l.joints) {
+    assert.equal(Math.abs(marks[a][0]-marks[b][0])+Math.abs(marks[a][1]-marks[b][1]),1);
+  }
+  if (l.fork) {
+    const [x,y]=marks[l.fork.pane];
+    assert.ok(l.fork.routes.some(r=>r.at===y*l.width+x));
+  }
 }
 function checkConnected(l) {
   for (const p of l.pieces) {
@@ -41,9 +55,9 @@ function checkConnected(l) {
   }
 }
 
-test('all sixteen patterns use connected panes and can be finished with every optional gold seal',()=>{
-  assert.equal(levels.length,16);
-  assert.equal(levels.filter(l=>l.gold!==null).length,14);
+test('all 28 patterns use connected panes and can be finished with every optional gold seal',()=>{
+  assert.equal(levels.length,28);
+  assert.equal(levels.filter(l=>l.gold!==null).length,26);
   for (const l of levels) {
     checkConnected(l);
     const solution=solve(l,l.sample,l.gold!==null);
@@ -75,9 +89,85 @@ function placements(l,id) {
 test('etchings and lead strips each exclude a geometrically fitting placement',()=>{
   const etched=levels[4], plain={...etched,clues:new Map()};
   assert.ok(etched.pieces.some((_,i)=>placements(plain,i).some(p=>!describe(etched,i,p))));
-  for (const l of levels.slice(12)) {
+  for (const l of levels.filter(l=>l.seams.length)) {
     const withoutLead={...l,seams:[]};
     assert.ok(l.pieces.some((_,i)=>placements(withoutLead,i).some(p=>!describe(l,i,p))),l.id);
+  }
+});
+
+test('a rubbing distinguishes two turns of a square that cover exactly the same cells',()=>{
+  const l=levels[16], i=0, answer=solve(l,l.sample,true);
+  const plain={...l,rubbings:new Map(),pieces:l.pieces.map(p=>({...p,rubbing:undefined}))};
+  const target=describe(l,i,answer[i]);
+  assert.ok(placements(plain,i).some(p=>{
+    const other=describe(plain,i,p);
+    return other.mask===target.mask && other.etch!==target.etch && !describe(l,i,p);
+  }));
+});
+
+test('each vine requires a shared edge and rules out an otherwise complete cutting pattern',()=>{
+  assert.equal(sideBySide(4,3,4),false);
+  assert.equal(sideBySide(4,0,5),false);
+  assert.equal(sideBySide(4,0,1),true);
+  for(const l of levels.filter(l=>l.joints.length)) {
+    for(const [a,b] of l.joints) {
+      const neighbors=l.neighbors.map((list,id)=>list.filter(other=>!(id===a && other===b || id===b && other===a)));
+      const loose={...l,neighbors,joints:l.joints.filter(([i,j])=>i!==a || j!==b)};
+      const pairs=placements(loose,b);
+      const example=placements(loose,a).some(p=>pairs.some(q=>{
+        const slots=[...l.sample]; slots[a]=p; slots[b]=q;
+        return !fits(l,slots,b,q) && fits(loose,slots,b,q) && Boolean(solve(loose,slots));
+      }));
+      assert.ok(example,l.id+' joint '+a+'–'+b);
+    }
+  }
+});
+
+test('each of the eight last-chapter replies has its own gilded tiling and directed hint path',()=>{
+  const last=levels.filter(l=>l.fork);
+  assert.equal(last.length,4);
+  for(const l of last) {
+    const paths=[0,1].map(route=>{
+      const answer=solve(l,l.sample,true,route);
+      checkTiling(l,answer);
+      assert.equal(endingOf(l,answer),route);
+      assert.ok(isGilded(l,answer));
+      return answer;
+    });
+    // Changing the reply actually rearranges the window, beyond turning a decoration.
+    const moved=paths[0].filter((p,i)=>describe(l,i,p).mask!==describe(l,i,paths[1][i]).mask).length;
+    assert.ok(moved>=2,l.title);
+    const slots=[...l.sample];
+    slots[l.fork.pane]=paths[0][l.fork.pane];
+    assert.equal(solve(l,slots,false,1),null);
+    for(let steps=0;steps<l.pieces.length*3 && !slots.every(Boolean);steps++) {
+      const step=suggest(l,slots,slots.findIndex(p=>!p),1);
+      assert.ok(step);
+      if(step.type==='lift') slots[step.id]=null;
+      else { assert.ok(fits(l,slots,step.id,step.place)); slots[step.id]=step.place; }
+    }
+    checkTiling(l,slots); assert.equal(endingOf(l,slots),1);
+    award(l,true,0); award(l,false,1); award(l,false,0);
+    assert.equal(record(l).endings,3); assert.equal(record(l).gold,true);
+    write('done:'+l.id,{id:l.id,gold:false,endings:1}); // A stale tab writes its own summary last.
+    assert.equal(record(l).endings,3); assert.equal(record(l).gold,true);
+  }
+});
+
+test('each sequel contract, including each reply, also has a genuine unstamped solution',()=>{
+  for (const l of levels.filter(l=>l.tip)) {
+    const routes=l.fork?[0,1]:[null];
+    for (const route of routes) {
+      // If a pane covers the seal away from its rivet, no later pane can earn it.
+      const ordinary=l.pieces.some((_,id)=>!l.sample[id] && placements(l,id).some(p=>{
+        const c=describe(l,id,p);
+        if (c.gold || !(c.mask & (1n<<BigInt(l.gold))) || !fits(l,l.sample,id,p)) return false;
+        const slots=[...l.sample]; slots[id]=p;
+        const answer=solve(l,slots,false,route);
+        return answer && !isGilded(l,answer);
+      }));
+      assert.ok(ordinary,l.title+' route '+route);
+    }
   }
 });
 

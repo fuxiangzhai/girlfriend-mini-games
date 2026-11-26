@@ -17,6 +17,25 @@ export function shapeAt(piece, o) {
   return piece.cells.map(point => transform(point, o));
 }
 
+export function etchAt(level,id,place) {
+  const etch = level.pieces[id].etch;
+  if (!place || !etch) return null;
+  const [dx,dy] = transform(etch,place.o);
+  const x=place.x+dx, y=place.y+dy;
+  return x>=0 && x<level.width && y>=0 && y<level.height ? y*level.width+x : null;
+}
+
+export function sideBySide(width,a,b) {
+  if (a == null || b == null) return false;
+  return Math.abs(a%width-b%width) + Math.abs(Math.floor(a/width)-Math.floor(b/width)) === 1;
+}
+
+export function endingOf(level,slots) {
+  if (!level.fork) return -1;
+  const at = etchAt(level,level.fork.pane,slots[level.fork.pane]);
+  return level.fork.routes.findIndex(route=>route.at===at);
+}
+
 export function describe(level, id, place) {
   if (!place || ![place.x, place.y, place.o].every(Number.isInteger) ||
       place.o < 0 || place.o >= (level.flip ? 8 : 4) || !level.pieces[id]) return null;
@@ -25,16 +44,21 @@ export function describe(level, id, place) {
     const x = place.x + dx, y = place.y + dy;
     if (x < 0 || x >= level.width || y < 0 || y >= level.height) return null;
     const at = y * level.width + x;
-    if (level.cells[at] === '.' || (level.clues.has(at) && level.clues.get(at) !== id)) return null;
+    if (level.cells[at] === '.' || (level.clues.has(at) && level.clues.get(at) !== id) ||
+        (level.rubbings.has(at) && level.rubbings.get(at)!==id)) return null;
     mask |= 1n << BigInt(at);
   }
   if (level.seams.some(([a,b]) => (mask & (1n << BigInt(a))) && (mask & (1n << BigInt(b))))) return null;
-  return { mask, gold: place.y * level.width + place.x === level.gold };
+  const etch = etchAt(level,id,place);
+  if (level.pieces[id].rubbing != null && level.pieces[id].rubbing !== etch) return null;
+  if (level.fork?.pane === id && !level.fork.routes.some(route=>route.at===etch)) return null;
+  return { mask, etch, gold: place.y * level.width + place.x === level.gold };
 }
 
 export function fits(level, slots, id, place) {
   const candidate = describe(level, id, place);
   if (!candidate) return false;
+  if (level.neighbors[id].some(n=>slots[n] && !sideBySide(level.width,candidate.etch,etchAt(level,n,slots[n])))) return false;
   return slots.every((other, i) => {
     if (!other || i === id) return true;
     const taken = describe(level, i, other);
@@ -57,7 +81,8 @@ function catalog(level) {
         const place = { x: at % level.width, y: Math.floor(at / level.width), o };
         const candidate = describe(level, id, place);
         if (!candidate) continue;
-        const key = String(candidate.mask) + (candidate.gold ? '*' : '');
+        // Identical silhouettes can have their back flower in different cells.
+        const key = String(candidate.mask) + ':' + candidate.etch + (candidate.gold ? '*' : '');
         if (seen.has(key)) continue;
         seen.add(key);
         const record = { ...candidate, place, id, bit: 1 << id };
@@ -75,14 +100,21 @@ function catalog(level) {
 }
 
 // Exact cover over both the remaining panes and the uncovered cells.
-export function solve(level, slots = level.pieces.map(() => null), requireGold = false) {
+export function solve(level, slots = level.pieces.map(() => null), requireGold = false, route = null) {
   const { byPiece, byCell } = catalog(level);
   const result = [...slots], all = (1 << level.pieces.length) - 1;
+  const marks = level.pieces.map(()=>null);
+  const wanted = level.fork?.routes[route]?.at;
+  function matches(id,etch) {
+    if (level.fork?.pane === id && wanted != null && wanted !== etch) return false;
+    return level.neighbors[id].every(n=>marks[n]===null || sideBySide(level.width,etch,marks[n]));
+  }
   let occupied = 0n, used = 0;
   for (let i = 0; i < result.length; i++) {
     if (!result[i]) continue;
     const c = describe(level, i, result[i]);
-    if (!c || (occupied & c.mask)) return null;
+    if (!c || (occupied & c.mask) || !matches(i,c.etch)) return null;
+    marks[i]=c.etch;
     occupied |= c.mask;
     used |= 1 << i;
   }
@@ -90,7 +122,7 @@ export function solve(level, slots = level.pieces.map(() => null), requireGold =
     if (pieces === all) return !requireGold || gold;
     let fewest;
     function consider(options) {
-      const open = options.filter(c => !(c.bit & pieces) && !(c.mask & mask));
+      const open = options.filter(c => !(c.bit & pieces) && !(c.mask & mask) && matches(c.id,c.etch));
       if (!fewest || open.length < fewest.length) fewest = open;
     }
     for (let i = 0; i < byPiece.length; i++) {
@@ -103,17 +135,19 @@ export function solve(level, slots = level.pieces.map(() => null), requireGold =
     }
     for (const c of fewest) {
       result[c.id] = c.place;
+      marks[c.id] = c.etch;
       if (search(mask | c.mask, pieces | c.bit, gold || c.gold)) return true;
       result[c.id] = null;
+      marks[c.id] = null;
     }
     return false;
   }
   return search(occupied, used, isGilded(level, slots)) ? result : null;
 }
 
-export function suggest(level, slots, selected) {
+export function suggest(level, slots, selected, route = null) {
   if (slots.every(Boolean)) return null;
-  const answer = (level.gold !== null && solve(level, slots, true)) || solve(level, slots);
+  const answer = (level.gold !== null && solve(level, slots, true,route)) || solve(level, slots,false,route);
   if (answer) {
     const id = Number.isInteger(selected) && !slots[selected] ? selected : slots.findIndex(p => !p);
     return { type: 'place', id, place: answer[id] };
@@ -125,7 +159,7 @@ export function suggest(level, slots, selected) {
       const remove = placed.filter((_, n) => bits & (1 << n));
       if (remove.length !== count) continue;
       const trial = slots.map((p, i) => remove.includes(i) ? null : p);
-      if (solve(level, trial)) return { type: 'lift', id: remove[0] };
+      if (solve(level, trial,false,route)) return { type: 'lift', id: remove[0] };
     }
   }
   return null;
