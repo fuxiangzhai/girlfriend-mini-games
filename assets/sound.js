@@ -1,6 +1,6 @@
 const storageKey = "pat-pat-club:sound";
 
-export function bindGameSound(button, label) {
+export function bindGameSound(button, label, playEffect) {
   let enabled = true;
   let audio;
   let buffer;
@@ -31,8 +31,12 @@ export function bindGameSound(button, label) {
     }
   }
 
-  function play() {
+  function play(cue) {
     if (!enabled || !audio) return;
+    if (playEffect) {
+      playEffect(audio, cue);
+      return;
+    }
     if (!buffer) {
       buffer = audio.createBuffer(1, Math.ceil(audio.sampleRate * .12), audio.sampleRate);
       const samples = buffer.getChannelData(0);

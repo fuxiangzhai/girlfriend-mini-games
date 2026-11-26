@@ -1,0 +1,75 @@
+const serif = '"Songti SC","Noto Serif CJK SC",SimSun,Georgia,serif';
+const sans = '"PingFang SC","Microsoft YaHei UI",system-ui,sans-serif';
+
+function wrapLines(ctx, text, width) {
+  const lines = [];
+  for (const paragraph of text.replace(/\n{3,}/g, "\n\n").split("\n")) {
+    let line = "";
+    for (const char of paragraph) {
+      if (line && ctx.measureText(line + char).width > width) {
+        lines.push(line);
+        line = "";
+      }
+      line += char;
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+
+export async function postcardPNG(letter, number, message) {
+  const image = new Image();
+  image.src = letter.image;
+  await image.decode();
+  const canvas = document.createElement("canvas");
+  const width = 1200;
+  const margin = 56;
+  const inside = width - 2 * margin;
+  canvas.width = width;
+  const ctx = canvas.getContext("2d");
+  const bodyFont = "37px " + serif;
+  ctx.font = bodyFont;
+  const lines = wrapLines(ctx, message, inside - 20);
+  const artHeight = Math.round(inside * image.naturalHeight / image.naturalWidth);
+  const titleY = 112 + artHeight + 88;
+  const messageY = titleY + 74;
+  canvas.height = messageY + lines.length * 64 + 114;
+  ctx.fillStyle = "#fbf6e8";
+  ctx.fillRect(0, 0, width, canvas.height);
+  for (let x = -12, i = 0; x < width + 12; x += 43, i++) {
+    ctx.fillStyle = i % 2 ? "#497378" : "#b9664f";
+    ctx.beginPath();
+    ctx.moveTo(x, 0); ctx.lineTo(x + 25, 0); ctx.lineTo(x + 16, 14); ctx.lineTo(x - 9, 14);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#25494e";
+  ctx.font = "bold 32px " + serif;
+  ctx.fillText("月光邮局", margin, 76);
+  ctx.font = "bold 23px monospace";
+  ctx.fillStyle = "#95654d";
+  ctx.fillText("MOONLIGHT POST", margin + 160, 75);
+  ctx.textAlign = "right";
+  ctx.fillText("NO. " + String(number).padStart(2, "0"), width - margin, 75);
+  ctx.textAlign = "left";
+  ctx.drawImage(image, margin, 112, inside, artHeight);
+  ctx.fillStyle = "#183b40";
+  ctx.font = "bold 55px " + serif;
+  ctx.fillText(letter.title, margin, titleY);
+  ctx.fillStyle = "#294b49";
+  ctx.font = bodyFont;
+  lines.forEach((line, i) => ctx.fillText(line, margin + 2, messageY + i * 64));
+  const baseline = canvas.height - 54;
+  ctx.strokeStyle = "#c7bfab";
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(margin, baseline - 47); ctx.lineTo(width - margin, baseline - 47); ctx.stroke();
+  ctx.fillStyle = "#586b60";
+  ctx.font = "26px " + sans;
+  ctx.fillText(letter.place + "  ·  " + letter.time + " 邮班", margin, baseline);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#a3523f";
+  ctx.fillText("月光已送达", width - margin, baseline);
+  return new Promise((resolve, reject) => canvas.toBlob(blob => {
+    if (blob) resolve(blob);
+    else reject(new Error("PNG encoding failed"));
+  }, "image/png"));
+}
