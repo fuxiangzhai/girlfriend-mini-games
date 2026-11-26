@@ -12,15 +12,21 @@
 
 「直投」接通两只信箱即可寄出。「合印」还需要两束光同时穿过菱形邮戳，每站都有另一条走法。成功投递后，票根背面会展开一段留言，导出明信片时也会印上。集齐同一难度的三枚合印，信夹里就能拼出两个人见面的约定。两种投递方式分别保存进度和最佳步数。
 
+第四章「潮汐暗房」把海边的贝壳、海藻和两把椅子拍成三张明信片。转镜让光经过字母感光点、进入相机，按快门就能在同一张底片上存下一层。第二张要给纸角留白，第三张要安排三次曝光的先后。拍过的编号可以点开，在航图上用虚线对照当时的光路。底片和转镜都可以撤销。冲印后，明信片会附上你实际拍过的每一条光路。[试玩潮汐暗房](./moon-mail/index.html#shellprint)
+
+![晒网台的曝光台，底片上已保存一曝，虚线显示它与当前光路的差别](./docs/tidewater-darkroom.webp)
+
 点航图上的难度名或顶部「设置」即可换档。轻松档会先调好一部分镜片并标出下一步。标准档提供按需提示。挑战档每站都有独立的航图，须在最少步数内送达，撤销可以返还步数。各档独立保存路线、撤销记录与最佳步数。原版存档可在标准档继续。
 
 顶部的语言按钮可随时切换简体中文和 English。设置内可试听、静音或调节音量。转镜、邮戳、潮门、寄送和拆信等声音由浏览器实时合成。键盘可用 Tab 选中镜片后按空格或回车旋转。「信夹」可以选关、重读、改写寄语并导出 PNG。自写的寄语在切换语言和难度后保留。
 
 **English.** Open Moonlight Post and use the language button in the upper right. The album holds six coastal letters, three replies with numbered seals, and three paired deliveries in *Across the Bay*. Match the solid moon beam and dashed star beam to their own mailboxes. For a joint postmark, both beams must pass through the diamond on their way to the boxes. Each postmark reveals a handwritten clue. Collect all three in one difficulty to unfold the meeting plan. Select Relaxed, Standard or Expert on the chart. Every delivered card can be personalised and saved as a PNG.
 
+The final three postcards are made in the *Tidewater Darkroom*. Take two or three exposures on the same negative. Match each lettered site's layer count, keeping any zero targets clear. Tap a recorded shot to compare its route with the live beam. The developed postcard includes a contact sheet of your exposures. Expert counts every mirror turn across the whole negative.
+
 ![雾钟渡口的航图，两束光穿过同一枚菱形邮戳，分别照到月亮和星星信箱](./docs/moon-mail.webp)
 
-在仓库根目录运行 `node --test tests/moon-mail.test.mjs` 可验证全部关卡的光路与提示（Node.js 18 及以上）。
+在仓库根目录运行 `node --test` 可验证全部关卡的光路、曝光组合、存档恢复与提示（Node.js 18 及以上）。
 
 ## GitHub Pages
 

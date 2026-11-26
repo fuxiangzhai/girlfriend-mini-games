@@ -45,6 +45,7 @@ function traceBeam(board, mask, source, direction, mailbox) {
   const sequence = [];
   let wrongOrder = false;
   let crossed = false;
+  let exposure = 0;
   const turns = [];
   const visited = new Set();
   let end;
@@ -90,6 +91,8 @@ function traceBeam(board, mask, source, direction, mailbox) {
       lines.push(line);
     } else if (tile === "&") {
       crossed = true;
+    } else if ("abcd".includes(tile)) {
+      exposure |= 1 << (tile.charCodeAt(0) - 97);
     } else if (tile === mailbox) {
       end = "ready";
       if (lit.size < marks.length) end = "missing";
@@ -98,7 +101,7 @@ function traceBeam(board, mask, source, direction, mailbox) {
       end = "wrongBox";
     }
   }
-  return { lines, lit, sequence, wrongOrder, turns, end, crossed };
+  return { lines, lit, sequence, wrongOrder, turns, end, crossed, exposure };
 }
 
 export function trace(board, mask) {

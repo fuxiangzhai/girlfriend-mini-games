@@ -43,6 +43,8 @@ export function mountChart(board, onRotate, t) {
   const tiles = document.getElementById("tiles");
   const beam = document.getElementById("beam");
   const groups = [...beam.querySelectorAll(".beam-lines [data-ray]")];
+  const overlay = document.getElementById("film-overlay");
+  overlay.replaceChildren();
   const couriers = [document.getElementById("courier"), document.getElementById("star-courier")];
   const paired = board.starSource !== undefined;
   groups.forEach(group => group.replaceChildren());
@@ -63,6 +65,8 @@ export function mountChart(board, onRotate, t) {
     let name = features[tile] || "water";
     if (direction !== -1) name = starDirection !== -1 ? "starLamp" : "lamp";
     if (paired && tile === "M") name = "moonBox";
+    if (board.film && tile === "M") name = "filmCamera";
+    if (board.film && "abcd".includes(tile)) name = "sensor";
     if (isMirror) name = "mirror";
     if (isNumbered(tile)) name = "number";
     element.className = "tile " + name + (name === "number" ? " mark" : "");
@@ -73,12 +77,14 @@ export function mountChart(board, onRotate, t) {
     } else if (name !== "water") {
       element.setAttribute("role", "img");
       const label = direction !== -1 ? t(starDirection !== -1 ? "starLampLabel" : "lampLabel", {direction: t(directions[direction])})
-        : name === "number" ? t("sealLabel", {n: tile}) : t(name);
+        : name === "number" ? t("sealLabel", {n: tile}) : name === "sensor" ? t("sensorLabel", {name: tile.toUpperCase()}) : t(name);
       element.setAttribute("aria-label", coordinate(board, cell) + " " + label);
     } else {
       element.setAttribute("aria-hidden", "true");
     }
-    if (name !== "water" || (cell * 7 + Math.floor(cell / board.width)) % 5 < 2) element.append(glyph(name, name === "number" ? tile : null));
+    if (name !== "water" || (cell * 7 + Math.floor(cell / board.width)) % 5 < 2) {
+      element.append(glyph(name, name === "sensor" ? tile.toUpperCase() : name === "number" ? tile : null));
+    }
     if (direction !== -1) {
       const arrow = document.createElement("i");
       arrow.className = "heading-arrow";
@@ -122,6 +128,12 @@ export function mountChart(board, onRotate, t) {
       seal.dataset.count = route.jointCount;
       seal.setAttribute("aria-label", coordinate(board, board.jointCell) + " " + t("sealCount", {n: route.jointCount}));
     }
+    if (board.film) board.film.sensors.forEach((cell, i) => {
+      const lit = Boolean(route.exposure & (1 << i));
+      cells[cell].classList.toggle("lit", lit);
+      const name = board.tiles[cell].toUpperCase();
+      cells[cell].setAttribute("aria-label", [coordinate(board, cell), t("sensorLabel", {name}), t(lit ? "lit" : "unlit")].join(" "));
+    });
     document.getElementById("route-description").textContent = route.rays.map((ray, i) => {
       const boxCell = board.tiles.indexOf(i === 0 ? "M" : "S");
       cells[boxCell].classList.toggle("arrived", ray.end === "ready");
@@ -130,7 +142,7 @@ export function mountChart(board, onRotate, t) {
         paired ? t("beamFrom", {ray: t(i === 0 ? "moonRay" : "starRay"), cell: coordinate(board, i === 0 ? board.source : board.starSource)})
           : t("routeFrom", {cell: coordinate(board, board.source)}),
         via.length ? t("routeVia", {cells: via.join(" → ")}) : "",
-        t("routeTo", {cell: coordinate(board, boxCell)}),
+        t(board.film ? "cameraTo" : "routeTo", {cell: coordinate(board, boxCell)}),
         paired ? t(ray.end === "ready" ? "arrived" : ray.end === "wrongBox" ? "wrongBox" : "inTransit") : "",
       ].filter(Boolean).join(" ");
     }).join(" ");
@@ -169,7 +181,14 @@ export function mountChart(board, onRotate, t) {
       chart.classList.remove("sending");
     }
   }
-  return { draw, carryLetter };
+  function compareExposure(ray) {
+    overlay.replaceChildren(...(ray?.lines ?? []).map(line => {
+      const path = document.createElementNS(svgNS, "polyline");
+      path.setAttribute("points", line.map(([x, y]) => [x * 100, y * 100].join(",")).join(" "));
+      return path;
+    }));
+  }
+  return { draw, carryLetter, compareExposure };
 }
 
 function moveEnvelope({ courier, total, parts }, progress) {

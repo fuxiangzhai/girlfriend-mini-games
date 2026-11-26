@@ -1,6 +1,7 @@
 // Each row runs west to east. A and B are the two mirror orientations.
 // Arrows are lamps, M is the mailbox, # a reef, * a postmark and @ a tide gate.
 // A numbered postmark must be encountered for the first time in ascending order.
+// On photographic plates, a–d are exposure sites and M is the camera.
 export const letters = [
   {
     id: "lighthouse", title: "灯塔初亮", place: "白沙灯塔", time: "19:08",
@@ -204,6 +205,54 @@ export const letters = [
       letter: "The man at the bike shop offered me a brighter bell. Mine sounds a little tired, he said. I kept it. You'd know that sound from the other side of a bridge.",
       postscript: "I tried my bell. It still rings. When the bridge closes, ring yours once and I'll answer. Look up at the second ring.",
       clue: "Two bicycle bells",
+    },
+  },
+  {
+    id: "shellprint", chapter: "darkroom", title: "一枚贝壳，两次天光", place: "退潮池", time: "06:24",
+    artAlt: "浅浅的潮池里，两瓣扇贝一深一浅，清晨的光沿着贝壳的纹路散开。",
+    brief: "第一束光已穿过 A 到达相机。按快门留下它，再转镜拍 B。同一张底片会记住两次曝光。",
+    letter: "那天我们一人捡到半边贝壳，谁都没想到要试着合起来。洗出照片才发现，两边的纹路差得很远。可我还是喜欢它们待在同一张照片里。",
+    rows: ["..AaB", ">.A.M", ".#...", "..AbA"], plate: {frames: 2, targets: [1, 1]},
+    expert: ["#.BA.A", "...b..", "..a...", ">..A.c", "..AM.A"], expertPlate: {frames: 2, targets: [1, 2, 1]},
+    expertNote: "贝脊上的 B 要曝光两次。找两条都经过 B 的光路，让 A 和 C 各自只出现一次。",
+    en: {
+      title: "A Shell in Two Lights", place: "Low Tide Pool",
+      artAlt: "Two scallop halves, one pale and one vivid, catch the morning light in a shallow tide pool.",
+      brief: "The beam already passes through A into the camera. Take that exposure, then turn the mirrors for B. The same negative remembers both shots.",
+      expertNote: "The shell ridge at B needs two exposures. Find two routes through B that catch A and C just once each.",
+      letter: "We each picked up half a shell that day. It never occurred to us to fit them together. In the print their ridges don't match at all. I still like seeing them in the same picture.",
+    },
+  },
+  {
+    id: "kelpprint", chapter: "darkroom", title: "给海藻留一块白", place: "晒网台", time: "14:10",
+    artAlt: "普鲁士蓝的晒印纸上，两枝海藻留下白色的细影，纸角系着一截珊瑚色细绳。",
+    brief: "D 是要留白的纸角。拍之前先看底片读数，把光移开。A 要叠两层，B 和 C 各留一层。",
+    letter: "第一次晒海藻，你忘了把压纸的手移开。纸角留下半个指尖。后来我们怎么摆都复原不了那一张，我把原件夹进了信里。",
+    rows: ["..B.AB", "..c...", "#MB..b", ".dA.aA", ".BA.^."], plate: {frames: 2, targets: [2, 1, 1, 0]},
+    expert: [".#vBA.", ".BAbB.", ".aAA..", ".cd...", ".MA..."], expertPlate: {frames: 2, targets: [2, 1, 2, 0]},
+    expertNote: "A、C 都要叠两层，B 只要一层。先认出两次都该保留的光段，D 自始至终要留白。",
+    en: {
+      title: "A Corner Left White", place: "Net-Drying Terrace",
+      artAlt: "Two pale seaweed silhouettes cross a Prussian-blue print beside a coral thread and an unexposed paper corner.",
+      brief: "D is the white corner. Check the readings and steer the light away before shooting. A needs two layers, B and C one each.",
+      expertNote: "A and C need both layers, B only one. Look for the stretch of light that can stay put. Keep D clear in both shots.",
+      letter: "The first time we printed seaweed, you forgot to lift your hand. Half a fingertip came out white in the corner. We tried to make it again and never could. I've enclosed the original.",
+    },
+  },
+  {
+    id: "windowprint", chapter: "darkroom", title: "窗边的第三次快门", place: "堤岸暗房", time: "20:36",
+    artAlt: "暗房窗里两把木椅靠在一起，晾晒的相片下，海港灯火映在窗玻璃上。",
+    brief: "这张底片要叠三次。留意只该出现一次的光点，给后面的快门留出余量。潮门能让一段光路越过窗框。",
+    letter: "最后一张里没有人。我们轮流站起来按快门，谁都没坐好。两把椅子却越挪越近，第三次曝光时，椅背已经碰在一起了。",
+    rows: ["....@M", "....a.", ".B.d.A", ">A..A@", "#BcbB."], plate: {frames: 3, targets: [1, 1, 1, 2]},
+    expert: ["...#.@", ".BB.A.", ".ab..d", ".BAcA.", ".@^.MA"], expertPlate: {frames: 3, targets: [1, 2, 2, 2]},
+    expertNote: "三次曝光共用一份转镜预算。先决定每次要留下哪些点，再安排拍摄顺序，让上一张的镜面为下一张所用。",
+    en: {
+      title: "The Third Click", place: "Seawall Darkroom",
+      artAlt: "Two wooden chairs nearly touch under drying prints in a lamplit window reflecting the harbour at night.",
+      brief: "This negative takes three exposures. Save room for later shots at sites that only need one layer. A tide gate can carry light across the window frame.",
+      expertNote: "Three shots share one turn budget. Choose the sites for each exposure, then order the shots so one mirror arrangement can lead into the next.",
+      letter: "Neither of us is in the last picture. We kept getting up to press the shutter. The two chairs crept a little closer each time. By the third exposure their backs were touching.",
     },
   },
 ].map(letter => ({ chapter: "coast", ...letter, image: "./art/" + letter.id + ".webp" }));

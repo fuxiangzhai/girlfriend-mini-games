@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 import { letters, localLetter } from "../moon-mail/levels.mjs";
 import { prepareBoard, prepareRoute, isNumbered, trace, closestRoute } from "../moon-mail/puzzle.mjs";
 import { chooseLanguage, translator } from "../moon-mail/i18n.mjs";
+const mailRoutes = letters.filter(letter => !letter.plate);
 
 test("all twelve standard letters start unsolved and retain the original nine routes", () => {
   const par = [1, 2, 3, 3, 4, 6, 1, 4, 5, 2, 3, 4];
-  assert.equal(new Set(letters.map(letter => letter.id)).size, par.length);
-  letters.forEach(({ rows }, index) => {
+  assert.equal(new Set(letters.map(letter => letter.id)).size, letters.length);
+  assert.equal(mailRoutes.length, par.length);
+  mailRoutes.forEach(({ rows }, index) => {
     const board = prepareBoard(rows);
     assert.ok(rows.every(row => row.length === board.width));
     assert.equal(board.tiles.match(/[<>v^]/g)?.length, 1);
@@ -19,7 +21,7 @@ test("all twelve standard letters start unsolved and retain the original nine ro
 });
 
 test("every standard and expert configuration has a shortest route and a valid next turn", () => {
-  const charts = letters.flatMap(letter => [letter.rows, letter.expert].flatMap(rows =>
+  const charts = mailRoutes.flatMap(letter => [letter.rows, letter.expert].flatMap(rows =>
     rows.join("").includes("&") ? [prepareBoard(rows), prepareBoard(rows, "joint")] : [prepareBoard(rows)]));
   for (const board of charts) {
     // Work backwards from every valid delivery by individual mirror turns.
@@ -91,7 +93,7 @@ test("the dawn letter must traverse the same tide gate twice and keep its direct
 test("relaxed starts one or two turns away and each expert budget fits its own unique chart", () => {
   const expertPar = [3, 4, 5, 5, 6, 7, 4, 6, 7, 4, 5, 7];
   const layouts = new Set();
-  letters.forEach((letter, i) => {
+  mailRoutes.forEach((letter, i) => {
     const relaxed = prepareRoute(letter, "relaxed");
     const normal = prepareRoute(letter, "standard");
     const expert = prepareRoute(letter, "expert");

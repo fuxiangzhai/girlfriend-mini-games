@@ -5,6 +5,8 @@ import { chooseLanguage, translator } from "./i18n.mjs";
 import { playMailSound } from "./soundscape.js";
 import { coordinate, mountChart } from "./chart.js";
 import { postcardPNG } from "./postcard.js";
+import { prepareFilm, readFilm, restoreFilm, filmHint, isDevelopedFilm, shutter } from "./darkroom.mjs";
+import { showFilmTray, filmStatus, contactSheet, developPrint } from "./darkroom-ui.js";
 
 const byId = id => document.getElementById(id);
 const pad = value => String(value).padStart(2, "0");
@@ -65,6 +67,8 @@ const album = byId("album");
 const receipt = byId("receipt");
 const settings = byId("settings");
 let active, board, chart, mask, path, history, sent, hint;
+let frames = [], reading;
+let compared = -1, justExposed = false;
 let chapter = "coast";
 let sending = false;
 let viewed = 0;
@@ -87,11 +91,19 @@ function saveDraft() {
   write(routeKey(active, "route", board.goal), { history: history.slice(), sent });
 }
 
-function outOfTurns() {
-  return board.budget !== null && history.length >= board.budget;
-}
+function turns() { return history.length - frames.length; }
+function outOfTurns() { return board.budget !== null && turns() >= board.budget; }
+function readyToSend() { return reading ? reading.complete : path.end === "ready"; }
+function nextAction() { return reading ? filmHint(board, mask, reading) : closestRoute(board, mask).next; }
 
 function statusText(advice) {
+  if (board.film) {
+    if (sending || sent) return t(sending ? "developing" : "printSent");
+    const text = Number.isInteger(advice)
+      ? t(difficulty === "relaxed" ? "guidedStatus" : "hintStatus", {cell: coordinate(board, board.mirrors[advice])})
+      : filmStatus(board, path, reading, advice, outOfTurns(), t);
+    return justExposed ? t("shotStored", {n: frames.length}) + " " + text : text;
+  }
   if (sending) return t("busyStatus");
   if (sent) return t("deliveredStatus");
   if (path.end === "ready") {
@@ -120,11 +132,12 @@ function statusText(advice) {
 
 function render() {
   path = trace(board, mask);
-  const advice = difficulty === "relaxed" ? closestRoute(board, mask).next : hint;
-  chart.draw(mask, path, advice, sending || sent || outOfTurns());
-  byId("moves").textContent = pad(history.length);
+  reading = board.film ? readFilm(board, frames, mask) : null;
+  const advice = difficulty === "relaxed" && !sent ? nextAction() : hint;
+  chart.draw(mask, path, advice, sending || sent || outOfTurns() || reading?.slots === 0);
+  byId("moves").textContent = pad(turns());
   byId("budget").textContent = board.budget === null ? "" : " / " + pad(board.budget);
-  byId("turn-counter").title = board.budget === null ? t("turns") : t("budgetAccess", {used: history.length, total: board.budget});
+  byId("turn-counter").title = board.budget === null ? t("turns") : t("budgetAccess", {used: turns(), total: board.budget});
   byId("mode-label").textContent = t(difficulty);
   byId("mode-open").setAttribute("aria-label", t("modeControl", {mode: t(difficulty)}));
   const counter = byId("mark-count");
@@ -133,14 +146,23 @@ function render() {
     ? board.sealOrder.map((_, i) => path.sequence[i] ?? "–").join("›")
     : path.lit.size + "/" + board.marks.length);
   counter.classList.toggle("wrong-order", path.wrongOrder);
+  if (reading) {
+    counter.hidden = false;
+    counter.textContent = t("filmCounter", {n: frames.length, total: board.film.frames});
+    if (compared >= frames.length) compared = -1;
+    showFilmTray(board, frames, reading, advice, sending || sent, compared, t);
+    chart.compareExposure(compared >= 0 ? trace(board, frames[compared]) : null);
+  }
   byId("status").textContent = statusText(advice);
-  byId("status").parentElement.dataset.state = advice !== undefined ? "hint" : path.end;
+  byId("status").parentElement.dataset.state = readyToSend() ? "ready" : advice !== undefined ? "hint" : reading ? "film" : path.end;
   byId("undo").disabled = byId("reset").disabled = !history.length || sending || sent;
   byId("hint").hidden = difficulty !== "standard";
-  byId("hint").disabled = difficulty !== "standard" || path.end === "ready" || sending || sent;
-  byId("send").disabled = path.end !== "ready" || sending;
+  byId("hint").disabled = difficulty !== "standard" || readyToSend() || sending || sent;
+  byId("send").disabled = sending || !(readyToSend() || reading?.canShoot);
   const paired = board.starSource !== undefined;
-  byId("send").querySelector("span").textContent = t(sending ? "sending" : sent ? "read" : paired ? "pairSend" : "send");
+  const action = reading ? (reading.complete ? "develop" : "takeShot") : paired ? "pairSend" : "send";
+  byId("send").querySelector("span").textContent = t(sending ? (reading ? "developing" : "sending") : sent ? "read" : action);
+  byId("send").querySelector("use").setAttribute("href", reading && !reading.complete ? "#i-camera" : "#i-mail");
   if (paired) {
     for (const button of byId("goals").querySelectorAll("button")) {
       button.disabled = sending;
@@ -163,14 +185,19 @@ function openRoute(index, fresh = false, requestedGoal) {
   const paired = letter.chapter === "together";
   const choice = requestedGoal ?? (paired ? read(routeKey(index, "goal")) : "direct");
   const goal = paired && choice === "joint" ? "joint" : "direct";
-  board = prepareRoute(letter, difficulty, goal);
+  board = letter.plate ? prepareFilm(letter, difficulty) : prepareRoute(letter, difficulty, goal);
   if (paired) write(routeKey(index, "goal"), goal);
   const draft = fresh ? null : read(routeKey(index, "route", goal));
-  const valid = Array.isArray(draft?.history) && (board.budget === null || draft.history.length <= board.budget)
+  const restored = board.film ? restoreFilm(board, draft?.history) : null;
+  const valid = board.film ? !!restored : Array.isArray(draft?.history) && (board.budget === null || draft.history.length <= board.budget)
     && draft.history.every(i => Number.isInteger(i) && i >= 0 && i < board.mirrors.length);
   history = valid ? draft.history.slice() : [];
-  mask = history.reduce((state, i) => state ^ (1 << i), board.initial);
-  sent = valid && draft.sent === true && bestFor(index, goal) !== null && trace(board, mask).end === "ready";
+  mask = restored?.mask ?? history.reduce((state, i) => state ^ (1 << i), board.initial);
+  frames = restored?.frames ?? [];
+  compared = -1;
+  justExposed = false;
+  sent = valid && draft.sent === true && bestFor(index, goal) !== null
+    && (board.film ? isDevelopedFilm(board, frames) : trace(board, mask).end === "ready");
   hint = undefined;
   sending = false;
   write("active", letter.id);
@@ -193,24 +220,38 @@ function presentRoute() {
   byId("time").textContent = letter.time;
   byId("brief").textContent = difficulty === "expert" ? letter.expertNote : letter.brief;
   const paired = board.starSource !== undefined;
+  const film = Boolean(board.film);
   byId("goals").hidden = byId("ray-key").hidden = !paired;
+  byId("film-tray").hidden = !film;
+  byId("send").classList.remove("suggested");
+  byId("chart-title").querySelector("span").textContent = t(film ? "filmChart" : "chart");
+  byId("chart-title").querySelector("use").setAttribute("href", film ? "#i-camera" : "#i-compass");
+  document.querySelector(".chart-panel").classList.toggle("darkroom-chart", film);
   for (const key of document.querySelectorAll(".bay-symbol")) key.hidden = !paired;
-  for (const key of document.querySelectorAll(".single-symbol")) key.hidden = paired;
-  byId("guide-instructions").textContent = t(paired ? "pairInstructions" : "instructions");
+  for (const key of document.querySelectorAll(".single-symbol")) key.hidden = paired || film;
+  for (const key of document.querySelectorAll(".film-symbol")) key.hidden = !film;
+  byId("guide-instructions").textContent = t(film ? "filmGuide" : paired ? "pairInstructions" : "instructions");
   chart = mountChart(board, rotate, t);
   render();
   updateCount();
 }
 
 function rotate(index) {
-  if (sending || sent || outOfTurns()) return;
+  if (sending || sent || outOfTurns() || reading?.slots === 0) return;
   const previous = path;
+  const wasShootable = reading?.canShoot;
   cue("turn");
   history.push(index);
   mask ^= 1 << index;
+  justExposed = false;
   hint = undefined;
   saveDraft();
   render();
+  if (reading) {
+    if (reading.canShoot && !wasShootable) sound.play("focus");
+    else if (outOfTurns() && !reading.canShoot) sound.play("limit");
+    return;
+  }
   const stampedTogether = path.jointCount === 2 && previous.jointCount !== 2;
   if (stampedTogether) sound.play("joint");
   else if ([...path.lit].some(cell => !previous.lit.has(cell))) sound.play("stamp");
@@ -219,13 +260,37 @@ function rotate(index) {
   else if (outOfTurns() && path.end !== "ready") sound.play("limit");
 }
 
+function undoAction() {
+  justExposed = false;
+  const action = history.pop();
+  if (action === shutter) frames.pop();
+  else mask ^= 1 << action;
+}
+
 byId("undo").addEventListener("click", () => {
   if (!history.length || sending || sent) return;
   cue("undo");
-  mask ^= 1 << history.pop();
+  undoAction();
   hint = undefined;
   saveDraft();
   render();
+});
+byId("rewind-film").addEventListener("click", () => {
+  if (!frames.length || sending || sent) return;
+  const last = history.lastIndexOf(shutter);
+  cue("undo");
+  while (history.length > last) undoAction();
+  hint = undefined;
+  saveDraft();
+  render();
+});
+byId("film-log").addEventListener("click", event => {
+  const toggle = event.target.closest("button[data-frame]");
+  if (!toggle || sending) return;
+  const index = Number(toggle.dataset.frame);
+  compared = compared === index ? -1 : index;
+  render();
+  byId("film-log").querySelector('[data-frame="' + index + '"]').focus({preventScroll: true});
 });
 byId("reset").addEventListener("click", () => { cue("reset"); openRoute(active, true); });
 for (const button of byId("goals").querySelectorAll("button")) {
@@ -249,25 +314,41 @@ for (const button of byId("ray-key").querySelectorAll("button")) {
 byId("hint").addEventListener("click", () => {
   if (difficulty !== "standard") return;
   cue("hint");
-  hint = closestRoute(board, mask).next;
+  justExposed = false;
+  hint = nextAction();
   render();
-  if (hint !== undefined) byId("tiles").querySelector('[data-mirror="' + hint + '"]').focus({ preventScroll: true });
+  if (Number.isInteger(hint)) byId("tiles").querySelector('[data-mirror="' + hint + '"]').focus({ preventScroll: true });
+  if (hint === shutter || hint === "rewind") byId(hint === shutter ? "send" : "rewind-film").focus({ preventScroll: true });
 });
 
 byId("send").addEventListener("click", async () => {
-  if (sending || path.end !== "ready") return;
+  if (sending) return;
+  if (reading && !reading.complete) {
+    if (!reading.canShoot || sent) return;
+    cue(shutter);
+    frames.push(mask);
+    justExposed = true;
+    history.push(shutter);
+    hint = undefined;
+    saveDraft();
+    render();
+    return;
+  }
+  if (!readyToSend()) return;
   const firstDelivery = !sent;
   if (firstDelivery) {
     sending = true;
     sent = true;
-    cue("depart");
-    write(routeKey(active, "best", board.goal), Math.min(bestFor(active, board.goal) ?? Infinity, history.length));
+    cue(reading ? "develop" : "depart");
+    if (reading) write(routeKey(active, "print"), frames.slice());
+    write(routeKey(active, "best", board.goal), Math.min(bestFor(active, board.goal) ?? Infinity, turns()));
     if (path.jointCount === 2) write(routeKey(active, "imprint"), true);
     saveDraft();
     updateCount();
     render();
     try {
-      await chart.carryLetter();
+      if (reading) await developPrint();
+      else await chart.carryLetter();
     } catch {
       // A browser without SVG path measurement can still open the delivered letter.
     } finally {
@@ -379,6 +460,7 @@ function setEditing(value) {
   byId("editor").hidden = !value;
   byId("letter-text").hidden = value;
   byId("postscript").hidden = value || letters[viewed].chapter !== "together";
+  byId("film-proof").hidden = value || !byId("contact-sheet").firstElementChild;
   byId("edit-message").parentElement.hidden = value;
   byId("next").parentElement.hidden = value;
   if (value) {
@@ -398,6 +480,14 @@ function showReceipt(index, rustle = true) {
   byId("receipt-image").alt = letter.artAlt;
   byId("receipt-title").textContent = letter.title;
   byId("letter-text").textContent = messageFor(index);
+  const proof = byId("contact-sheet");
+  proof.replaceChildren();
+  if (letter.plate) {
+    const printBoard = index === active ? board : prepareFilm(letter, difficulty);
+    const saved = read(routeKey(index, "print"));
+    if (isDevelopedFilm(printBoard, saved)) proof.append(contactSheet(printBoard, saved, t));
+  }
+  byId("film-proof").hidden = !proof.firstElementChild;
   updateReceiptRoutes();
   const next = letters[index + 1];
   byId("next").querySelector("span").textContent = t(!next ? "backToAlbum" : next.chapter !== letter.chapter ? "nextChapter" : "next", {chapter: next && t(next.chapter)});
@@ -409,7 +499,7 @@ function updateReceiptRoutes() {
   const paired = station.chapter === "together";
   const goal = paired && read(routeKey(viewed, "goal")) === "joint" ? "joint" : "direct";
   const draft = read(routeKey(viewed, "route", goal));
-  const resume = paired && draft?.sent === false && draft.history?.length > 0;
+  const resume = (paired || Boolean(station.plate)) && draft?.sent === false && draft.history?.length > 0;
   byId("replay").textContent = t(resume ? "continueRoute" : "replay");
   byId("replay").dataset.resume = String(resume);
   if (!paired) return;
@@ -450,7 +540,7 @@ byId("save-image").addEventListener("click", async () => {
   byId("export-status").textContent = t("printing");
   try {
     const letter = localLetter(letters[index], language);
-    const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, hasImprint(index) ? letter.postscript : undefined);
+    const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, hasImprint(index) ? letter.postscript : undefined, byId("contact-sheet").firstElementChild);
     if (version !== exportVersion || !receipt.open) return;
     exportURL = URL.createObjectURL(blob);
     const download = document.createElement("a");
