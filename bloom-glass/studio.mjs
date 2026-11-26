@@ -5,6 +5,7 @@ import { icon, thumbnail, drawBoard } from './glass.mjs';
 import { read, write, fresh, restore, save, record, award } from './save.mjs';
 import { setupNight } from './night-shift.mjs';
 import { lastShow, setupLantern } from './lantern-desk.mjs';
+import { lastPlay, setupSlips } from './slip-desk.mjs';
 import { paneDescription } from './lantern-glass.mjs';
 
 const $ = id => document.getElementById(id);
@@ -51,6 +52,12 @@ function occupiedAt(x,y) {
   return state.slots.findIndex((p,i) => p && shapeAt(level.pieces[i],p.o).some(([dx,dy]) => p.x+dx === x && p.y+dy === y));
 }
 function baseText() {
+  if(level.play){
+    if(slips.finished())return '落幕了。可以重映整出，或在活动戏本里回看每次换片。';
+    if(state.selected<0)return '镜位已拼满。可以先探后场，再落下这一拍。';
+    if(trying)return '先选格试摆，点「嵌入此处」才会放下这片活动玻璃。';
+    return '已选'+level.pieces[state.selected].name+'，圆钉是落点。按场记拼出这一拍的两束光。';
+  }
   if (level.projection) {
     if(state.selected<0)return '玻璃已拼满。核对出光口后，点「开场放映」试演。';
     if(trying)return '先选窗格试摆，再看试灯轨迹。点「嵌入此处」才会放下玻璃。';
@@ -73,15 +80,21 @@ function baseText() {
   }
   return '已选' + level.pieces[state.selected].name + '。点窗格放下圆钉，也可以先旋转。';
 }
+function persist(){
+  if(level.play)slips.save(state,history);else save(level,state,history);
+}
+function issueAt(id,place) {
+  return level.play?slips.issue(state.slots.map((p,i)=>i===id?place:p)):'';
+}
 function commit(next) {
   history = [...history.slice(-39),state];
   state = next; hint = null; hover = null; lesson = null; trial = null;
-  save(level,state,history);
+  persist();
 }
 function preview() {
   if (trial) {
     const id=state.selected, place={...trial,o:state.angles[id]};
-    return {id,place,valid:fits(level,state.slots,id,place)};
+    return {id,place,valid:fits(level,state.slots,id,place) && !issueAt(id,place)};
   }
   if (hover) return hover;
   const ghost = hint?.type === 'place' ? hint : lesson;
@@ -108,15 +121,22 @@ function render() {
   $('reset').disabled = !history.length && !record(level) &&
     JSON.stringify(state.slots) === JSON.stringify(level.sample) && state.angles.every(o => !o);
   $('hint-label').textContent = done && !level.projection ? '查看成品' : hint ? (hint.type === 'place' ? '照提示嵌入' : '取回这片') : '看一步提示';
+  if(level.play){
+    if(slips.finished()){$('reset').disabled=true;$('hint-label').textContent='重映整出';}
+    if(hint?.type==='rewind')$('hint-label').textContent='倒回第 '+(hint.index+1)+' 拍';
+    if(hint?.type==='reset')$('hint-label').textContent='还原本拍';
+  }
   els('pieces').forEach((btn,id) => {
     const p = level.pieces[id], placed = state.slots[id];
     btn.classList.toggle('is-set',Boolean(placed));
+    const guarded=Boolean(level.play && slips.held(id));
+    btn.classList.toggle('is-guarded',guarded);
     btn.setAttribute('aria-pressed',String(state.selected === id));
     const angle=placed?.o ?? state.angles[id];
     const offset=p.etch && transform(p.etch,angle);
     const offsets=offset ? [offset[0] ? (offset[0]>0?'右':'左')+Math.abs(offset[0])+'格':'',
       offset[1] ? (offset[1]>0?'下':'上')+Math.abs(offset[1])+'格':''].filter(Boolean).join('、') : '';
-    btn.setAttribute('aria-label',p.name + '玻璃，' + p.mark + '纹，' +(offsets?'背花在圆钉'+offsets+'，':'')+paneDescription(p,angle)+ (placed ? '已嵌入，点按取回' : '点按选择'));
+    btn.setAttribute('aria-label',p.name + '玻璃，' + p.mark + '纹，' +(offsets?'背花在圆钉'+offsets+'，':'')+paneDescription(p,angle)+ (guarded?'守灯夹住':placed ? '已嵌入，点按取回' : '点按选择'));
     btn.innerHTML = thumbnail(p,angle,id) +
       (placed ? '<span class="check">'+icon('check')+'</span>' : '') + '<span class="piece-label">'+p.name+'</span>';
   });
@@ -124,7 +144,7 @@ function render() {
   if (level.gold !== null) $('objective').innerHTML = icon('star') + (isGilded(level,state.slots) ? '圆钉已对准金印。' : '可选金印 · 让一枚圆钉压住四角星。');
   for (const cell of els('hit-grid')) {
     const x = +cell.dataset.x, y = +cell.dataset.y, at = y*level.width+x, id = occupiedAt(x,y);
-    const text = [address(x,y), id < 0 ? '空格' : level.pieces[id].name+'玻璃，点按取回'];
+    const text = [address(x,y), id < 0 ? '空格' : level.pieces[id].name+(level.play && slips.held(id)?'玻璃，守灯夹住':'玻璃，点按取回')];
     if (level.clues.has(at)) text.push(level.pieces[level.clues.get(at)].mark+'刻纹');
     if (at === level.gold) text.push('金印');
     if (level.rubbings.has(at)) text.push(level.pieces[level.rubbings.get(at)].name+'背花拓印');
@@ -159,7 +179,7 @@ function setPage(page) {
   write('room',page);
 }
 function jacket(chapter) {
-  $('hero').classList.remove('is-night','is-roll','is-lantern');
+  $('hero').classList.remove('is-night','is-roll','is-lantern','is-slip');
   const sequel=volumes[1].chapters.includes(chapter);
   $('hero').classList.toggle('is-letter',sequel);
   $('jacket').hidden=!sequel;
@@ -180,7 +200,7 @@ function preferRoute(index) {
   routeButtons(); render();
 }
 function openLevel(target, showFinished = false) {
-  level = target; ({ state, history } = restore(level));
+  level = target; ({ state, history } = level.play?slips.load(level):restore(level));
   hint = null; hover = null; drag = null; lesson = null; if (!level.projection) chapterOpen = level.chapter;
   trying=false; trial=null;
   const preference=level.fork ? read('route:'+level.id) : null;
@@ -196,8 +216,8 @@ function openLevel(target, showFinished = false) {
       focusAt = step.place.y * level.width + step.place.x;
     }
   }
-  write('bench:mode',level.projection?'lantern':'day');
-  write(level.projection?'lantern:active':'active',level.daily ? 'daily' : level.id);
+  write('bench:mode',level.play?'slips':level.projection?'lantern':'day');
+  write(level.play?'slip:active':level.projection?'lantern:active':'active',level.daily ? 'daily' : level.id);
   const chapter = chapters[level.chapter];
   $('chapter-label').textContent = level.daily ? '每日委托 · '+level.id.slice(4) :
     '第'+chapterNumbers[level.chapter]+'章·'+chapter.flower+' / 图纸'+number(level.index+1);
@@ -207,7 +227,7 @@ function openLevel(target, showFinished = false) {
     level.clues.size ? '刻纹格要配同纹玻璃。点选或拖入窗框。' : '点选或拖动玻璃，圆钉对准想放的窗格。';
   if (level.hasEtches) $('instruction').textContent='圆钉仍是落点。玻璃上的实心小花会一起转动。';
   if(level.projection) {
-    $('chapter-label').textContent='巷口幻灯会 / 第 '+number(level.showIndex+1)+' 场';
+    $('chapter-label').textContent=level.play?'留灯换景 / 第 '+number(level.showIndex+1)+' 出':'巷口幻灯会 / 第 '+number(level.showIndex+1)+' 场';
     $('instruction').textContent='点玻璃，再点窗格放圆钉。光从圆牌入，遇银镜转直角，向方牌出。';
   }
   $('note-art').closest('.note-card').querySelector('h3').textContent=level.projection?'棚边来信':'窗边来信';
@@ -242,14 +262,15 @@ function openLevel(target, showFinished = false) {
   }
 }
 function selectPane(id) {
-  trial=null;
   const installed = state.slots[id];
+  if(installed && level.play){const why=issueAt(id,null);if(why){tell(why);return;}}
+  trial=null;
   if (installed) {
     const angles = [...state.angles], slots = [...state.slots];
     angles[id] = installed.o; slots[id] = null;
     commit({angles,slots,selected:id});
   } else {
-    state = { ...state, selected:id }; hint=null; lesson=null; hover=null; save(level,state,history);
+    state = { ...state, selected:id }; hint=null; lesson=null; hover=null; persist();
   }
   render(); tell(installed ? '已取回'+level.pieces[id].name+'，可以重新嵌入。' : baseText());
 }
@@ -277,6 +298,7 @@ function rejection(id,place) {
 }
 function trialText() {
   const ghost=preview();
+  if(level.play && fits(level,state.slots,ghost.id,ghost.place)){const why=issueAt(ghost.id,ghost.place);if(why)return why;}
   return ghost.valid?'试摆在 '+address(ghost.place.x,ghost.place.y)+'，位置合适。可以嵌入或继续尝试。':rejection(ghost.id,ghost.place);
 }
 function tryCell(x,y) {
@@ -285,6 +307,7 @@ function tryCell(x,y) {
 }
 function placePane(id,place) {
   if (!fits(level,state.slots,id,place)) { tell(rejection(id,place)); return; }
+  const why=issueAt(id,place);if(why){tell(why);return;}
   const slots = [...state.slots], angles = [...state.angles];
   slots[id] = place; angles[id] = place.o;
   commit({ slots,angles, selected:slots.findIndex(p=>!p) });
@@ -322,24 +345,29 @@ function onCell(x,y) {
 function undo() {
   if (!history.length) return;
   state = history[history.length-1]; history=history.slice(0,-1);
-  hint=null; lesson=null; hover=null; trial=null; save(level,state,history); render(); tell('已撤销上一步。'+baseText());
+  hint=null; lesson=null; hover=null; trial=null; persist(); render(); tell('已撤销上一步。'+baseText());
 }
 function showHint() {
   if (!level.projection && state.slots.every(Boolean)) { showResult(); return; }
   if (hint) {
-    if (hint.type === 'lift') selectPane(hint.id);
+    if (hint.type==='rewind') slips.rewind(hint.index);
+    else if (hint.type==='reset') $('reset').click();
+    else if (hint.type === 'lift') selectPane(hint.id);
     else placePane(hint.id,hint.place);
     return;
   }
   hint = level.projection?lantern.step(state.slots,state.selected):suggest(level,state.slots,state.selected,hintRoute); hover=null; lesson=null; trial=null;
   if (!hint) return;
-  if (hint.type==='ready') {hint=null;render();tell('这套镜位已经能演「'+lantern.target()+'」。点「开场放映」即可收票。');return;}
+  if(hint.type==='finished'){hint=null;slips.project();return;}
+  if(hint.type==='rewind'){render();tell('要完成这次排演，最晚从第 '+(hint.index+1)+' 拍起改。再点提示会保留前 '+hint.index+' 拍。');return;}
+  if(hint.type==='reset'){render();tell('先还原这次换景，再从上一拍的镜位接下去。');return;}
+  if (hint.type==='ready') {hint=null;render();tell('这套镜位已经能演「'+lantern.target()+'」。'+(level.play?'可以落下这一拍。':'点「开场放映」即可收票。'));return;}
   const { id,place } = hint;
   if (hint.type === 'lift' && level.projection) tell('要演「'+lantern.target()+'」，桌上至少要换 '+hint.count+' 片。先取回红色虚线里的'+level.pieces[id].name+'。');
   else if (hint.type === 'lift') tell('要完成'+(hintRoute===null?'余下的图纸':'「'+level.fork.routes[hintRoute].name+'」')+'，先取回红色虚线里的'+level.pieces[id].name+'。');
   else {
     state = {...state,selected:id,angles:state.angles.map((o,i)=>i===id?place.o:o)};
-    save(level,state,history);
+    persist();
     tell('试试'+level.pieces[id].name+'，方向已对好。把圆钉放到 '+address(place.x,place.y)+' 的亮圈。');
   }
   render();
@@ -354,7 +382,7 @@ $('routes').onclick=e=>{
   tell(hintRoute===null?'两封回信都可以尝试。':'提示将寻找「'+level.fork.routes[index].name+'」，目标在 '+cellLabel(level,level.fork.routes[index].at)+'。');
 };
 $('undo').onclick = undo; $('hint').onclick = showHint;
-$('reset').onclick = () => { commit(fresh(level)); render(); tell('图纸已铺好，可以重新拼。'+baseText()); };
+$('reset').onclick = () => { if(level.play && slips.finished())return;commit(level.play?slips.resetDesk():fresh(level)); render(); tell((level.play?'本拍的起始镜位已还原。':'图纸已铺好，可以重新拼。')+baseText()); };
 $('pieces').onclick = e => { const b=e.target.closest('.piece'); if (b && !suppressClick) selectPane(+b.dataset.id); };
 $('hit-grid').onclick = e => { const b=e.target.closest('.cell'); if (b && !suppressClick) onCell(+b.dataset.x,+b.dataset.y); };
 
@@ -362,7 +390,7 @@ function cellBelow(x,y) { return document.elementFromPoint(x,y)?.closest('#hit-g
 function setHover(id,place) {
   if (!drag?.moved) place = guidedPlace(id,place.x,place.y) || place;
   if (hover?.id===id && hover.place.x===place.x && hover.place.y===place.y && hover.place.o===place.o) return;
-  hover = {id,place,valid:fits(level,state.slots,id,place)}; paint();
+  hover = {id,place,valid:fits(level,state.slots,id,place) && !issueAt(id,place)}; paint();
 }
 function clearHover() { if (hover) { hover=null; paint(); } }
 function startDrag(event) {
@@ -374,6 +402,7 @@ function startDrag(event) {
   const id = fromBoard ? occupiedAt(x,y) : +button.dataset.id;
   if (id < 0) return;
   const installed = state.slots[id];
+  if(installed && level.play && issueAt(id,null))return;
   if (trying && installed) return;
   drag = {id, pointer:event.pointerId, startX:event.clientX, startY:event.clientY, moved:false, button,
     dx:fromBoard?x-installed.x:0, dy:fromBoard?y-installed.y:0, o:installed?.o??state.angles[id]};
@@ -389,7 +418,7 @@ document.addEventListener('pointermove',e => {
       hint=null; lesson=null; trial=null;
       if (!state.slots[drag.id]) {
         state={...state,selected:drag.id};
-        save(level,state,history);
+        persist();
         els('pieces').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===drag.id)));
       }
       $('hint-label').textContent='看一步提示';
@@ -502,7 +531,7 @@ const filmArt = id => './art/film-' + id + '.webp';
 const enterNight=setupNight(chime,nightCover,filmArt);
 function nightCover(edition) {
   const roll=edition==='roll';
-  $('hero').classList.remove('is-letter','is-lantern'); $('hero').classList.add('is-night');
+  $('hero').classList.remove('is-letter','is-lantern','is-slip'); $('hero').classList.add('is-night');
   $('hero').classList.toggle('is-roll',roll);
   $('jacket').hidden=true; $('sequel').hidden=true;
   $('volume-name').textContent=roll?'Petal Panes · Contact Sheets':'Petal Panes · Night Shift';
@@ -514,7 +543,7 @@ function showNight(edition) {
 }
 $('nav-night').onclick=()=>showNight();
 $('nav-night').hidden=false;
-$('guide').onclick=()=>$(level.projection?'lantern-guide':'guide-dialog').showModal();
+$('guide').onclick=()=>$(level.play?'slip-guide':level.projection?'lantern-guide':'guide-dialog').showModal();
 document.querySelectorAll('[data-close]').forEach(b=>{b.onclick=()=>b.closest('dialog').close();});
 document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{
   if (e.target!==d) return;
@@ -569,8 +598,11 @@ function dayLevel() {
   return last==='daily'?dailyLevel():levels.find(l=>l.id===last) || levels[0];
 }
 const slideArt = id => './art/slide-' + id + '.webp';
+const slipArt = (id,layer) => './art/slip-' + id + '-' + layer + '.webp';
+const clearStep=()=>{hint=null;lesson=null;trial=null;hover=null;render();};
+const slips=setupSlips({art:slipArt,open:openLevel,slots:()=>state.slots,selected:()=>state.selected,seat:placePane,repaint:paint,clearStep,tell,chime});
 const lantern=setupLantern({art:slideArt,open:openLevel,day:()=>openLevel(dayLevel()),slots:()=>state.slots,
-  clearStep:()=>{hint=null;lesson=null;trial=null;hover=null;render();},repaint:paint,tell,chime});
+  clearStep,repaint:paint,tell,chime,slips});
 chapterOpen=dayLevel().chapter;
 function consumeEntry() {
   try { window.history.replaceState(null,'',location.href.split('#')[0]); } catch { /* The game also works on restricted file URLs. */ }
@@ -586,17 +618,18 @@ function openAfterlight() {
 }
 if (location.hash==='#afterlight') openAfterlight();
 else if (location.hash==='#lantern') {openLevel(lastShow());consumeEntry();}
+else if (location.hash==='#slips') {openLevel(lastPlay());consumeEntry();}
 else {
-  openLevel(read('bench:mode')==='lantern'?lastShow():dayLevel());
+  const mode=read('bench:mode');openLevel(mode==='slips'?lastPlay():mode==='lantern'?lastShow():dayLevel());
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
     showNight(location.hash==='#shutters'?'roll':'night'); consumeEntry();
   } else if(lastRoom==='night') showNight();
 }
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#afterlight') openAfterlight();
-  if(location.hash==='#lantern') {
+  if(location.hash==='#lantern' || location.hash==='#slips') {
     for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
-    openLevel(lastShow());consumeEntry();window.scrollTo(0,0);
+    openLevel(location.hash==='#slips'?lastPlay():lastShow());consumeEntry();window.scrollTo(0,0);
   }
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
     for(const dialog of document.querySelectorAll('dialog[open]')) dialog.close();

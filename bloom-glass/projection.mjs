@@ -48,7 +48,7 @@ export function readProjector(level,slots) {
 }
 
 const solutions=new WeakMap();
-function performances(level) {
+export function performances(level) {
   if (solutions.has(level)) return solutions.get(level);
   const list=[];
   solve(level,undefined,false,null,slots=>{
@@ -75,14 +75,14 @@ export function promptProjector(level,slots,selected,scene=0,star=false) {
   return id<0?{type:'ready'}:{type:'place',id,place:closest.slots[id]};
 }
 
-function validTicket(level,slots) {
+export function validLayout(level,slots) {
   return Array.isArray(slots) && slots.length===level.pieces.length &&
     slots.every((p,id)=>p && describe(level,id,p) && fits(level,slots,id,p));
 }
 const receiptKey=(level,scene,star)=>'lantern:ticket:'+level.id+':'+scene+':'+(star?'star':'plain');
 
 export function punchTicket(level,slots) {
-  if (!validTicket(level,slots)) return null;
+  if (!validLayout(level,slots)) return null;
   const result=readProjector(level,slots);
   if (result.scene<0) return null;
   const key=receiptKey(level,result.scene,result.star);
@@ -93,7 +93,7 @@ export function punchTicket(level,slots) {
 export function ticketFor(level,scene) {
   for (const star of [true,false]) {
     const slots=read(receiptKey(level,scene,star));
-    if (!validTicket(level,slots)) continue;
+    if (!validLayout(level,slots)) continue;
     const result=readProjector(level,slots);
     if (result.scene===scene && result.star===star) return {slots,result};
   }

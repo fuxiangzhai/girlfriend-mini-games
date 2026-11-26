@@ -17,7 +17,7 @@ export function write(key, value) {
 export function fresh(level) {
   return { slots: [...level.sample], angles: level.pieces.map(() => 0), selected: level.sample.findIndex(p => !p) };
 }
-function valid(level, draft) {
+export function validDraft(level, draft) {
   const n = level.pieces.length;
   return draft && Array.isArray(draft.slots) && draft.slots.length === n &&
     Array.isArray(draft.angles) && draft.angles.length === n &&
@@ -29,8 +29,8 @@ function valid(level, draft) {
 function keyFor(level, kind) { return kind + (level.daily ? 'today' : level.id); }
 export function restore(level) {
   const draft = read(keyFor(level, 'draft:'));
-  if (draft?.id !== level.id || !valid(level,draft.state)) return { state: fresh(level), history: [] };
-  const history = Array.isArray(draft.history) ? draft.history.slice(-40).filter(s => valid(level,s)) : [];
+  if (draft?.id !== level.id || !validDraft(level,draft.state)) return { state: fresh(level), history: [] };
+  const history = Array.isArray(draft.history) ? draft.history.slice(-40).filter(s => validDraft(level,s)) : [];
   return { state: draft.state, history };
 }
 export function save(level,state,history) {

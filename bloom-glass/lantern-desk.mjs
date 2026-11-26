@@ -9,9 +9,11 @@ const $=id=>document.getElementById(id);
 const pad=n=>String(n).padStart(2,'0');
 export const lastShow=()=>shows.find(l=>l.id===read('lantern:active')) || shows[0];
 
-export function setupLantern({art,open,day,slots,clearStep,repaint,tell,chime}) {
-  let level,preferred=0,seekStar=false,testing=true,filter=-1,ticket=null,downloadRun=0;
+export function setupLantern({art,open,day,slots,clearStep,repaint,tell,chime,slips}) {
+  let level,preferred=0,seekStar=false,testing=true,filter=-1,ticket=null,downloadRun=0,scored;
   function cover(){
+    if(level.play){slips.cover();return;}
+    $('hero').classList.remove('is-slip');
     $('hero').classList.remove('is-letter','is-night','is-roll');$('hero').classList.add('is-lantern');
     let illustration='swallow';
     for(let n=level.showIndex;n>=0;n--){
@@ -34,24 +36,33 @@ export function setupLantern({art,open,day,slots,clearStep,repaint,tell,chime}) 
     })).join('');
     $('ticket-count').textContent=earned+' / 8 幕　·　'+stars+' / 7 枚暗星';
   }
+  function score(scene) {
+    if(scored===scene)return;
+    scored=scene;
+    const p=level.projection;
+    const lines=p.entries.map((e,i)=>'<span><i aria-hidden="true" class="beam-mark'+(i?' cool':'')+'"></i>'+lampNames[i]+' <b>'+portName(e)+' → '+portName(scene.exits[i])+'</b></span>');
+    if (p.cross!=null) lines.push('<span>◎ '+crossName(level)+' 横竖合像</span>');
+    $('projection-score').innerHTML='<strong>'+scene.title+'</strong><div class="lamp-lines">'+lines.join('')+'</div>';
+  }
   function preferences() {
-    const {projection:p}=level, scene=p.scenes[preferred];
+    const {projection:p}=level;
     $('scene-choice').hidden=p.scenes.length===1;
     $('scene-choice').innerHTML=p.scenes.length===1?'':'<p>选择要排演的灯位。实际出光决定幕景。</p>'+
       p.scenes.map((s,i)=>'<button type="button" data-prefer="'+i+'" aria-pressed="'+(preferred===i)+'">'+s.title+'</button>').join('');
     $('star-label').hidden=p.starLamp==null;
     $('seek-star').checked=seekStar;
     $('star-copy').textContent=p.starLamp==null?'':'提示也寻找暗星 · 让'+lampNames[p.starLamp]+'经过星刻';
-    const lines=p.entries.map((e,i)=>'<span><i aria-hidden="true" class="beam-mark'+(i?' cool':'')+'"></i>'+lampNames[i]+' <b>'+portName(e)+' → '+portName(scene.exits[i])+'</b></span>');
-    if (p.cross!=null) lines.push('<span>◎ '+crossName(level)+' 横竖合像</span>');
-    $('projection-score').innerHTML='<strong>'+scene.title+'</strong><div class="lamp-lines">'+lines.join('')+'</div>';
+    score(p.scenes[preferred]);
     write('lantern:choice:'+level.id,{preferred,seekStar});
   }
   function configure(target) {
     level=target;const enabled=Boolean(level.projection);
+    slips.configure(level);
     $('bench').classList.toggle('projecting',enabled);
-    $('day-desk').setAttribute('aria-pressed',String(!enabled));$('lantern-desk').setAttribute('aria-pressed',String(enabled));
-    for (const id of ['program-bar','cue-sheet','lamp-bench','projection-score','ticket-album','optics']) $(id).toggleAttribute('hidden',!enabled);
+    $('day-desk').setAttribute('aria-pressed',String(!enabled));$('lantern-desk').setAttribute('aria-pressed',String(enabled && !level.play));
+    for (const id of ['lamp-bench','projection-score','optics']) $(id).toggleAttribute('hidden',!enabled);
+    for (const id of ['program-bar','cue-sheet','ticket-album'])$(id).hidden=!enabled || Boolean(level.play);
+    $('project-slide').textContent='开场放映';
     if(!enabled) return;
     const p=level.projection, pref=read('lantern:choice:'+level.id);
     preferred=Number.isInteger(pref?.preferred) && p.scenes[pref.preferred]?pref.preferred:0;
@@ -61,15 +72,20 @@ export function setupLantern({art,open,day,slots,clearStep,repaint,tell,chime}) 
     $('beam-solo').hidden=p.entries.length===1;
     $('beam-solo').innerHTML=['双灯','琥珀','青瓷'].map((s,i)=>'<button type="button" data-beam="'+(i-1)+'" aria-pressed="'+(i===0)+'">'+s+'</button>').join('');
     $('optics').setAttribute('viewBox','0 0 '+level.width*48+' '+level.height*48);
-    preferences();album();cover();
+    if(level.play){score(p.scenes[slips.sceneId()]);}
+    else{preferences();album();cover();}
   }
   function paint(placed,ghost) {
     const p=level.projection, showing=testing && ghost?.valid;
     const shown=showing?placed.map((v,i)=>i===ghost.id?ghost.place:v):placed;
-    const result=testing?readProjector(level,shown):null;
-    $('optics').innerHTML=opticsOverlay(level,p.scenes[preferred],result,filter);
+    const keeper=level.play?slips.keeper():null;
+    const result=testing || keeper!=null?readProjector(level,shown):null;
+    const id=level.play?slips.sceneId():preferred;
+    if(level.play){score(p.scenes[id]);slips.paint(placed);}
+    $('optics').innerHTML=opticsOverlay(level,p.scenes[id],result,testing?filter:keeper)+(level.play?slips.clamps(placed):'');
     $('test-beam').setAttribute('aria-pressed',String(testing));$('beam-solo').hidden=p.entries.length===1 || !testing;
     $('project-slide').disabled=!placed.every(Boolean);
+    if(!testing && keeper!=null){$('projection-report').textContent=lampNames[keeper]+'仍照着原处。再点「试灯」可查看另一盏。';return;}
     if(!result) { $('projection-report').textContent='试灯已收起。圆牌进光，方牌是排演出口。';return; }
     const lines=result.rays.flatMap((r,i)=>{
       if(filter>=0 && i!==filter)return [];
@@ -116,6 +132,7 @@ export function setupLantern({art,open,day,slots,clearStep,repaint,tell,chime}) 
     }else $('ticket-compare').textContent=sibling?'收齐这场的两张票后，可以在这里对照哪些玻璃换过位置或朝向。':'';
   };
   function project() {
+    if(level.play){slips.project();return;}
     const held=punchTicket(level,slots());
     if(!held) {
       testing=true;write('lantern:test',true);repaint();
@@ -130,7 +147,7 @@ export function setupLantern({art,open,day,slots,clearStep,repaint,tell,chime}) 
   $('program-select').innerHTML=shows.map((l,i)=>'<option value="'+i+'">'+pad(i+1)+'　'+l.title+'</option>').join('');
   $('program-select').onchange=()=>go(shows[Number($('program-select').value)]);
   $('day-desk').onclick=()=>{if(level.projection)day();};
-  $('lantern-desk').onclick=()=>{if(!level.projection)go(lastShow());};
+  $('lantern-desk').onclick=()=>{if(!level.projection || level.play)go(lastShow());};
   $('to-tickets').onclick=openAlbum;
   $('jump-tray').onclick=()=>{const b=$('pieces').querySelector('[aria-pressed="true"]')||$('pieces').firstElementChild;b.focus({preventScroll:true});$('pieces').parentElement.scrollIntoView({block:'center'});};
   $('jump-frame').onclick=()=>{const b=$('hit-grid').querySelector('[tabindex="0"]');b.focus({preventScroll:true});$('mat').scrollIntoView({block:'center'});};
@@ -162,6 +179,6 @@ export function setupLantern({art,open,day,slots,clearStep,repaint,tell,chime}) 
     }catch{if(run===downloadRun)$('print-status').textContent='这次冲印没有成功，可以再试一次。';}
     finally{if(run===downloadRun)$('print-ticket').disabled=false;}
   };
-  return {configure,paint,cover,project,step:(placed,selected)=>promptProjector(level,placed,selected,preferred,seekStar),
-    target:()=>level.projection.scenes[preferred].title};
+  return {configure,paint,cover,project,step:(placed,selected)=>level.play?slips.step(placed,selected):promptProjector(level,placed,selected,preferred,seekStar),
+    target:()=>level.projection.scenes[level.play?slips.sceneId():preferred].title};
 }

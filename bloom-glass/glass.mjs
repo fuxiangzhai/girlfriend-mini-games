@@ -34,7 +34,7 @@ export function icon(name, size = 20) {
 
 const unit = 48;
 const square = ([x, y]) => 'M' + x*unit + ' ' + y*unit + 'h48v48h-48z';
-function edgePath(points) {
+export function edgePath(points) {
   const set = new Set(points.map(String)), lines = [];
   for (const [x, y] of points) {
     const a = x * unit, b = y * unit;

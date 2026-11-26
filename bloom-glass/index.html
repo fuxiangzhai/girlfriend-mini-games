@@ -4,12 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#183e35">
-  <meta name="description" content="拼合花窗，收集回信，调两盏灯拍下街坊的故事。巷口幻灯会的银镜随玻璃转动，照向不同的出口，就能演出不同的幕景。">
+  <meta name="description" content="拼合花窗，收集回信，调两盏灯拍下街坊的故事。在巷口放一场幻灯，再到《留灯换景》推起活动玻璃，把纸燕、电车、荷灯和云鲸的故事一拍一拍演下去。">
   <title>借一束光 · 花窗工坊</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./studio.css">
   <link rel="stylesheet" href="./night.css">
   <link rel="stylesheet" href="./lantern.css">
+  <link rel="stylesheet" href="./slips.css">
   <script type="module" src="./studio.mjs"></script>
 </head>
 <body>
@@ -39,8 +40,9 @@
     </header>
 
     <section id="bench" aria-label="花窗工作台">
-      <div class="desk-selector" role="group" aria-label="选择工作台"><button type="button" id="day-desk">拼窗工作台</button><button type="button" id="lantern-desk">巷口幻灯会</button></div>
+      <div class="desk-selector" role="group" aria-label="选择工作台"><button type="button" id="day-desk">拼窗工作台</button><button type="button" id="lantern-desk">巷口幻灯会</button><button type="button" id="slip-desk">留灯换景</button></div>
       <div id="program-bar" hidden><label for="program-select">今晚的节目</label><select id="program-select"></select><button type="button" class="subtle" id="to-tickets">看戏票夹</button></div>
+      <div id="slip-bar" hidden><label for="slip-select">连台节目</label><select id="slip-select"></select><button type="button" class="subtle" id="to-plays">翻活动戏本</button></div>
       <div class="workbench">
         <section class="work-card">
           <div class="work-heading">
@@ -54,6 +56,8 @@
             </div>
           </div>
           <div id="projection-score" hidden></div>
+          <div id="slip-hold" hidden></div>
+          <div id="slip-overlay-tools" hidden><button type="button" id="overlay-slip" aria-pressed="false">叠看上拍</button><button type="button" id="reseat-slip" hidden></button><span id="stencil-key" hidden>虚线是上拍的位置和镜面</span></div>
           <div class="mat" id="mat">
             <span class="screw nw" aria-hidden="true"></span><span class="screw ne" aria-hidden="true"></span>
             <span class="screw sw" aria-hidden="true"></span><span class="screw se" aria-hidden="true"></span>
@@ -79,6 +83,12 @@
             </div>
             <button type="button" class="hint-btn" id="hint"><span data-icon="hint"></span><span id="hint-label">看一步提示</span></button>
           </div>
+          <section id="slip-run-sheet" hidden aria-label="全剧排演">
+            <div class="slip-buttons"><button type="button" class="secondary" id="predict-slip">探后场</button><button type="button" class="subtle" id="retake-slip">倒回上一拍</button></div><p id="slip-forecast" role="status"></p>
+            <div id="slip-endings" role="group" aria-label="选择要排演的结尾"></div>
+            <label id="encore-order" hidden><input type="checkbox" id="keep-both">按观众点戏排演 · 把两个结尾都留到中场</label>
+            <details id="slip-program"><summary>整出戏的灯位</summary><ol id="slip-cues"></ol></details>
+          </section>
         </section>
 
         <aside class="tools-column">
@@ -99,6 +109,12 @@
             <label id="star-label"><input id="seek-star" type="checkbox"><span id="star-copy"></span></label>
             <details id="show-cue"><summary>翻看外公的调灯笔记</summary><p id="show-cue-text"></p></details>
           </section>
+          <section id="slip-scorecard" aria-labelledby="slip-heading" hidden>
+            <div class="slip-card-head"><h3 id="slip-heading">幕上的活动片</h3><span id="slip-count"></span></div>
+            <div id="slip-small-screen" class="slip-screen" role="img"></div>
+            <p id="slip-letter"></p>
+            <details id="slip-notes"><summary>读换景笔记</summary><p id="slip-tip"></p></details>
+          </section>
           <section class="order-card" id="order-card" hidden aria-labelledby="order-heading">
             <h3 id="order-heading">图纸上的约定</h3>
             <ul id="order-lines"></ul>
@@ -115,6 +131,9 @@
         </aside>
       </div>
       <details id="ticket-album" hidden><summary><span>我的戏票夹</span><span id="ticket-count"></span></summary><div id="ticket-grid"></div></details>
+      <details id="slip-archive" hidden><summary>我的活动戏本 <span id="playbill-count"></span></summary><div id="playbill-grid"></div>
+        <div id="audience-note"><div><h3>阁楼点戏签</h3><p id="audience-copy"></p></div><button type="button" class="secondary" id="read-encore" hidden>请观众点一幕</button></div>
+      </details>
     </section>
 
     <section id="book" hidden aria-labelledby="book-heading">
@@ -250,6 +269,25 @@
       <button type="button" class="primary" data-close>回到放映台</button>
     </div>
   </dialog>
+  <dialog id="slip-guide" class="dialog" aria-labelledby="slip-guide-title"><div class="dialog-inner">
+    <button type="button" class="round close" data-close aria-label="合上手册"><span data-icon="close"></span></button><p class="overline">活动片手册</p><h2 id="slip-guide-title">怎样留一盏灯换景</h2>
+    <div class="guide-list">
+      <div><span data-icon="pin"></span><p><strong>先拼出开场</strong>点托盘选片，点窗格放下圆钉。银镜使光转直角。让两束光分别走到场记的出口，再点「落下这一拍」。</p></div>
+      <div><span data-icon="sun"></span><p><strong>守住上一拍的光</strong>换景时有一盏灯要一直照着原处。它经过的整片玻璃都会夹住，标有「守」。可以取回其余玻璃，旋转、翻面或交换位置。</p></div>
+      <div><span data-icon="rotate"></span><p><strong>把名额用在需要换的片上</strong>暂时取回也占一个名额。把玻璃按上一拍的原样放回就能腾出名额。要交换两片，可先把两片都拿到托盘。</p></div>
+      <div><span data-icon="book"></span><p><strong>先看看下一拍</strong>场记列着整出戏的灯位。拼满时用「探后场」检查能否接到所选结尾。活动戏本里的拉杆可以重演你实际留下的镜位。</p></div>
+    </div><p class="keys">数字键选片，方向键选格，空格嵌入。R 旋转，F 翻面，Z 撤销。</p><button type="button" class="primary" data-close>回到放映台</button>
+  </div></dialog>
+  <dialog id="slip-dialog" class="dialog" aria-labelledby="slip-title"><div class="dialog-inner">
+    <button type="button" class="round close" data-close aria-label="合上活动片"><span data-icon="close"></span></button>
+    <p class="overline" id="slip-kicker"></p><h2 id="slip-title"></h2>
+    <div id="audience-choice" role="group" aria-label="用同一套中场镜位现场点戏" hidden></div>
+    <div id="slip-large-screen" class="slip-screen" role="img"></div>
+    <canvas id="slip-map" width="640" height="360" role="img" aria-label="这一拍落片时的双灯镜位" hidden></canvas>
+    <div id="slip-lever"><button type="button" class="secondary" id="run-slip">连放</button><label for="slide-lever">推片拉杆</label><input type="range" min="0" step="1" value="0" id="slide-lever" aria-label="推片拉杆，回看已演的各拍"></div>
+    <p id="slip-caption"></p><p id="slip-encore-note" hidden></p><button type="button" class="subtle" id="slip-proof" aria-expanded="false" aria-controls="slip-proof-text">看当场镜位</button><p id="slip-proof-text" hidden></p>
+    <div class="slip-buttons"><button type="button" class="primary" id="slip-continue"></button><button type="button" class="secondary" id="slip-other" hidden></button><button type="button" class="subtle" id="print-play" hidden>保存连景长票 PNG</button></div><p id="slip-print-status" role="status"></p>
+  </div></dialog>
   <dialog id="ticket-dialog" class="dialog" aria-labelledby="ticket-title">
     <div class="ticket-image-mat"><img id="ticket-image" alt=""><canvas id="ticket-map" width="620" height="360" role="img" aria-label="这张戏票实际使用的镜位和灯路" hidden></canvas></div>
     <div class="dialog-inner"><button type="button" class="round close" data-close aria-label="合上戏票"><span data-icon="close"></span></button>
