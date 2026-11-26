@@ -1,9 +1,10 @@
 const arrows = ">v<^";
+export const starArrows = "eswn";
 const offsets = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 const rising = [3, 2, 1, 0]; // /
 const falling = [1, 0, 3, 2]; // Backslash
 
-export function prepareBoard(rows) {
+export function prepareBoard(rows, goal = "direct") {
   const tiles = rows.join("");
   const width = rows[0].length;
   const mirrors = [];
@@ -12,6 +13,7 @@ export function prepareBoard(rows) {
   const mirrorAt = new Map();
   let initial = 0;
   let source;
+  let starSource;
   for (let cell = 0; cell < tiles.length; cell++) {
     const tile = tiles[cell];
     if (tile === "A" || tile === "B") {
@@ -22,25 +24,27 @@ export function prepareBoard(rows) {
     if (tile === "@") gates.push(cell);
     if (tile === "*" || isNumbered(tile)) marks.push(cell);
     if (arrows.includes(tile)) source = cell;
+    if (starArrows.includes(tile)) starSource = cell;
   }
   const sealOrder = marks.map(cell => tiles[cell]).filter(isNumbered).map(Number).sort((a, b) => a - b);
-  return { width, height: rows.length, tiles, mirrors, mirrorAt, gates, marks, sealOrder, source, initial };
+  return { width, height: rows.length, tiles, mirrors, mirrorAt, gates, marks, sealOrder, source,
+    starSource, jointCell: tiles.indexOf("&"), goal, initial };
 }
 
 export function isNumbered(tile) {
   return tile === "1" || tile === "2" || tile === "3";
 }
 
-export function trace(board, mask) {
-  const { width, height, tiles, mirrorAt, gates, marks, source } = board;
+function traceBeam(board, mask, source, direction, mailbox) {
+  const { width, height, tiles, mirrorAt, gates, marks } = board;
   let x = source % width;
   let y = Math.floor(source / width);
-  let direction = arrows.indexOf(tiles[source]);
   let line = [[x + 0.5, y + 0.5]];
   const lines = [line];
   const lit = new Set();
   const sequence = [];
   let wrongOrder = false;
+  let crossed = false;
   const turns = [];
   const visited = new Set();
   let end;
@@ -55,7 +59,7 @@ export function trace(board, mask) {
     }
     const cell = y * width + x;
     const tile = tiles[cell];
-    if (tile === "#" || cell === source) {
+    if (tile === "#" || cell === board.source || cell === board.starSource) {
       line.push([x + 0.5 - dx * 0.3, y + 0.5 - dy * 0.3]);
       end = "blocked";
       break;
@@ -84,13 +88,30 @@ export function trace(board, mask) {
       y = Math.floor(exit / width);
       line = [[x + 0.5, y + 0.5]];
       lines.push(line);
-    } else if (tile === "M") {
+    } else if (tile === "&") {
+      crossed = true;
+    } else if (tile === mailbox) {
       end = "ready";
       if (lit.size < marks.length) end = "missing";
       else if (wrongOrder) end = "order";
+    } else if (tile === "M" || tile === "S") {
+      end = "wrongBox";
     }
   }
-  return { lines, lit, sequence, wrongOrder, turns, end };
+  return { lines, lit, sequence, wrongOrder, turns, end, crossed };
+}
+
+export function trace(board, mask) {
+  const moon = traceBeam(board, mask, board.source, arrows.indexOf(board.tiles[board.source]), "M");
+  const rays = [moon];
+  if (board.starSource === undefined) return { ...moon, rays };
+  const star = traceBeam(board, mask, board.starSource, starArrows.indexOf(board.tiles[board.starSource]), "S");
+  rays.push(star);
+  const jointCount = Number(moon.crossed) + Number(star.crossed);
+  const matched = rays.filter(ray => ray.end === "ready").length;
+  let end = "unmatched";
+  if (matched === 2) end = board.goal === "joint" && jointCount < 2 ? "needsJoint" : "ready";
+  return { ...moon, rays, end, matched, jointCount, turns: moon.turns.concat(star.turns) };
 }
 
 const cachedSolutions = new WeakMap();
@@ -124,8 +145,8 @@ export function closestRoute(board, mask) {
 
 export const difficulties = ["relaxed", "standard", "expert"];
 
-export function prepareRoute(letter, difficulty) {
-  const board = prepareBoard(difficulty === "expert" ? letter.expert : letter.rows);
+export function prepareRoute(letter, difficulty, goal = "direct") {
+  const board = prepareBoard(difficulty === "expert" ? letter.expert : letter.rows, goal);
   board.budget = null;
   if (difficulty === "expert") board.budget = closestRoute(board, board.initial).distance;
   if (difficulty === "relaxed") {

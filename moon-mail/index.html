@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f7f3e8">
-    <meta name="description" content="转动镜片，穿越潮门，把九封沿海来信与回信寄给远方的人。">
+    <meta name="description" content="转动海上的镜片，把十二封沿海来信、回信与两岸合邮的明信片寄给远方的人。">
     <title>月光邮局 · 女友小游戏</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="./post.css">
@@ -39,14 +39,18 @@
         <symbol id="g-mark" viewBox="0 0 64 64"><path d="m32 8 6 4 7 .3 3.2 6.2 5.7 4.5-.7 7.5 2 7-4.8 5.4-2.7 6.8-7.3 1.2-6.5 3.6-6.6-3.4-7.2-.7-3.3-6.5-5-5 .9-7.3-1-7.3 5.2-5 3-6.6 7.1-.7Z" fill="currentColor" stroke="currentColor" stroke-width="1.5"/><circle cx="32" cy="32" r="16" fill="none" stroke="#173d47" stroke-width="1.6"/><path d="m32 19 3.5 8 8.5 1-6.5 6 1.8 8.7-7.3-4.5-7.6 4.5 1.9-8.7-6.5-6 8.7-1Z" fill="#173d47"/></symbol>
         <symbol id="g-gate" viewBox="0 0 64 64"><path d="M12 49V34a20 20 0 0 1 40 0v15m-33 0V34a13 13 0 0 1 26 0v15" fill="#44496a" stroke="#c5b4ef" stroke-width="2.5"/><path d="M20 45q13-10 25 0m-25 6q13-10 25 0m-18-14 5-7 5 7" fill="none" stroke="#b7d3ce" stroke-width="2.5" stroke-linecap="round"/></symbol>
         <symbol id="g-water" viewBox="0 0 64 64"><path d="M13 33q4-4 9 0t9 0m4 5q4-3 9 0t8 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+        <symbol id="g-starLamp" viewBox="0 0 64 64"><circle cx="32" cy="32" r="25" fill="#21575a" stroke="#9bded5" stroke-width="2"/><circle cx="32" cy="32" r="20" fill="#163f46" stroke="#5a9997"/><path d="m32 15 4.6 11.1 11.9 1.1-9.1 8 2.8 12-10.2-6.5-10.2 6.5 2.8-12-9.1-8 11.9-1.1Z" fill="#aff5e7"/></symbol>
+        <symbol id="g-moonBox" viewBox="0 0 64 64"><path d="M12 26q0-11 10-11h23q7 0 7 10v25H12Z" fill="#88522e" stroke="#ffcd85" stroke-width="2"/><path d="M18 24h28" stroke="#ffcd85" stroke-width="3" stroke-linecap="round"/><path d="M33 28a9 9 0 1 0 8 13c-9 1-13-6-8-13Z" fill="#ffe5a5"/><path d="M18 51v4m27-4v4" stroke="#d6bd91" stroke-width="3"/></symbol>
+        <symbol id="g-starBox" viewBox="0 0 64 64"><path d="M12 26q0-11 10-11h23q7 0 7 10v25H12Z" fill="#276a6a" stroke="#a8ebdf" stroke-width="2"/><path d="M18 24h28" stroke="#b6e9de" stroke-width="3" stroke-linecap="round"/><path d="m32 28 2.8 6 6.7.8-5 4.4 1.5 6.4-6-3.7-6 3.7 1.5-6.4-5-4.4 6.7-.8Z" fill="#d8fff1"/><path d="M18 51v4m27-4v4" stroke="#a6cebe" stroke-width="3"/></symbol>
+        <symbol id="g-jointSeal" viewBox="0 0 64 64"><path d="m32 4 27 28-27 28L5 32Z" fill="#23474d" stroke="currentColor" stroke-width="3"/><path d="m32 11 20 21-20 21-20-21Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="3 3"/><path d="M28 21a10 10 0 1 0 7 16c-7 1-12-6-7-16Z" fill="#ffda91"/><path d="m38 23 1.8 4.5 4.9.6-3.7 3.1 1 4.8-4-2.6-4.2 2.6 1-4.8-3.8-3.1 4.9-.6Z" fill="#a0eedc"/></symbol>
       </defs>
     </svg>
 
     <nav class="topbar shell" data-aria="nav" aria-label="游戏导航">
       <a class="nav-back" href="../index.html"><svg class="icon"><use href="#i-back"/></svg><span data-t="back">小游戏</span></a>
       <div class="top-tools">
-        <button id="open-album" type="button" aria-haspopup="dialog" aria-controls="album"><svg class="icon"><use href="#i-album"/></svg><span data-t="albumNav">信夹</span> <span id="album-count" class="count">0/9</span></button>
-        <button id="open-settings" type="button" aria-haspopup="dialog" aria-controls="settings"><svg class="icon"><use href="#i-settings"/></svg><span data-t="settings">设置</span></button>
+        <button id="open-album" type="button" aria-haspopup="dialog" aria-controls="album"><svg class="icon"><use href="#i-album"/></svg><span data-t="albumNav">信夹</span> <span id="album-count" class="count">0/12</span></button>
+        <button id="open-settings" type="button" aria-haspopup="dialog" aria-controls="settings" data-aria="settings"><svg class="icon"><use href="#i-settings"/></svg><span data-t="settings">设置</span></button>
         <button id="language-switch" type="button" lang="en" data-aria="switchLanguage" data-t="otherLanguage">English</button>
       </div>
     </nav>
@@ -64,6 +68,9 @@
               <button id="mode-open" type="button" aria-haspopup="dialog"><span id="mode-label">标准</span> <span aria-hidden="true">⌄</span></button></div>
             <div class="counters"><span id="mark-count" hidden></span><span id="turn-counter"><span data-t="turns">步数</span> <b id="moves">00</b><span id="budget"></span></span></div>
           </div>
+          <div id="goals" class="goal-strip" role="group" data-aria="deliveryGoal" hidden>
+            <span data-t="deliveryGoal">投递方式</span><div class="goal-options"><button type="button" data-goal="direct" data-t="direct">直投</button><button type="button" data-goal="joint" data-t="joint">合印</button></div>
+          </div>
           <div class="chart-frame">
             <div id="col-labels" class="col-labels" aria-hidden="true"></div>
             <div id="row-labels" class="row-labels" aria-hidden="true"></div>
@@ -72,11 +79,16 @@
                 <g><path d="M-22 104q63 5 77-40t96-36q54 2 60-44"/><path d="M-22 112q68 5 84-42t94-34q57 2 65-46"/><path d="M-22 120q73 4 91-44t92-32q62 1 70-48"/></g>
                 <g><path d="M630 287q-69-6-88 39t-78 49q-66 5-81 50t-71 57"/><path d="M630 296q-64-6-82 38t-77 49q-68 6-80 50t-72 57"/><path d="M630 305q-58-7-76 37t-76 49q-70 6-80 50t-67 55"/></g>
               </svg>
-              <svg id="beam" aria-hidden="true"><g class="beam-lines"></g><g id="courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g></svg>
+              <svg id="beam" aria-hidden="true"><g class="beam-lines"><g data-ray="moon"></g><g data-ray="star"></g></g><g id="courier" class="courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g><g id="star-courier" class="courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g></svg>
               <div id="tiles" class="tiles"></div>
             </div>
           </div>
           <p id="route-description" class="sr-only"></p>
+          <div id="ray-key" class="ray-key" role="group" data-aria="inspectBeams" hidden>
+            <button type="button" data-focus="moon" aria-pressed="false"><i aria-hidden="true"></i><span data-t="moonRay">月光</span><small></small></button>
+            <button type="button" data-focus="star" aria-pressed="false"><i aria-hidden="true"></i><span data-t="starRay">星光</span><small></small></button>
+            <span class="joint-progress"><svg aria-hidden="true"><use href="#g-jointSeal"/></svg><span id="joint-count"></span></span>
+          </div>
           <div class="transit"><i aria-hidden="true"></i><p id="status" role="status">点一下圆镜，改变月光的方向。</p></div>
           <div class="actions">
             <div class="chart-tools">
@@ -91,7 +103,7 @@
           <article class="travel-card" aria-labelledby="station-title">
             <div class="card-picture"><img id="scene" src="./art/lighthouse.webp" width="625" height="415" alt="弯月下的白沙灯塔"></div>
             <div class="card-copy">
-              <div class="card-meta"><span id="serial">NO. 01 / 09</span><span class="departure"><time id="time">19:08</time> <span data-t="postRun">邮班</span></span></div>
+              <div class="card-meta"><span id="serial">NO. 01 / 12</span><span class="departure"><time id="time">19:08</time> <span data-t="postRun">邮班</span></span></div>
               <h2 id="station-title">灯塔初亮</h2>
               <p class="destination"><svg class="icon"><use href="#i-pin"/></svg><span id="place">白沙灯塔</span></p>
             </div>
@@ -99,11 +111,13 @@
           <section class="brief" aria-labelledby="brief-title"><h3 id="brief-title" data-t="fieldNotes">投递手记</h3><p id="brief">今晚的第一封信从这里出发。点一下海面上的圆镜，让月光拐向信箱。</p></section>
           <details class="guide" id="guide"><summary><svg class="icon"><use href="#i-book"/></svg><strong data-t="guide">航图图例与玩法</strong><span aria-hidden="true">⌄</span></summary>
             <div class="legend">
-              <span><svg><use href="#g-lamp"/></svg><b data-t="moon">月光源</b></span><span><svg><use href="#g-mirror"/></svg><b data-t="mirror">可转圆镜</b></span><span><svg><use href="#g-box"/></svg><b data-t="box">收信箱</b></span>
-              <span><svg><use href="#g-reef"/></svg><b data-t="reef">挡光礁石</b></span><span><svg><use href="#g-mark"/></svg><b data-t="mark">沿途邮戳</b></span><span><svg><use href="#g-gate"/></svg><b data-t="gate">成对潮门</b></span>
-              <span><svg viewBox="0 0 64 64"><use href="#g-number"/><text x="32" y="40" text-anchor="middle" fill="#234249" font-size="27" font-weight="bold">1</text></svg><b data-t="numbered">顺序邮戳</b></span>
+              <span><svg><use href="#g-lamp"/></svg><b data-t="moon">月光源</b></span><span class="bay-symbol" hidden><svg><use href="#g-starLamp"/></svg><b data-t="starLamp">星光源</b></span>
+              <span><svg><use href="#g-mirror"/></svg><b data-t="mirror">可转圆镜</b></span><span class="single-symbol"><svg><use href="#g-box"/></svg><b data-t="box">收信箱</b></span>
+              <span class="bay-symbol" hidden><svg><use href="#g-moonBox"/></svg><b data-t="moonBox">月亮信箱</b></span><span class="bay-symbol" hidden><svg><use href="#g-starBox"/></svg><b data-t="starBox">星星信箱</b></span><span class="bay-symbol" hidden><svg><use href="#g-jointSeal"/></svg><b data-t="jointSeal">两岸合印</b></span>
+              <span><svg><use href="#g-reef"/></svg><b data-t="reef">挡光礁石</b></span><span class="single-symbol"><svg><use href="#g-mark"/></svg><b data-t="mark">沿途邮戳</b></span><span><svg><use href="#g-gate"/></svg><b data-t="gate">成对潮门</b></span>
+              <span class="single-symbol"><svg viewBox="0 0 64 64"><use href="#g-number"/><text x="32" y="40" text-anchor="middle" fill="#234249" font-size="27" font-weight="bold">1</text></svg><b data-t="numbered">顺序邮戳</b></span>
             </div>
-            <p data-t="instructions"></p>
+            <p id="guide-instructions"></p>
           </details>
         </aside>
       </div>
@@ -111,14 +125,20 @@
 
     <dialog id="album" aria-labelledby="album-title">
       <div class="dialog-head"><div><h2 id="album-title" data-t="album">明信片夹</h2><p id="album-summary"></p></div><button class="close" type="button" data-aria="close" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
-      <div id="chapters" class="chapters" role="group" data-aria="chapters"><button type="button" data-chapter="coast"><span data-t="coast">沿海夜邮</span> <small>6</small></button><button type="button" data-chapter="replies"><span data-t="replies">回信篇</span> <small>3</small></button></div>
+      <div id="chapters" class="chapters" role="group" data-aria="chapters"><button type="button" data-chapter="coast"><span data-t="coast">沿海夜邮</span> <small>6</small></button><button type="button" data-chapter="replies"><span data-t="replies">回信篇</span> <small>3</small></button><button type="button" data-chapter="together"><span data-t="together">两岸合邮</span> <small>3</small></button></div>
       <div id="album-grid" class="album-grid"></div>
+      <section id="appointment" class="ticket" aria-labelledby="appointment-title" tabindex="-1" hidden>
+        <div class="ticket-heading"><h3 id="appointment-title" data-t="appointment">两人的约定</h3><span id="appointment-count"></span></div>
+        <dl id="ticket-pieces"></dl>
+        <p id="appointment-text"></p>
+      </section>
     </dialog>
     <dialog id="receipt" aria-labelledby="receipt-title">
       <div class="receipt-tools"><span id="receipt-meta"></span><button class="close" type="button" data-aria="close" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
       <div class="receipt-art"><img id="receipt-image" width="625" height="415" alt=""><span class="postmark"><small>MOON MAIL</small><b data-t="delivered">已送达</b></span></div>
       <div class="receipt-body">
         <h2 id="receipt-title"></h2><p id="letter-text"></p>
+        <div class="postscript" id="postscript" hidden><strong data-t="onTheBack">票根背面</strong><p id="postscript-text"></p><button id="alternate-route" type="button">寻找合印邮路</button><button id="read-ending" type="button" data-t="readEnding" hidden>展开两人的约定</button></div>
         <div id="editor" hidden><label for="message" data-t="writeLabel">写给收信人的话</label><textarea id="message" rows="3" maxlength="200"></textarea>
           <div class="edit-actions"><span data-t="noteLimit">限 200 字，留空恢复原文</span><button id="use-message" type="button" data-t="saveNote">保存寄语</button><button id="cancel-edit" type="button" data-t="cancel">取消</button></div>
         </div>

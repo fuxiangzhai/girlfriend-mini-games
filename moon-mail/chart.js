@@ -1,10 +1,10 @@
-import { isNumbered } from "./puzzle.mjs";
+import { isNumbered, starArrows } from "./puzzle.mjs";
 
 const svgNS = "http://www.w3.org/2000/svg";
 const arrows = ">v<^";
 const directions = ["east", "south", "west", "north"];
 const features = {
-  M: "box", "#": "reef", "*": "mark", "@": "gate",
+  M: "box", S: "starBox", "&": "jointSeal", "#": "reef", "*": "mark", "@": "gate",
 };
 
 export function coordinate(board, cell) {
@@ -42,8 +42,10 @@ export function mountChart(board, onRotate, t) {
   const chart = document.getElementById("chart");
   const tiles = document.getElementById("tiles");
   const beam = document.getElementById("beam");
-  const lines = beam.querySelector(".beam-lines");
-  const courier = document.getElementById("courier");
+  const groups = [...beam.querySelectorAll(".beam-lines [data-ray]")];
+  const couriers = [document.getElementById("courier"), document.getElementById("star-courier")];
+  const paired = board.starSource !== undefined;
+  groups.forEach(group => group.replaceChildren());
   const frame = chart.parentElement;
   frame.style.setProperty("--cols", board.width);
   frame.style.setProperty("--rows", board.height);
@@ -56,9 +58,11 @@ export function mountChart(board, onRotate, t) {
     const index = board.mirrorAt.get(cell);
     const isMirror = index !== undefined;
     const element = document.createElement(isMirror ? "button" : "span");
-    const direction = arrows.indexOf(tile);
+    const starDirection = starArrows.indexOf(tile);
+    const direction = starDirection !== -1 ? starDirection : arrows.indexOf(tile);
     let name = features[tile] || "water";
-    if (direction !== -1) name = "lamp";
+    if (direction !== -1) name = starDirection !== -1 ? "starLamp" : "lamp";
+    if (paired && tile === "M") name = "moonBox";
     if (isMirror) name = "mirror";
     if (isNumbered(tile)) name = "number";
     element.className = "tile " + name + (name === "number" ? " mark" : "");
@@ -68,7 +72,7 @@ export function mountChart(board, onRotate, t) {
       element.addEventListener("click", () => onRotate(index));
     } else if (name !== "water") {
       element.setAttribute("role", "img");
-      const label = name === "lamp" ? t("lampLabel", {direction: t(directions[direction])})
+      const label = direction !== -1 ? t(starDirection !== -1 ? "starLampLabel" : "lampLabel", {direction: t(directions[direction])})
         : name === "number" ? t("sealLabel", {n: tile}) : t(name);
       element.setAttribute("aria-label", coordinate(board, cell) + " " + label);
     } else {
@@ -86,17 +90,19 @@ export function mountChart(board, onRotate, t) {
   tiles.replaceChildren(...cells);
 
   function draw(mask, route, hint, locked) {
-    const strokes = [];
-    for (const line of route.lines) {
-      const points = line.map(([x, y]) => [x * 100, y * 100].join(",")).join(" ");
-      for (const name of ["halo", "core", "flow"]) {
-        const path = document.createElementNS(svgNS, "polyline");
-        path.setAttribute("points", points);
-        path.setAttribute("class", "beam-" + name);
-        strokes.push(path);
+    route.rays.forEach((ray, i) => {
+      const strokes = [];
+      for (const line of ray.lines) {
+        const points = line.map(([x, y]) => [x * 100, y * 100].join(",")).join(" ");
+        for (const name of ["halo", "core", "flow"]) {
+          const path = document.createElementNS(svgNS, "polyline");
+          path.setAttribute("points", points);
+          path.setAttribute("class", "beam-" + name);
+          strokes.push(path);
+        }
       }
-    }
-    lines.replaceChildren(...strokes);
+      groups[i].replaceChildren(...strokes);
+    });
     board.mirrors.forEach((cell, index) => {
       const mirror = cells[cell];
       const falling = !!(mask & (1 << index));
@@ -111,50 +117,69 @@ export function mountChart(board, onRotate, t) {
       const name = isNumbered(tile) ? t("sealLabel", {n: tile}) : t("mark");
       cells[cell].setAttribute("aria-label", [coordinate(board, cell), name, t(route.lit.has(cell) ? "lit" : "unlit")].join(" "));
     });
-    cells[board.tiles.indexOf("M")].classList.toggle("arrived", route.end === "ready");
-    const via = route.turns.map(index => coordinate(board, board.mirrors[index]));
-    document.getElementById("route-description").textContent = [
-      t("routeFrom", {cell: coordinate(board, board.source)}),
-      via.length ? t("routeVia", {cells: via.join(" → ")}) : "",
-      t("routeTo", {cell: coordinate(board, board.tiles.indexOf("M"))}),
-    ].filter(Boolean).join(" ");
+    if (paired) {
+      const seal = cells[board.jointCell];
+      seal.dataset.count = route.jointCount;
+      seal.setAttribute("aria-label", coordinate(board, board.jointCell) + " " + t("sealCount", {n: route.jointCount}));
+    }
+    document.getElementById("route-description").textContent = route.rays.map((ray, i) => {
+      const boxCell = board.tiles.indexOf(i === 0 ? "M" : "S");
+      cells[boxCell].classList.toggle("arrived", ray.end === "ready");
+      const via = ray.turns.map(index => coordinate(board, board.mirrors[index]));
+      return [
+        paired ? t("beamFrom", {ray: t(i === 0 ? "moonRay" : "starRay"), cell: coordinate(board, i === 0 ? board.source : board.starSource)})
+          : t("routeFrom", {cell: coordinate(board, board.source)}),
+        via.length ? t("routeVia", {cells: via.join(" → ")}) : "",
+        t("routeTo", {cell: coordinate(board, boxCell)}),
+        paired ? t(ray.end === "ready" ? "arrived" : ray.end === "wrongBox" ? "wrongBox" : "inTransit") : "",
+      ].filter(Boolean).join(" ");
+    }).join(" ");
   }
 
   async function carryLetter() {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches || document.hidden) return;
-    const parts = Array.from(lines.querySelectorAll(".beam-core"), path => ({ path, length: path.getTotalLength() }));
-    const total = parts.reduce((sum, part) => sum + part.length, 0);
-    const duration = Math.min(1700, 520 + total * 0.6);
-    chart.classList.add("sending");
-    courier.removeAttribute("hidden");
-    await new Promise(resolve => {
-      const start = performance.now();
-      let frameId;
-      function finish() {
-        cancelAnimationFrame(frameId);
-        document.removeEventListener("visibilitychange", visibility);
-        resolve();
-      }
-      function visibility() { if (document.hidden) finish(); }
-      function frame(now) {
-        const progress = Math.min(1, (now - start) / duration);
-        let travel = total * progress;
-        for (const part of parts) {
-          if (travel <= part.length || part === parts.at(-1)) {
-            const { x, y } = part.path.getPointAtLength(travel);
-            courier.setAttribute("transform", "translate(" + x + " " + y + ")");
-            break;
-          }
-          travel -= part.length;
-        }
-        if (progress === 1) finish();
-        else frameId = requestAnimationFrame(frame);
-      }
-      document.addEventListener("visibilitychange", visibility);
-      frame(start);
+    const journeys = groups.slice(0, paired ? 2 : 1).map((group, i) => {
+      const parts = Array.from(group.querySelectorAll(".beam-core"), path => ({ path, length: path.getTotalLength() }));
+      return { parts, courier: couriers[i], total: parts.reduce((sum, part) => sum + part.length, 0) };
     });
-    courier.setAttribute("hidden", "");
-    chart.classList.remove("sending");
+    const duration = Math.min(1700, 520 + Math.max(...journeys.map(journey => journey.total)) * 0.6);
+    chart.classList.add("sending");
+    journeys.forEach(({ courier }) => courier.removeAttribute("hidden"));
+    try {
+      await new Promise(resolve => {
+        const start = performance.now();
+        let frameId;
+        function finish() {
+          cancelAnimationFrame(frameId);
+          document.removeEventListener("visibilitychange", visibility);
+          resolve();
+        }
+        function visibility() { if (document.hidden) finish(); }
+        function frame(now) {
+          const progress = Math.min(1, (now - start) / duration);
+          for (const journey of journeys) moveEnvelope(journey, progress);
+          if (progress === 1) finish();
+          else frameId = requestAnimationFrame(frame);
+        }
+        document.addEventListener("visibilitychange", visibility);
+        frame(start);
+      });
+    } finally {
+      journeys.forEach(({ courier }) => courier.setAttribute("hidden", ""));
+      chart.classList.remove("sending");
+    }
   }
   return { draw, carryLetter };
+}
+
+function moveEnvelope({ courier, total, parts }, progress) {
+  let travel = total * progress;
+  for (const part of parts) {
+    if (travel <= part.length || part === parts.at(-1)) {
+      const { x, y } = part.path.getPointAtLength(Math.min(travel, part.length));
+      courier.setAttribute("transform", "translate(" + x + " " + y + ")");
+      return;
+    }
+    travel -= part.length;
+  }
 }

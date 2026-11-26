@@ -4,8 +4,8 @@ import { letters, localLetter } from "../moon-mail/levels.mjs";
 import { prepareBoard, prepareRoute, isNumbered, trace, closestRoute } from "../moon-mail/puzzle.mjs";
 import { chooseLanguage, translator } from "../moon-mail/i18n.mjs";
 
-test("all nine standard letters start unsolved and retain the original six routes", () => {
-  const par = [1, 2, 3, 3, 4, 6, 1, 4, 5];
+test("all twelve standard letters start unsolved and retain the original nine routes", () => {
+  const par = [1, 2, 3, 3, 4, 6, 1, 4, 5, 2, 3, 4];
   assert.equal(new Set(letters.map(letter => letter.id)).size, par.length);
   letters.forEach(({ rows }, index) => {
     const board = prepareBoard(rows);
@@ -19,9 +19,9 @@ test("all nine standard letters start unsolved and retain the original six route
 });
 
 test("every standard and expert configuration has a shortest route and a valid next turn", () => {
-  const charts = letters.flatMap(letter => [letter.rows, letter.expert]);
-  for (const rows of charts) {
-    const board = prepareBoard(rows);
+  const charts = letters.flatMap(letter => [letter.rows, letter.expert].flatMap(rows =>
+    rows.join("").includes("&") ? [prepareBoard(rows), prepareBoard(rows, "joint")] : [prepareBoard(rows)]));
+  for (const board of charts) {
     // Work backwards from every valid delivery by individual mirror turns.
     const size = 2 ** board.mirrors.length;
     const distance = Array(size).fill(Infinity);
@@ -44,11 +44,11 @@ test("every standard and expert configuration has a shortest route and a valid n
     assert.equal(queue.length, size);
     for (let state = 0; state < size; state++) {
       const hint = closestRoute(board, state);
-      assert.equal(hint.distance, distance[state], rows.join("/"));
+      assert.equal(hint.distance, distance[state], board.tiles);
       if (distance[state] === 0) assert.equal(hint.next, undefined);
       else {
         assert.ok(Number.isInteger(hint.next));
-        assert.equal(distance[state ^ (1 << hint.next)], distance[state] - 1, rows.join("/"));
+        assert.equal(distance[state ^ (1 << hint.next)], distance[state] - 1, board.tiles);
       }
     }
   }
@@ -89,7 +89,7 @@ test("the dawn letter must traverse the same tide gate twice and keep its direct
 });
 
 test("relaxed starts one or two turns away and each expert budget fits its own unique chart", () => {
-  const expertPar = [3, 4, 5, 5, 6, 7, 4, 6, 7];
+  const expertPar = [3, 4, 5, 5, 6, 7, 4, 6, 7, 4, 5, 7];
   const layouts = new Set();
   letters.forEach((letter, i) => {
     const relaxed = prepareRoute(letter, "relaxed");
@@ -103,7 +103,7 @@ test("relaxed starts one or two turns away and each expert budget fits its own u
     assert.equal(closestRoute(expert, expert.initial).distance, expert.budget);
     assert.ok(expert.budget > min);
     for (const rows of [letter.rows, letter.expert]) {
-      assert.ok(rows.every(row => row.length === rows[0].length && /^[AB.M#*@1-3<>^v]+$/.test(row)));
+      assert.ok(rows.every(row => row.length === rows[0].length && /^[AB.M#*@1-3<>^veswnS&]+$/.test(row)));
       const numbers = [...rows.join("")].filter(isNumbered).map(Number).sort();
       assert.deepEqual(numbers, numbers.map((_, index) => index + 1));
       const layout = rows.join("/").replace(/[AB]/g, "X");
@@ -158,4 +158,57 @@ test("a reef stops light on its near side, and an escaping beam ends on the boar
   const escaped = trace(sea, sea.initial);
   assert.equal(escaped.end, "sea");
   assert.deepEqual(escaped.lines[0].at(-1), [1.5, 2]);
+});
+
+test("wrong mailboxes and the other lamp stop a beam, and two lit boxes alone cannot earn a joint postmark", () => {
+  const swapped = trace(prepareBoard([">S.", "eM&"]), 0);
+  assert.deepEqual(swapped.rays.map(ray => ray.end), ["wrongBox", "wrongBox"]);
+  assert.equal(swapped.matched, 0);
+  const blocked = trace(prepareBoard([">e.", "MS&"]), 0);
+  assert.equal(blocked.rays[0].end, "blocked");
+  const rows = [">.M", "e&S"];
+  assert.equal(trace(prepareBoard(rows), 0).end, "ready");
+  const unstamped = trace(prepareBoard(rows, "joint"), 0);
+  assert.equal(unstamped.jointCount, 1);
+  assert.equal(unstamped.end, "needsJoint");
+});
+
+test("each pair can take a shorter direct route or a genuine two-way crossing to collect its postmark", () => {
+  const stamps = [[4, 5], [5, 8], [6, 8]];
+  letters.filter(letter => letter.chapter === "together").forEach((letter, station) => {
+    for (const key of ["clue", "postscript"]) assert.ok(letter[key] && letter.en[key] && letter.en[key] !== letter[key]);
+    for (const [i, mode] of ["standard", "expert"].entries()) {
+      const direct = prepareRoute(letter, mode);
+      const joint = prepareRoute(letter, mode, "joint");
+      const relaxed = prepareRoute(letter, "relaxed", "joint");
+      assert.equal(closestRoute(relaxed, relaxed.initial).distance, 2);
+      assert.equal(closestRoute(joint, joint.initial).distance, stamps[station][i]);
+      assert.ok(closestRoute(direct, direct.initial).distance < stamps[station][i]);
+      if (mode === "expert") assert.equal(joint.budget, stamps[station][i]);
+      assert.equal(joint.tiles.match(/[eswn]/g).length, 1);
+      assert.equal(joint.tiles.match(/S/g).length, 1);
+      assert.equal(joint.tiles.match(/&/g).length, 1);
+      let plain = 0, stamped = 0;
+      for (let mask = 0; mask < 2 ** joint.mirrors.length; mask++) {
+        const path = trace(direct, mask);
+        const alternate = trace(joint, mask);
+        const matches = path.rays.every(ray => ray.end === "ready");
+        assert.equal(path.end === "ready", matches);
+        assert.equal(alternate.end === "ready", matches && alternate.jointCount === 2);
+        if (!matches) continue;
+        if (letter.id === "bridge") assert.ok(path.rays.some(ray => ray.lines.length > 1));
+        if (alternate.end !== "ready") { plain++; continue; }
+        stamped++;
+        const [x, y] = [joint.jointCell % joint.width + .5, Math.floor(joint.jointCell / joint.width) + .5];
+        const headings = path.rays.map(ray => {
+          const segment = ray.lines.find(line => line.some(p => p[0] === x && p[1] === y));
+          const entry = segment.findIndex(p => p[0] === x && p[1] === y);
+          return segment[entry - 1][0] === x ? "vertical" : "horizontal";
+        });
+        assert.notEqual(headings[0], headings[1]);
+        if (letter.id === "bell") assert.ok(path.rays[0].turns.some(mirror => path.rays[1].turns.includes(mirror)));
+      }
+      assert.ok(plain > 0 && stamped > 0);
+    }
+  });
 });

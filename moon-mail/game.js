@@ -32,13 +32,13 @@ function write(key, value) {
 }
 
 // Standard routes keep the keys used by the original six-letter release.
-function routeKey(index, field) {
-  const id = letters[index].id;
-  return difficulty === "standard" ? id + "." + field : id + "." + difficulty + "." + field;
+function routeKey(index, field, goal = "direct") {
+  const mode = difficulty === "standard" ? "" : "." + difficulty;
+  return letters[index].id + mode + (goal === "joint" ? ".joint" : "") + "." + field;
 }
 
-function bestFor(index) {
-  const value = read(routeKey(index, "best"));
+function bestFor(index, goal = "direct") {
+  const value = read(routeKey(index, "best", goal));
   return Number.isSafeInteger(value) && value > 0 ? value : null;
 }
 
@@ -71,14 +71,20 @@ let viewed = 0;
 let exportVersion = 0;
 let exportURL;
 
-function savedCount() { return letters.filter((_, i) => bestFor(i) !== null).length; }
+function delivered(index) {
+  return bestFor(index) !== null || (letters[index].chapter === "together" && bestFor(index, "joint") !== null);
+}
+function hasImprint(index) { return read(routeKey(index, "imprint")) === true; }
+const meetingStops = letters.map((letter, index) => ({letter, index})).filter(stop => stop.letter.chapter === "together");
+function imprintCount() { return meetingStops.filter(stop => hasImprint(stop.index)).length; }
+function savedCount() { return letters.filter((_, i) => delivered(i)).length; }
 
 function updateCount() {
   byId("album-count").textContent = savedCount() + "/" + letters.length;
 }
 
 function saveDraft() {
-  write(routeKey(active, "route"), { history: history.slice(), sent });
+  write(routeKey(active, "route", board.goal), { history: history.slice(), sent });
 }
 
 function outOfTurns() {
@@ -88,13 +94,23 @@ function outOfTurns() {
 function statusText(advice) {
   if (sending) return t("busyStatus");
   if (sent) return t("deliveredStatus");
-  if (path.end === "ready") return t("readyStatus");
+  if (path.end === "ready") {
+    if (board.starSource === undefined) return t("readyStatus");
+    return t(path.jointCount === 2 ? "imprintReady" : "pairReady");
+  }
   if (outOfTurns()) return t("exhausted");
   if (advice !== undefined) return t(difficulty === "relaxed" ? "guidedStatus" : "hintStatus", {cell: coordinate(board, board.mirrors[advice])});
   if (path.wrongOrder) {
     return t("orderStatus", {actual: path.sequence.join(" → "), expected: board.sealOrder.join(" → ")});
   }
   if (difficulty === "expert" && !history.length) return t("budgetStart", {n: board.budget});
+  if (board.starSource !== undefined) {
+    if (path.end === "needsJoint") return t("needsJoint");
+    if (path.rays.some(ray => ray.end === "wrongBox")) return t("wrongBoxStatus");
+    if (board.goal === "joint") return t("jointStatus");
+    if (path.matched === 1) return t("oneArrived", {ray: t(path.rays[0].end === "ready" ? "moonRay" : "starRay")});
+    return t("dualStatus");
+  }
   if (path.end === "missing") return t("missingStatus", {n: board.marks.length - path.lit.size});
   if (path.end === "blocked") return t("blockedStatus");
   if (path.end === "loop") return t("loopStatus");
@@ -123,23 +139,46 @@ function render() {
   byId("hint").hidden = difficulty !== "standard";
   byId("hint").disabled = difficulty !== "standard" || path.end === "ready" || sending || sent;
   byId("send").disabled = path.end !== "ready" || sending;
-  byId("send").querySelector("span").textContent = t(sending ? "sending" : sent ? "read" : "send");
+  const paired = board.starSource !== undefined;
+  byId("send").querySelector("span").textContent = t(sending ? "sending" : sent ? "read" : paired ? "pairSend" : "send");
+  if (paired) {
+    for (const button of byId("goals").querySelectorAll("button")) {
+      button.disabled = sending;
+      button.setAttribute("aria-pressed", String(button.dataset.goal === board.goal));
+    }
+    byId("ray-key").querySelectorAll("button").forEach((button, i) => {
+      const end = path.rays[i].end;
+      button.querySelector("small").textContent = t(end === "ready" ? "arrived" : end === "wrongBox" ? "wrongBox" : "inTransit");
+      button.title = t("focusRay", {ray: t(i === 0 ? "moonRay" : "starRay")});
+      button.setAttribute("aria-pressed", String(byId("chart").dataset.focus === button.dataset.focus));
+    });
+    byId("joint-count").textContent = t("sealCount", {n: path.jointCount});
+  }
   for (const id of ["open-album", "open-settings", "mode-open", "language-switch"]) byId(id).disabled = sending;
 }
 
-function openRoute(index, fresh = false) {
+function openRoute(index, fresh = false, requestedGoal) {
   active = index;
   const letter = letters[index];
-  board = prepareRoute(letter, difficulty);
-  const draft = fresh ? null : read(routeKey(index, "route"));
+  const paired = letter.chapter === "together";
+  const choice = requestedGoal ?? (paired ? read(routeKey(index, "goal")) : "direct");
+  const goal = paired && choice === "joint" ? "joint" : "direct";
+  board = prepareRoute(letter, difficulty, goal);
+  if (paired) write(routeKey(index, "goal"), goal);
+  const draft = fresh ? null : read(routeKey(index, "route", goal));
   const valid = Array.isArray(draft?.history) && (board.budget === null || draft.history.length <= board.budget)
     && draft.history.every(i => Number.isInteger(i) && i >= 0 && i < board.mirrors.length);
   history = valid ? draft.history.slice() : [];
   mask = history.reduce((state, i) => state ^ (1 << i), board.initial);
-  sent = valid && draft.sent === true && bestFor(index) !== null && trace(board, mask).end === "ready";
+  sent = valid && draft.sent === true && bestFor(index, goal) !== null && trace(board, mask).end === "ready";
   hint = undefined;
   sending = false;
   write("active", letter.id);
+  delete byId("chart").dataset.focus;
+  const fragment = location.hash.slice(1);
+  if (fragment && fragment !== letter.id && letters.some(station => station.id === fragment)) {
+    try { window.history.replaceState(null, "", "#" + letter.id); } catch { /* Optional shortcut in local files. */ }
+  }
   if (fresh) saveDraft();
   presentRoute();
 }
@@ -153,6 +192,11 @@ function presentRoute() {
   byId("place").textContent = letter.place;
   byId("time").textContent = letter.time;
   byId("brief").textContent = difficulty === "expert" ? letter.expertNote : letter.brief;
+  const paired = board.starSource !== undefined;
+  byId("goals").hidden = byId("ray-key").hidden = !paired;
+  for (const key of document.querySelectorAll(".bay-symbol")) key.hidden = !paired;
+  for (const key of document.querySelectorAll(".single-symbol")) key.hidden = paired;
+  byId("guide-instructions").textContent = t(paired ? "pairInstructions" : "instructions");
   chart = mountChart(board, rotate, t);
   render();
   updateCount();
@@ -167,9 +211,11 @@ function rotate(index) {
   hint = undefined;
   saveDraft();
   render();
-  if ([...path.lit].some(cell => !previous.lit.has(cell))) sound.play("stamp");
-  else if (path.lines.length > previous.lines.length) sound.play("tide");
-  if (path.end === "ready" && previous.end !== "ready") sound.play("ready");
+  const stampedTogether = path.jointCount === 2 && previous.jointCount !== 2;
+  if (stampedTogether) sound.play("joint");
+  else if ([...path.lit].some(cell => !previous.lit.has(cell))) sound.play("stamp");
+  else if (path.rays.some((ray, i) => ray.lines.length > previous.rays[i].lines.length)) sound.play("tide");
+  if (path.end === "ready" && previous.end !== "ready" && !stampedTogether) sound.play("ready");
   else if (outOfTurns() && path.end !== "ready") sound.play("limit");
 }
 
@@ -182,6 +228,24 @@ byId("undo").addEventListener("click", () => {
   render();
 });
 byId("reset").addEventListener("click", () => { cue("reset"); openRoute(active, true); });
+for (const button of byId("goals").querySelectorAll("button")) {
+  button.addEventListener("click", () => {
+    if (sending || button.dataset.goal === board.goal) return;
+    cue("paper");
+    openRoute(active, false, button.dataset.goal);
+  });
+}
+for (const button of byId("ray-key").querySelectorAll("button")) {
+  button.addEventListener("click", () => {
+    const chartElement = byId("chart");
+    const focus = button.dataset.focus;
+    if (chartElement.dataset.focus === focus) delete chartElement.dataset.focus;
+    else chartElement.dataset.focus = focus;
+    for (const toggle of byId("ray-key").querySelectorAll("button")) {
+      toggle.setAttribute("aria-pressed", String(toggle.dataset.focus === chartElement.dataset.focus));
+    }
+  });
+}
 byId("hint").addEventListener("click", () => {
   if (difficulty !== "standard") return;
   cue("hint");
@@ -197,7 +261,8 @@ byId("send").addEventListener("click", async () => {
     sending = true;
     sent = true;
     cue("depart");
-    write(routeKey(active, "best"), Math.min(bestFor(active) ?? Infinity, history.length));
+    write(routeKey(active, "best", board.goal), Math.min(bestFor(active, board.goal) ?? Infinity, history.length));
+    if (path.jointCount === 2) write(routeKey(active, "imprint"), true);
     saveDraft();
     updateCount();
     render();
@@ -227,7 +292,8 @@ function fillAlbum() {
     button.type = "button";
     button.className = "album-item";
     button.dataset.station = letter.id;
-    button.dataset.delivered = best !== null;
+    const wasDelivered = delivered(index);
+    button.dataset.delivered = wasDelivered;
     const image = new Image(625, 415);
     image.src = letter.image;
     image.alt = "";
@@ -236,14 +302,47 @@ function fillAlbum() {
     const status = document.createElement("small");
     status.textContent = best !== null ? t(best === 1 ? "albumBestOne" : "albumBest", {n: best}) : t(active === index ? "inProgress" : "visit");
     button.append(image, title, status);
+    if (station.chapter === "together") {
+      const jointBest = bestFor(index, "joint");
+      if (wasDelivered) {
+        const scores = [];
+        if (best !== null) scores.push(t("goalBest", {goal: t("direct"), n: best}));
+        if (jointBest !== null) scores.push(t("goalBest", {goal: t("joint"), n: jointBest}));
+        status.textContent = scores.join(" / ");
+      }
+      const seal = document.createElement("small");
+      seal.className = "imprint-state";
+      seal.dataset.collected = hasImprint(index);
+      seal.textContent = "◇ " + t(hasImprint(index) ? "imprintCollected" : "imprintOpen");
+      button.append(seal);
+    }
     button.addEventListener("click", () => {
       album.close();
-      if (best !== null) showReceipt(index);
+      if (wasDelivered) showReceipt(index);
       else goTo(index);
     });
     cards.push(button);
   });
   byId("album-grid").replaceChildren(...cards);
+  byId("appointment").hidden = chapter !== "together";
+  if (chapter === "together") {
+    const together = meetingStops.length;
+    const imprints = imprintCount();
+    byId("ticket-pieces").replaceChildren(...meetingStops.map(({letter, index}) => {
+      const piece = document.createElement("div");
+      const term = document.createElement("dt");
+      const detail = document.createElement("dd");
+      const collected = hasImprint(index);
+      piece.dataset.open = String(collected);
+      term.textContent = t(letter.clueLabel);
+      detail.textContent = collected ? localLetter(letter, language).clue : t("folded");
+      piece.append(term, detail);
+      return piece;
+    }));
+    byId("appointment-count").textContent = t("collected", {n: imprints, total: together});
+    byId("appointment-text").textContent = t(imprints === together ? "appointmentOpen" : "appointmentLocked");
+    byId("appointment").dataset.open = String(imprints === together);
+  }
 }
 
 function showAlbum(selectedChapter = letters[active].chapter) {
@@ -257,9 +356,9 @@ for (const tab of byId("chapters").querySelectorAll("button")) {
   tab.addEventListener("click", () => { chapter = tab.dataset.chapter; cue("paper"); fillAlbum(); });
 }
 
-function goTo(index, fresh = false) {
+function goTo(index, fresh = false, goal) {
   if (receipt.open) receipt.close();
-  openRoute(index, fresh);
+  openRoute(index, fresh, goal);
   window.scrollTo(0, 0);
   const first = byId("tiles").querySelector("button:not(:disabled)") || byId("send");
   first.focus({ preventScroll: true });
@@ -279,6 +378,7 @@ function clearExport() {
 function setEditing(value) {
   byId("editor").hidden = !value;
   byId("letter-text").hidden = value;
+  byId("postscript").hidden = value || letters[viewed].chapter !== "together";
   byId("edit-message").parentElement.hidden = value;
   byId("next").parentElement.hidden = value;
   if (value) {
@@ -298,16 +398,42 @@ function showReceipt(index, rustle = true) {
   byId("receipt-image").alt = letter.artAlt;
   byId("receipt-title").textContent = letter.title;
   byId("letter-text").textContent = messageFor(index);
+  updateReceiptRoutes();
   const next = letters[index + 1];
-  byId("next").querySelector("span").textContent = t(!next ? "backToAlbum" : next.chapter !== letter.chapter ? "nextChapter" : "next");
+  byId("next").querySelector("span").textContent = t(!next ? "backToAlbum" : next.chapter !== letter.chapter ? "nextChapter" : "next", {chapter: next && t(next.chapter)});
   receipt.showModal();
+}
+
+function updateReceiptRoutes() {
+  const station = letters[viewed];
+  const paired = station.chapter === "together";
+  const goal = paired && read(routeKey(viewed, "goal")) === "joint" ? "joint" : "direct";
+  const draft = read(routeKey(viewed, "route", goal));
+  const resume = paired && draft?.sent === false && draft.history?.length > 0;
+  byId("replay").textContent = t(resume ? "continueRoute" : "replay");
+  byId("replay").dataset.resume = String(resume);
+  if (!paired) return;
+  const collected = hasImprint(viewed);
+  byId("postscript-text").textContent = collected ? localLetter(station, language).postscript : t("foldedNote");
+  byId("postscript").dataset.open = String(collected);
+  const alternate = byId("alternate-route");
+  alternate.hidden = bestFor(viewed) !== null && bestFor(viewed, "joint") !== null;
+  alternate.dataset.goal = bestFor(viewed, "joint") === null ? "joint" : "direct";
+  alternate.textContent = t(alternate.dataset.goal === "direct" ? "tryDirect" : collected ? "tryJoint" : "seekJoint");
+  byId("read-ending").hidden = imprintCount() !== meetingStops.length;
 }
 
 byId("next").addEventListener("click", () => {
   if (viewed < letters.length - 1) goTo(viewed + 1);
   else { receipt.close(); showAlbum(letters[viewed].chapter); }
 });
-byId("replay").addEventListener("click", () => goTo(viewed, true));
+byId("replay").addEventListener("click", () => goTo(viewed, byId("replay").dataset.resume !== "true"));
+byId("alternate-route").addEventListener("click", () => goTo(viewed, false, byId("alternate-route").dataset.goal));
+byId("read-ending").addEventListener("click", () => {
+  receipt.close();
+  showAlbum("together");
+  byId("appointment").focus();
+});
 byId("edit-message").addEventListener("click", () => { clearExport(); setEditing(true); });
 byId("cancel-edit").addEventListener("click", () => { setEditing(false); byId("edit-message").focus(); });
 byId("use-message").addEventListener("click", () => {
@@ -324,7 +450,7 @@ byId("save-image").addEventListener("click", async () => {
   byId("export-status").textContent = t("printing");
   try {
     const letter = localLetter(letters[index], language);
-    const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t);
+    const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, hasImprint(index) ? letter.postscript : undefined);
     if (version !== exportVersion || !receipt.open) return;
     exportURL = URL.createObjectURL(blob);
     const download = document.createElement("a");
@@ -406,13 +532,15 @@ setVolume(Number.isInteger(savedVolume) && savedVolume >= 0 && savedVolume <= 10
 applyLanguage();
 window.addEventListener("pageshow", updateCount);
 window.addEventListener("storage", event => {
-  if (!event.key?.startsWith(prefix) || !event.key.endsWith(".best")) return;
+  if (!event.key?.startsWith(prefix) || !/\.(best|imprint)$/.test(event.key)) return;
   const key = event.key.slice(prefix.length);
   const previous = memory.get(key);
   const now = read(key);
   if (Number.isInteger(previous) && Number.isInteger(now) && previous < now) write(key, previous);
   updateCount();
   if (album.open) fillAlbum();
+  if (receipt.open) updateReceiptRoutes();
 });
-const savedStation = read("active");
+const linked = location.hash.slice(1);
+const savedStation = letters.some(letter => letter.id === linked) ? linked : read("active");
 openRoute(Math.max(0, letters.findIndex(letter => letter.id === savedStation)));

@@ -26,7 +26,7 @@ function wrapLines(ctx, text, width) {
   return lines;
 }
 
-export async function postcardPNG(letter, number, message, language, t) {
+export async function postcardPNG(letter, number, message, language, t, postscript) {
   const image = new Image();
   image.src = letter.image;
   await image.decode();
@@ -39,10 +39,15 @@ export async function postcardPNG(letter, number, message, language, t) {
   const bodyFont = "37px " + serif;
   ctx.font = bodyFont;
   const lines = wrapLines(ctx, message, inside - 20);
+  const replyFont = "30px " + serif;
+  ctx.font = replyFont;
+  const replyLines = postscript ? wrapLines(ctx, postscript, inside - 60) : [];
   const artHeight = Math.round(inside * image.naturalHeight / image.naturalWidth);
   const titleY = 112 + artHeight + 88;
   const messageY = titleY + 74;
-  canvas.height = messageY + lines.length * 64 + 114;
+  const foldY = messageY + lines.length * 64;
+  const foldHeight = replyLines.length ? 90 + replyLines.length * 47 : 0;
+  canvas.height = foldY + foldHeight + 114;
   ctx.fillStyle = "#fbf6e8";
   ctx.fillRect(0, 0, width, canvas.height);
   for (let x = -12, i = 0; x < width + 12; x += 43, i++) {
@@ -67,6 +72,15 @@ export async function postcardPNG(letter, number, message, language, t) {
   ctx.fillStyle = "#294b49";
   ctx.font = bodyFont;
   lines.forEach((line, i) => ctx.fillText(line, margin + 2, messageY + i * 64));
+  if (replyLines.length) {
+    ctx.fillStyle = "#e4ece0";
+    ctx.fillRect(margin, foldY, inside, foldHeight);
+    ctx.fillStyle = "#315854";
+    ctx.font = "bold 25px " + sans;
+    ctx.fillText("◇  " + t("onTheBack"), margin + 27, foldY + 41);
+    ctx.font = replyFont;
+    replyLines.forEach((line, i) => ctx.fillText(line, margin + 27, foldY + 88 + i * 47));
+  }
   const baseline = canvas.height - 54;
   ctx.strokeStyle = "#c7bfab";
   ctx.lineWidth = 2;
