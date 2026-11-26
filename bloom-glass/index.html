@@ -4,10 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#183e35">
-  <meta name="description" content="一间给两个人的彩绘玻璃工坊。拼合七扇花窗，接起玻璃背面的花枝，用不同的拼法交换回信。">
+  <meta name="description" content="拼合花窗，收集回信，再上一班验灯的夜班。两个人可以各读一张笺，一个人也能完成所有委托。">
   <title>借一束光 · 花窗工坊</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./studio.css">
+  <link rel="stylesheet" href="./night.css">
   <script type="module" src="./studio.mjs"></script>
 </head>
 <body>
@@ -17,6 +18,7 @@
       <nav class="tabs" aria-label="工坊导航">
         <button type="button" id="nav-bench" aria-current="page">工作台</button>
         <button type="button" id="nav-book">花窗册</button>
+        <button type="button" id="nav-night" hidden>对窗夜班</button>
       </nav>
       <div class="mast-end">
         <a href="../index.html" class="home" id="home" aria-label="返回小游戏首页"><span data-icon="back"></span><span>小游戏首页</span></a>
@@ -120,6 +122,52 @@
         </div>
       </div>
     </section>
+    <section id="night" hidden aria-labelledby="night-title">
+      <header class="shift-heading">
+        <div><p class="overline" id="night-place"></p><h2 id="night-title"></h2></div>
+        <label for="night-list">换一份委托<select id="night-list"></select></label>
+      </header>
+      <div class="night-layout">
+        <section class="lamp-desk" aria-labelledby="mirrors-heading">
+          <div class="lamp-heading"><h3 id="mirrors-heading">调光镜台</h3><div class="lamp-help"><button type="button" class="subtle mobile-jump" id="read-slips"><span data-icon="book"></span>看灯笺</button><button type="button" class="subtle" id="lamp-guide"><span data-icon="guide"></span>调灯手册</button></div></div>
+          <div class="lamp-mat"><div id="optical-board" role="group" aria-label="可转动的镜片">
+            <svg id="optics" aria-hidden="true" focusable="false"></svg>
+            <div id="mirror-controls"></div>
+          </div></div>
+          <div class="lamp-actions">
+            <button type="button" class="primary" id="expose"><span data-icon="sun"></span>试照</button>
+            <button type="button" class="subtle" id="lamp-undo"><span data-icon="undo"></span>撤销</button>
+            <button type="button" class="secondary" id="lamp-hint"><span data-icon="hint"></span><span id="lamp-hint-name">看一步提示</span></button>
+          </div>
+          <p class="lamp-status" id="lamp-status" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div id="light-report" hidden>
+            <div id="ray-filter" role="group" aria-label="查看灯光轨迹" hidden></div>
+            <div id="ray-report" aria-label="实际灯路"></div>
+            <details id="ray-study"><summary>逐格看灯路</summary>
+              <p id="study-detail" role="status"></p>
+              <div class="study-controls"><button type="button" class="secondary" id="study-prev" aria-label="灯路上一步">上一步</button><input type="range" min="0" step="1" value="0" id="study-step" aria-label="灯路位置"><button type="button" class="secondary" id="study-next" aria-label="灯路下一步">下一步</button></div>
+            </details>
+          </div>
+        </section>
+        <aside class="lamp-orders" aria-labelledby="slips-heading">
+          <div class="slips-heading"><h3 id="slips-heading">值夜灯笺</h3><div id="lamp-modes" role="group" aria-label="读笺方式"><button type="button" data-mode="solo">独自读笺</button><button type="button" data-mode="pair">双人传笺</button></div></div>
+          <p class="handoff-note" id="handoff-note" hidden>一人管花纹，一人管出口。轮流拿手机拆笺，合上后一起调镜。</p>
+          <div id="lamp-slips"></div>
+          <div id="film-order" hidden></div>
+          <details id="shift-tip"><summary>读师傅的手记</summary><p id="shift-tip-text"></p></details>
+          <button type="button" class="secondary mobile-jump" id="return-mirrors">回镜台调灯</button>
+        </aside>
+      </div>
+      <section class="shift-receipt" id="shift-receipt" aria-labelledby="receipt-title" hidden>
+        <div><p class="overline" id="receipt-place"></p><h3 id="receipt-title">灯已送到</h3><p id="receipt-story"></p><p id="receipt-print" hidden></p></div>
+        <div class="receipt-actions"><button type="button" class="secondary" id="seek-film" hidden>再晒底片</button><button type="button" class="primary" id="next-night"></button></div>
+      </section>
+      <details class="night-album" id="night-album">
+        <summary><span>值夜相册</span><span id="album-count"></span></summary>
+        <div class="album-inner"><figure><div class="contact-print" role="img" aria-label="旧茶亭、紫藤桥与桂花巷相连的夜景，完成委托可逐段显影"><div id="film-strips"></div></div><figcaption id="panorama-caption"></figcaption></figure>
+        <div id="album-notes"></div></div>
+      </details>
+    </section>
     <noscript>请开启 JavaScript，进入花窗工作台。</noscript>
   </main>
 
@@ -148,5 +196,11 @@
       <div class="result-actions"><button type="button" class="primary" id="next"></button><button type="button" class="secondary" id="alternate" hidden></button><button type="button" class="secondary" id="result-book">看花窗册</button><button type="button" class="subtle" id="retry-gold" hidden>重拼金印</button></div>
     </div>
   </dialog>
+  <dialog id="lamp-dialog" class="dialog" aria-labelledby="lamp-dialog-title"><div class="dialog-inner">
+    <button type="button" class="round close" data-close aria-label="合上"><span data-icon="close"></span></button>
+    <p class="overline" id="lamp-dialog-index"></p><h2 id="lamp-dialog-title"></h2>
+    <div id="lamp-dialog-copy"></div>
+    <button type="button" class="primary" id="lamp-dialog-action"></button>
+  </div></dialog>
 </body>
 </html>

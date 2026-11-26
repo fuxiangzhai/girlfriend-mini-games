@@ -3,6 +3,7 @@ import { turn, flip, shapeAt, fits, isGilded, suggest, etchAt, endingOf, transfo
 import { address, cellLabel, orderLines, backIssue } from './brief.mjs';
 import { icon, thumbnail, drawBoard } from './glass.mjs';
 import { read, write, fresh, restore, save, record, award } from './save.mjs';
+import { setupNight } from './night-shift.mjs';
 
 const $ = id => document.getElementById(id);
 const els = id => Array.from($(id).children);
@@ -130,12 +131,16 @@ function render() {
 }
 function setPage(page) {
   activePage = page;
-  $('bench').hidden = page !== 'bench'; $('book').hidden = page !== 'book';
-  $('nav-bench').toggleAttribute('aria-current',page === 'bench');
-  $('nav-book').toggleAttribute('aria-current',page === 'book');
-  $(page === 'bench' ? 'nav-bench' : 'nav-book').setAttribute('aria-current','page');
+  for (const id of ['bench','book','night']) {
+    $(id).hidden=page!==id;
+    const tab=$('nav-'+id);
+    if (id===page) tab.setAttribute('aria-current','page');
+    else tab.removeAttribute('aria-current');
+  }
+  write('room',page);
 }
 function jacket(chapter) {
+  $('hero').classList.remove('is-night');
   const sequel=volumes[1].chapters.includes(chapter);
   $('hero').classList.toggle('is-letter',sequel);
   $('jacket').hidden=!sequel;
@@ -462,6 +467,18 @@ $('daily').onclick=()=>{ openLevel(dailyLevel(dateKey()),true); window.scrollTo(
 $('nav-bench').onclick=()=>{setPage('bench'); jacket(level.chapter); render();};
 $('brand').onclick=e=>{e.preventDefault(); $('nav-bench').click();};
 $('nav-book').onclick=()=>showBook(chapterOpen);
+const enterNight=setupNight(chime);
+function showNight() {
+  setPage('night'); hover=null; drag=null;
+  $('hero').classList.remove('is-letter'); $('hero').classList.add('is-night');
+  $('jacket').hidden=true; $('sequel').hidden=true;
+  $('volume-name').textContent='Petal Panes · Night Shift';
+  $('page-title').textContent='对窗夜班';
+  $('hero-line').textContent='一人在窗里，一人在窗外，把两盏灯送到约好的地方。';
+  enterNight();
+}
+$('nav-night').onclick=showNight;
+$('nav-night').hidden=false;
 $('guide').onclick=()=>$('guide-dialog').showModal();
 document.querySelectorAll('[data-close]').forEach(b=>{b.onclick=()=>b.closest('dialog').close();});
 document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{
@@ -512,7 +529,11 @@ $('alternate').onclick=()=>{
   $('pieces').querySelector('[aria-pressed="true"]')?.focus();
 };
 const last=read('active');
+const lastRoom=read('room');
 const previous=levels.find(l=>l.id===last);
+function consumeEntry() {
+  try { window.history.replaceState(null,'',location.href.split('#')[0]); } catch { /* The game also works on restricted file URLs. */ }
+}
 function openAfterlight() {
   const active=levels.find(l=>l.id===read('active'));
   const next=levels.find(l=>l.hasEtches && !record(l));
@@ -520,8 +541,18 @@ function openAfterlight() {
   openLevel(active?.hasEtches && !record(active) ? active : next || levels.find(l=>l.hasEtches));
   window.scrollTo(0,0);
   // Consume the entry link so subsequent refreshes resume the pane on the table.
-  try { window.history.replaceState(null,'',location.href.split('#')[0]); } catch { /* Restricted file URLs can still open the chapter. */ }
+  consumeEntry();
 }
 if (location.hash==='#afterlight') openAfterlight();
-else openLevel(last==='daily'?dailyLevel():previous || levels[0]);
-window.addEventListener('hashchange',()=>{ if(location.hash==='#afterlight') openAfterlight(); });
+else {
+  openLevel(last==='daily'?dailyLevel():previous || levels[0]);
+  if(location.hash==='#nightshift' || lastRoom==='night') showNight();
+  if(location.hash==='#nightshift') consumeEntry();
+}
+window.addEventListener('hashchange',()=>{
+  if(location.hash==='#afterlight') openAfterlight();
+  if(location.hash==='#nightshift') {
+    for(const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
+    showNight(); consumeEntry(); window.scrollTo(0,0);
+  }
+});
