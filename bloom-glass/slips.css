@@ -72,6 +72,44 @@
 #slip-proof { padding-left:0; text-decoration:underline; text-underline-offset:3px; }
 #slip-proof-text { background:#eeeedf; color:#46524b; border-radius:4px; padding:7px 9px; font-size:.81rem; margin-bottom:7px; }
 #slip-print-status { font-size:.79rem; color:#575c50; margin-top:4px; }
+.slip-wire { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+#to-duets { min-height:32px; font-size:.80rem; padding:3px 9px; }
+#duet-order { margin:7px 0; border:1px solid #c7baa1; border-radius:7px; padding:7px 9px; background:#f9f2df; }
+.duet-order-line,#duet-buttons { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.duet-order-line { gap:5px 12px; }
+.duet-order-line strong { color:#4b4942; font:650 .88rem var(--serif); }
+#duet-buttons button,#duet-tickets button { border:1px solid #a6a593; border-radius:5px; color:#424a45; background:#fff9e9; }
+#duet-buttons button { font-size:.81rem; min-height:32px; padding:4px 9px; }
+#duet-buttons [aria-pressed="true"] { background:#40594f; color:#fff7df; border-color:#40594f; }
+#duet-buttons button:disabled { opacity:.82; }
+#duet-order-note,#quiet-score p,#duet-archive>p { margin:4px 0 0; font-size:.8rem; color:#55584a; }
+#duet-live { margin:6px 0 2px; text-align:center; font-size:.79rem; color:#46554c; }
+#quiet-score { margin:7px 0; padding:7px 9px; background:#edf0e2; border-left:2px solid #6b856a; }
+#quiet-score label { font-size:.83rem; font-weight:650; cursor:pointer; }
+#quiet-score input { accent-color:#426050; vertical-align:middle; }
+#quiet-count { display:inline-block; margin-left:7px; font-size:.8rem; color:#405047; font-variant-numeric:tabular-nums; }
+#duet-archive { padding-top:12px; margin-top:12px; border-top:1px dashed #b6a982; }
+#duet-archive h3 { font:700 1rem var(--serif); }
+#duet-tickets { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr)); gap:8px; margin-top:9px; }
+.duet-bill { border:1px solid #c8bea4; padding:8px; border-radius:6px; background:#f3edd9; }
+.duet-bill>strong { font:650 .95rem var(--serif); } .duet-bill>div { margin-top:5px; display:flex; gap:5px; }
+#duet-tickets button { flex:1; padding:4px 6px; text-align:left; font-size:.82rem; }
+#duet-tickets small { display:block; font-size:.72rem; } #duet-tickets button:disabled { opacity:1; color:#675f50; background:#eee8d8; border-style:dashed; }
+#slip-dialog.compare-open { width:min(930px,calc(100% - 20px)); }
+.compare-open #duet-stage-pair,.compare-open #slip-proof-pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+#duet-stage-pair>div,#slip-proof-pair>div { min-width:0; }
+.compare-open #duet-stage-pair .slip-screen { width:100%; }
+#duet-main-label,#duet-alt-label,#duet-proof-main,#duet-proof-label { display:block; font:650 .85rem var(--serif); color:#495446; margin:0 0 4px; }
+#duet-main-tally,#duet-alt-tally { display:block; margin-top:3px; font:.78rem var(--sans); color:#46574f; }
+.compare-open #slip-map,#duet-alt-map { display:block; width:100%; aspect-ratio:8 / 5; object-fit:contain; background:#253941; border-radius:4px; }
+#duet-alt-proof-text { background:#eeeedf; color:#46524b; border-radius:4px; padding:7px 9px; font-size:.81rem; margin:5px 0; }
+#duet-alt-caption,#duet-receipt { font:.86rem/1.55 var(--serif); margin:6px 0; color:#465147; }
+#duet-receipt { background:#eeeddb; padding:6px 9px; border-left:2px solid #7a8365; }
+@media(max-width:520px) {
+  .compare-open #duet-stage-pair,.compare-open #slip-proof-pair { grid-template-columns:1fr; gap:7px; }
+  .compare-open #duet-stage-pair .slip-screen { width:min(100%,48dvh); margin-inline:auto; }
+  #quiet-count { margin-left:0; display:block; }
+}
 @media(max-width:650px){
   #slip-bar { gap:5px 7px; margin-top:6px; }#slip-select { max-width:58%; font-size:.8rem; }#to-plays { font-size:.76rem; min-height:33px; }
   #hero.is-slip #jacket { width:62%; }#slip-scorecard,#slip-archive { padding:10px 11px; }

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#183e35">
-  <meta name="description" content="拼合花窗，收集回信，调两盏灯拍下街坊的故事。在巷口放一场幻灯，再到《留灯换景》推起活动玻璃，把纸燕、电车、荷灯和云鲸的故事一拍一拍演下去。">
+  <meta name="description" content="拼合花窗，收集回信，调两盏灯拍下街坊的故事。在《留灯换景》的双片合演里，决定邮船和渡船、缆车和仓鸮谁先动，用两束光把整场戏接下去。">
   <title>借一束光 · 花窗工坊</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./studio.css">
@@ -42,7 +42,7 @@
     <section id="bench" aria-label="花窗工作台">
       <div class="desk-selector" role="group" aria-label="选择工作台"><button type="button" id="day-desk">拼窗工作台</button><button type="button" id="lantern-desk">巷口幻灯会</button><button type="button" id="slip-desk">留灯换景</button></div>
       <div id="program-bar" hidden><label for="program-select">今晚的节目</label><select id="program-select"></select><button type="button" class="subtle" id="to-tickets">看戏票夹</button></div>
-      <div id="slip-bar" hidden><label for="slip-select">连台节目</label><select id="slip-select"></select><button type="button" class="subtle" id="to-plays">翻活动戏本</button></div>
+      <div id="slip-bar" hidden><label for="slip-select">连台节目</label><select id="slip-select"></select><button type="button" class="secondary" id="to-duets">双片合演</button><button type="button" class="subtle" id="to-plays">翻活动戏本</button></div>
       <div class="workbench">
         <section class="work-card">
           <div class="work-heading">
@@ -56,6 +56,7 @@
             </div>
           </div>
           <div id="projection-score" hidden></div>
+          <div id="duet-order" hidden><div class="duet-order-line"><strong>谁先动</strong><div id="duet-buttons" role="group" aria-label="安排出场顺序"></div></div><p id="duet-order-note"></p></div>
           <div id="slip-hold" hidden></div>
           <div id="slip-overlay-tools" hidden><button type="button" id="overlay-slip" aria-pressed="false">叠看上拍</button><button type="button" id="reseat-slip" hidden></button><span id="stencil-key" hidden>虚线是上拍的位置和镜面</span></div>
           <div class="mat" id="mat">
@@ -87,6 +88,7 @@
             <div class="slip-buttons"><button type="button" class="secondary" id="predict-slip">探后场</button><button type="button" class="subtle" id="retake-slip">倒回上一拍</button></div><p id="slip-forecast" role="status"></p>
             <div id="slip-endings" role="group" aria-label="选择要排演的结尾"></div>
             <label id="encore-order" hidden><input type="checkbox" id="keep-both">按观众点戏排演 · 把两个结尾都留到中场</label>
+            <div id="quiet-score" hidden><label><input type="checkbox" id="quiet-aim">按静场目标排演</label><span id="quiet-count"></span><p>开场免计。每次落片时，每片换了镜位的玻璃记一响。</p></div>
             <details id="slip-program"><summary>整出戏的灯位</summary><ol id="slip-cues"></ol></details>
           </section>
         </section>
@@ -112,6 +114,7 @@
           <section id="slip-scorecard" aria-labelledby="slip-heading" hidden>
             <div class="slip-card-head"><h3 id="slip-heading">幕上的活动片</h3><span id="slip-count"></span></div>
             <div id="slip-small-screen" class="slip-screen" role="img"></div>
+            <p id="duet-live" hidden></p>
             <p id="slip-letter"></p>
             <details id="slip-notes"><summary>读换景笔记</summary><p id="slip-tip"></p></details>
           </section>
@@ -133,6 +136,7 @@
       <details id="ticket-album" hidden><summary><span>我的戏票夹</span><span id="ticket-count"></span></summary><div id="ticket-grid"></div></details>
       <details id="slip-archive" hidden><summary>我的活动戏本 <span id="playbill-count"></span></summary><div id="playbill-grid"></div>
         <div id="audience-note"><div><h3>阁楼点戏签</h3><p id="audience-copy"></p></div><button type="button" class="secondary" id="read-encore" hidden>请观众点一幕</button></div>
+        <section id="duet-archive" aria-labelledby="duet-archive-title"><h3 id="duet-archive-title">双片合演</h3><p>同一出戏的两种先手都演完后，可以并排重映。每种顺序留存换片最少的一次。</p><div id="duet-tickets"></div></section>
       </details>
     </section>
 
@@ -276,17 +280,18 @@
       <div><span data-icon="sun"></span><p><strong>守住上一拍的光</strong>换景时有一盏灯要一直照着原处。它经过的整片玻璃都会夹住，标有「守」。可以取回其余玻璃，旋转、翻面或交换位置。</p></div>
       <div><span data-icon="rotate"></span><p><strong>把名额用在需要换的片上</strong>暂时取回也占一个名额。把玻璃按上一拍的原样放回就能腾出名额。要交换两片，可先把两片都拿到托盘。</p></div>
       <div><span data-icon="book"></span><p><strong>先看看下一拍</strong>场记列着整出戏的灯位。拼满时用「探后场」检查能否接到所选结尾。活动戏本里的拉杆可以重演你实际留下的镜位。</p></div>
+      <div id="duet-guide" hidden><span data-icon="sun"></span><p><strong>双片合演</strong>琥珀和青瓷各照一个角色。选谁先动，就先守另一盏灯。开场落片前「探后场」可查两种先手。每拍只在落片时记换片数，整场达到最少的响数就能读到收班笺。</p></div>
     </div><p class="keys">数字键选片，方向键选格，空格嵌入。R 旋转，F 翻面，Z 撤销。</p><button type="button" class="primary" data-close>回到放映台</button>
   </div></dialog>
   <dialog id="slip-dialog" class="dialog" aria-labelledby="slip-title"><div class="dialog-inner">
     <button type="button" class="round close" data-close aria-label="合上活动片"><span data-icon="close"></span></button>
     <p class="overline" id="slip-kicker"></p><h2 id="slip-title"></h2>
     <div id="audience-choice" role="group" aria-label="用同一套中场镜位现场点戏" hidden></div>
-    <div id="slip-large-screen" class="slip-screen" role="img"></div>
-    <canvas id="slip-map" width="640" height="360" role="img" aria-label="这一拍落片时的双灯镜位" hidden></canvas>
+    <div id="duet-stage-pair"><div><strong id="duet-main-label" hidden></strong><div id="slip-large-screen" class="slip-screen" role="img"></div><small id="duet-main-tally" hidden></small></div><div id="duet-alt-pane" hidden><strong id="duet-alt-label"></strong><div id="duet-alt-screen" class="slip-screen" role="img"></div><small id="duet-alt-tally"></small></div></div>
+    <div id="slip-proof-pair" hidden><div><strong id="duet-proof-main" hidden></strong><canvas id="slip-map" width="640" height="360" role="img" aria-label="这一拍落片时的双灯镜位" hidden></canvas></div><div id="duet-proof-other" hidden><strong id="duet-proof-label"></strong><canvas id="duet-alt-map" width="640" height="360" role="img" aria-label="另一种先手在这一拍的双灯镜位"></canvas></div></div>
     <div id="slip-lever"><button type="button" class="secondary" id="run-slip">连放</button><label for="slide-lever">推片拉杆</label><input type="range" min="0" step="1" value="0" id="slide-lever" aria-label="推片拉杆，回看已演的各拍"></div>
-    <p id="slip-caption"></p><p id="slip-encore-note" hidden></p><button type="button" class="subtle" id="slip-proof" aria-expanded="false" aria-controls="slip-proof-text">看当场镜位</button><p id="slip-proof-text" hidden></p>
-    <div class="slip-buttons"><button type="button" class="primary" id="slip-continue"></button><button type="button" class="secondary" id="slip-other" hidden></button><button type="button" class="subtle" id="print-play" hidden>保存连景长票 PNG</button></div><p id="slip-print-status" role="status"></p>
+    <p id="slip-caption"></p><p id="duet-alt-caption" hidden></p><p id="duet-receipt" hidden></p><p id="slip-encore-note" hidden></p><button type="button" class="subtle" id="slip-proof" aria-expanded="false" aria-controls="slip-proof-pair slip-proof-text">看当场镜位</button><p id="slip-proof-text" hidden></p><p id="duet-alt-proof-text" hidden></p>
+    <div class="slip-buttons"><button type="button" class="primary" id="slip-continue"></button><button type="button" class="secondary" id="slip-other" hidden></button><button type="button" class="secondary" id="retry-quiet" hidden>按静场目标改排</button><button type="button" class="secondary" id="compare-duet" aria-pressed="false" hidden>并排看两种先手</button><button type="button" class="subtle" id="print-play" hidden>保存连景长票 PNG</button></div><p id="slip-print-status" role="status"></p>
   </div></dialog>
   <dialog id="ticket-dialog" class="dialog" aria-labelledby="ticket-title">
     <div class="ticket-image-mat"><img id="ticket-image" alt=""><canvas id="ticket-map" width="620" height="360" role="img" aria-label="这张戏票实际使用的镜位和灯路" hidden></canvas></div>

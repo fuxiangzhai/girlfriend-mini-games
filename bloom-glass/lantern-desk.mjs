@@ -81,7 +81,7 @@ export function setupLantern({art,open,day,slots,clearStep,repaint,tell,chime,sl
     const keeper=level.play?slips.keeper():null;
     const result=testing || keeper!=null?readProjector(level,shown):null;
     const id=level.play?slips.sceneId():preferred;
-    if(level.play){score(p.scenes[id]);slips.paint(placed);}
+    if(level.play){score(p.scenes[id]);slips.paint(placed,testing?result:null);}
     $('optics').innerHTML=opticsOverlay(level,p.scenes[id],result,testing?filter:keeper)+(level.play?slips.clamps(placed):'');
     $('test-beam').setAttribute('aria-pressed',String(testing));$('beam-solo').hidden=p.entries.length===1 || !testing;
     $('project-slide').disabled=!placed.every(Boolean);

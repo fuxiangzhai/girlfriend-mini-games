@@ -67,29 +67,54 @@ export function takeScene(level,takes,slots) {
   if(!frame.scenes.includes(scene))return -1;
   return allows(makeHold(level,takes.at(-1),frame),signature(level,slots))?scene:-1;
 }
-export function sightline(level,takes,slots,ending,encore=false) {
+export function sightline(level,takes,slots,ending,encore=false,quiet=false) {
   const scene=takeScene(level,takes,slots);
   if(scene<0)return {scene,possible:false};
   const keys=signature(level,slots);
-  const possible=reachable(level,takes,playGraph(level,ending,encore),encore).options.some(s=>s.keys.every((key,id)=>key===keys[id]));
+  const possible=reachable(level,takes,playGraph(level,ending,encore),encore,quiet).options.some(s=>s.keys.every((key,id)=>key===keys[id]));
   return {scene,possible};
 }
-function reachable(level,takes,tails,encore) {
+export function changeTotal(level,takes) {
+  const keys=takes.map(slots=>signature(level,slots));
+  return keys.reduce((n,row,i)=>n+(i?changes(keys[i-1],row).length:0),0);
+}
+const quietScores=new WeakMap();
+export function quietScore(level) {
+  if(quietScores.has(level))return quietScores.get(level);
+  const frames=level.play.frames,tails=playGraph(level,frames.at(-1).scenes[0]),rest=tails.map(()=>new Map());
+  for(let i=frames.length-1;i>=0;i--){
+    for(const layout of tails[i]){
+      if(i===frames.length-1){rest[i].set(layout,0);continue;}
+      const hold=makeHold(level,layout.slots,frames[i+1]);
+      let best=Infinity;
+      for(const [next,after] of rest[i+1]){
+        if(allows(hold,next.keys))best=Math.min(best,changes(layout.keys,next.keys).length+after);
+      }
+      rest[i].set(layout,best);
+    }
+  }
+  const score={target:Math.min(...rest[0].values()),rest};
+  quietScores.set(level,score);return score;
+}
+function reachable(level,takes,tails,encore,quiet) {
   const hold=makeHold(level,takes.at(-1),level.play.frames[takes.length]);
   if(encore && level.play.frames.at(-1).scenes.length===2 && takes.length===tails.length-1 && !canTakeRequests(level,takes))return {hold,options:[]};
-  return {hold,options:tails[takes.length].filter(s=>allows(hold,s.keys))};
+  const options=tails[takes.length].filter(s=>allows(hold,s.keys));
+  if(!quiet || level.play.first==null)return {hold,options};
+  const {target,rest}=quietScore(level),used=changeTotal(level,takes);
+  return {hold,options:options.filter(s=>used+(hold?changes(hold.keys,s.keys).length:0)+rest[takes.length].get(s)<=target)};
 }
-export function rewindPoint(level,takes,ending,encore=false) {
+export function rewindPoint(level,takes,ending,encore=false,quiet=false) {
   const tails=playGraph(level,ending,encore);
   for(let i=Math.min(takes.length-1,tails.length-1);i>=0;i--){
-    if(reachable(level,takes.slice(0,i),tails,encore).options.length)return i;
+    if(reachable(level,takes.slice(0,i),tails,encore,quiet).options.length)return i;
   }
   return 0;
 }
-export function cueHint(level,takes,slots,selected,ending,encore=false) {
+export function cueHint(level,takes,slots,selected,ending,encore=false,quiet=false) {
   if(takes.length===level.play.frames.length)return {type:'finished'};
-  const {hold,options}=reachable(level,takes,playGraph(level,ending,encore),encore);
-  if(!options.length)return {type:'rewind',index:rewindPoint(level,takes,ending,encore)};
+  const {hold,options}=reachable(level,takes,playGraph(level,ending,encore),encore,quiet);
+  if(!options.length)return {type:'rewind',index:rewindPoint(level,takes,ending,encore,quiet)};
   const keys=signature(level,slots);
   let best,wrong,cost=Infinity;
   for(const candidate of options){
@@ -121,7 +146,10 @@ function validTakes(level,raw) {
   }
   return takes;
 }
-export function restorePlay(level,raw=read('slip:draft:'+level.id)) {
+const draftKey=level=>'slip:draft:'+(level.play.first==null?level.id:'slip-'+level.play.id);
+export const savedOrder=level=>read(draftKey(level))?.order===1?1:0;
+export function restorePlay(level,raw=read(draftKey(level))) {
+  if(level.play.first!=null && raw?.order!==level.play.first)raw=null;
   const takes=validTakes(level,raw?.takes),frame=level.play.frames[takes.length];
   const hold=makeHold(level,takes.at(-1),frame);
   const intact=Array.isArray(raw?.takes) && raw.takes.length===takes.length;
@@ -131,12 +159,15 @@ export function restorePlay(level,raw=read('slip:draft:'+level.id)) {
   return {takes,state:raw.state,history};
 }
 export function savePlay(level,takes,state,history) {
-  write('slip:draft:'+level.id,{takes,state,history:history.slice(-40)});
+  const draft={takes,state,history:history.slice(-40)};
+  if(level.play.first!=null)draft.order=level.play.first;
+  write(draftKey(level),draft);
 }
 export function storePlaybill(level,takes) {
   if(takes.length!==level.play.frames.length || validTakes(level,takes).length!==takes.length)return false;
   const scene=readProjector(level,takes.at(-1)).scene;
-  write('slip:bill:'+level.id+':'+scene,takes);
+  const key='slip:bill:'+level.id+':'+scene;
+  write(level.play.first==null?key:key+':'+changeTotal(level,takes),takes);
   if(canTakeRequests(level,takes) && !encoreBill(level)){
     // Keep each ending separately: another tab can perform its counterpart.
     // The prefix is the geometry, not the pose encoding of a symmetric pane.
@@ -148,9 +179,19 @@ export function storePlaybill(level,takes) {
   return true;
 }
 export function playbill(level,ending) {
-  const takes=validTakes(level,read('slip:bill:'+level.id+':'+ending));
-  if(takes.length!==level.play.frames.length || readProjector(level,takes.at(-1)).scene!==ending)return null;
-  return takes;
+  const key='slip:bill:'+level.id+':'+ending,frames=level.play.frames;
+  function checked(raw){
+    const takes=validTakes(level,raw);
+    return takes.length===frames.length && readProjector(level,takes.at(-1)).scene===ending?takes:null;
+  }
+  if(level.play.first==null)return checked(read(key));
+  // Each score has its own receipt, including when two tabs finish at once.
+  const cap=frames.reduce((n,frame)=>n+(frame.limit||0),0);
+  for(let score=0;score<=cap;score++){
+    const record=checked(read(key+':'+score));
+    if(record && changeTotal(level,record)===score)return record;
+  }
+  return null;
 }
 
 const castKey=(level,takes)=>takes.slice(0,-1).map(s=>marked(signature(level,s))).join('|');

@@ -6,6 +6,7 @@ import { read, write, fresh, restore, save, record, award } from './save.mjs';
 import { setupNight } from './night-shift.mjs';
 import { lastShow, setupLantern } from './lantern-desk.mjs';
 import { lastPlay, setupSlips } from './slip-desk.mjs';
+import {lastDuet} from './duet-desk.mjs';
 import { paneDescription } from './lantern-glass.mjs';
 
 const $ = id => document.getElementById(id);
@@ -23,24 +24,25 @@ function soundButton() {
   $('sound').setAttribute('aria-pressed', String(soundOn));
   $('sound').title = soundOn ? '关闭工坊音效' : '打开工坊音效';
 }
-function chime(id = 0, complete = false) {
+function chime(id = 0, complete = false, cuePanes = null) {
   if (!soundOn) return;
   try {
     const Audio = window.AudioContext || window.webkitAudioContext;
     if (!Audio) return;
     audio ??= new Audio();
     if (audio.state !== 'running') void audio.resume().catch(() => {});
-    const tone = [392,440,523.25,587.33,659.25,783.99][id] || 440;
-    const notes = complete ? [523.25,659.25,783.99] : [tone];
+    const glass = [392,440,523.25,587.33,659.25,783.99];
+    const notes = cuePanes ? cuePanes.map(piece=>glass[piece]) : complete ? [523.25,659.25,783.99] : [glass[id] || 440];
+    const gap = cuePanes ? 0.18 : 0.085, decay = cuePanes ? 0.19 : 0.46;
     notes.forEach((hz,i) => {
-      const start = audio.currentTime + .01 + i * .085, osc = audio.createOscillator(), gain = audio.createGain();
-      osc.frequency.value = hz; osc.type = 'sine';
+      const start = audio.currentTime + .01 + i * gap, osc = audio.createOscillator(), gain = audio.createGain();
+      osc.frequency.value = hz; osc.type = cuePanes?'triangle':'sine';
       gain.gain.setValueAtTime(.001,start);
-      gain.gain.exponentialRampToValueAtTime(.085,start + .008);
-      gain.gain.exponentialRampToValueAtTime(.001,start + .46);
+      gain.gain.exponentialRampToValueAtTime(cuePanes ? 0.045 : 0.085,start + .008);
+      gain.gain.exponentialRampToValueAtTime(.001,start + decay);
       osc.connect(gain).connect(audio.destination);
       osc.onended = () => { osc.disconnect(); gain.disconnect(); };
-      osc.start(start); osc.stop(start + .48);
+      osc.start(start); osc.stop(start + decay + .02);
     });
   } catch { /* Sound is optional on browsers that suspend audio. */ }
 }
@@ -363,7 +365,8 @@ function showHint() {
   if(hint.type==='reset'){render();tell('先还原这次换景，再从上一拍的镜位接下去。');return;}
   if (hint.type==='ready') {hint=null;render();tell('这套镜位已经能演「'+lantern.target()+'」。'+(level.play?'可以落下这一拍。':'点「开场放映」即可收票。'));return;}
   const { id,place } = hint;
-  if (hint.type === 'lift' && level.projection) tell('要演「'+lantern.target()+'」，桌上至少要换 '+hint.count+' 片。先取回红色虚线里的'+level.pieces[id].name+'。');
+  if (hint.type === 'lift' && level.play) tell('要接完整场，先取回红色虚线里的'+level.pieces[id].name+'。这套排法还有 '+hint.count+' 片在桌上需要调整。');
+  else if (hint.type === 'lift' && level.projection) tell('要演「'+lantern.target()+'」，桌上至少要换 '+hint.count+' 片。先取回红色虚线里的'+level.pieces[id].name+'。');
   else if (hint.type === 'lift') tell('要完成'+(hintRoute===null?'余下的图纸':'「'+level.fork.routes[hintRoute].name+'」')+'，先取回红色虚线里的'+level.pieces[id].name+'。');
   else {
     state = {...state,selected:id,angles:state.angles.map((o,i)=>i===id?place.o:o)};
@@ -600,7 +603,7 @@ function dayLevel() {
 const slideArt = id => './art/slide-' + id + '.webp';
 const slipArt = (id,layer) => './art/slip-' + id + '-' + layer + '.webp';
 const clearStep=()=>{hint=null;lesson=null;trial=null;hover=null;render();};
-const slips=setupSlips({art:slipArt,open:openLevel,slots:()=>state.slots,selected:()=>state.selected,seat:placePane,repaint:paint,clearStep,tell,chime});
+const slips=setupSlips({art:slipArt,open:openLevel,slots:()=>state.slots,selected:()=>state.selected,deskState:()=>({state,history}),seat:placePane,repaint:paint,clearStep,tell,chime});
 const lantern=setupLantern({art:slideArt,open:openLevel,day:()=>openLevel(dayLevel()),slots:()=>state.slots,
   clearStep,repaint:paint,tell,chime,slips});
 chapterOpen=dayLevel().chapter;
@@ -618,7 +621,7 @@ function openAfterlight() {
 }
 if (location.hash==='#afterlight') openAfterlight();
 else if (location.hash==='#lantern') {openLevel(lastShow());consumeEntry();}
-else if (location.hash==='#slips') {openLevel(lastPlay());consumeEntry();}
+else if (location.hash==='#slips' || location.hash==='#duets') {openLevel(location.hash==='#duets'?lastDuet():lastPlay());consumeEntry();}
 else {
   const mode=read('bench:mode');openLevel(mode==='slips'?lastPlay():mode==='lantern'?lastShow():dayLevel());
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
@@ -627,9 +630,9 @@ else {
 }
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#afterlight') openAfterlight();
-  if(location.hash==='#lantern' || location.hash==='#slips') {
+  if(location.hash==='#lantern' || location.hash==='#slips' || location.hash==='#duets') {
     for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
-    openLevel(location.hash==='#slips'?lastPlay():lastShow());consumeEntry();window.scrollTo(0,0);
+    openLevel(location.hash==='#duets'?lastDuet():location.hash==='#slips'?lastPlay():lastShow());consumeEntry();window.scrollTo(0,0);
   }
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
     for(const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
