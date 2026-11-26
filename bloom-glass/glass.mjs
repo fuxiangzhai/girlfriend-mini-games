@@ -1,4 +1,4 @@
-import { etchAt, shapeAt, sideBySide, transform } from './puzzle.mjs';
+import { etchAt, mirrorFalls, shapeAt, sideBySide, transform } from './puzzle.mjs';
 
 const icons = {
   window: '<path d="M4.5 21V10a7.5 7.5 0 0 1 15 0v11zM5 11h14M12 3v8m-6-6 6 6 6-6M8.5 21v-7m7 7v-7"/>',
@@ -60,6 +60,17 @@ function pane(piece, points, pin, prefix, o, ghost = '') {
   const invalid = ghost === 'invalid';
   const offset = piece.etch && transform(piece.etch,o);
   const backFlower = offset ? blossom(pin[0]+offset[0],pin[1]+offset[1]) : '';
+  function atMark(mark) {
+    const [x,y]=transform(mark,o);
+    return 'translate('+((pin[0]+x+.5)*unit)+' '+((pin[1]+y+.5)*unit)+')';
+  }
+  let silver='';
+  if (piece.mirror) {
+    const d=mirrorFalls(piece.mirror.falls,o)?'M-15 -15 15 15':'M-15 15 15 -15';
+    silver='<g transform="'+atMark(piece.mirror.offset)+'" stroke-linecap="round"><path d="'+d+'" stroke="#233541" stroke-width="8.4"/><path d="'+d+'" stroke="#f5fcf4" stroke-width="4.3"/><path d="'+d+'" stroke="#8c9daa" stroke-width="1.3"/></g>';
+    if(piece.mirror.offset.every(n=>n===0))silver+='<circle cx="'+pivotX+'" cy="'+pivotY+'" r="3.3" stroke="#493925" stroke-width="1.2" fill="#efd694"/>';
+  }
+  if (piece.star) silver+='<g transform="'+atMark(piece.star)+'"><circle r="10.2" fill="#283f50" stroke="#f8edc8" stroke-width="1.3"/><path d="M0-8 2-2 8 0 2 2 0 8 -2 2 -8 0 -2-2z" fill="#fce6a0"/></g>';
   return '<g opacity="' + (ghost ? '.77' : '1') + '"><defs>' +
     '<linearGradient id="'+gradient+'" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="'+piece.light+'"/><stop offset=".47" stop-color="'+piece.mid+'"/><stop offset="1" stop-color="'+piece.dark+'"/></linearGradient>' +
     '<pattern id="'+paneTexture+'" width="77" height="86" patternUnits="userSpaceOnUse" patternTransform="rotate(-18)"><path d="M-12 43 18 7 41 31 79-5M18 7 8 67l33-36 37 33" fill="none" stroke="#fff8d6" stroke-width="1.2" opacity=".43"/><path d="m18 7 23 24L8 67z" fill="#fff8df" opacity=".21"/><path d="m42 72 20-7m-18 10 9-3" stroke="#fcf3c9" opacity=".44"/></pattern>' +
@@ -68,7 +79,7 @@ function pane(piece, points, pin, prefix, o, ghost = '') {
     '<path d="'+edge+'" fill="none" stroke="#fff8df" stroke-width="5.8" opacity=".65"/></g>' +
     '<path d="'+edge+'" fill="none" stroke="'+(ghost ? (invalid ? '#9c2728' : '#f8fcbe') : '#324a42')+'" stroke-width="'+(ghost ? '2.8' : '2.1')+'" '+(ghost ? 'stroke-dasharray="5 3"' : '')+' stroke-linecap="round"/>' +
     '<g transform="translate('+pivotX+' '+pivotY+')"><circle r="5.3" fill="#614f38" stroke="#fff2ba" stroke-width="1.5"/><circle cx="-1" cy="-1.2" r="1.8" fill="#ffe7a3"/></g>' +
-    '<g transform="translate('+(pivotX+5)+' '+(pivotY+5)+') scale(.52)" color="#263f3b" opacity=".8">'+icon(piece.icon,22)+'</g>'+backFlower+'</g>';
+    '<g transform="translate('+(pivotX+5)+' '+(pivotY+5)+') scale(.52)" color="#263f3b" opacity=".8">'+icon(piece.icon,22)+'</g>'+backFlower+silver+'</g>';
 }
 
 export function thumbnail(piece, o, id) {

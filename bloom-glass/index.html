@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#183e35">
-  <meta name="description" content="拼合花窗，收集回信，再上一班验灯的夜班。两个人可以各读一张笺，一个人也能完成所有委托。">
+  <meta name="description" content="拼合花窗，收集回信，调两盏灯拍下街坊的故事。巷口幻灯会的银镜随玻璃转动，照向不同的出口，就能演出不同的幕景。">
   <title>借一束光 · 花窗工坊</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./studio.css">
   <link rel="stylesheet" href="./night.css">
+  <link rel="stylesheet" href="./lantern.css">
   <script type="module" src="./studio.mjs"></script>
 </head>
 <body>
@@ -38,6 +39,8 @@
     </header>
 
     <section id="bench" aria-label="花窗工作台">
+      <div class="desk-selector" role="group" aria-label="选择工作台"><button type="button" id="day-desk">拼窗工作台</button><button type="button" id="lantern-desk">巷口幻灯会</button></div>
+      <div id="program-bar" hidden><label for="program-select">今晚的节目</label><select id="program-select"></select><button type="button" class="subtle" id="to-tickets">看戏票夹</button></div>
       <div class="workbench">
         <section class="work-card">
           <div class="work-heading">
@@ -50,6 +53,7 @@
               <button type="button" class="subtle" id="guide"><span data-icon="guide"></span>玩法</button>
             </div>
           </div>
+          <div id="projection-score" hidden></div>
           <div class="mat" id="mat">
             <span class="screw nw" aria-hidden="true"></span><span class="screw ne" aria-hidden="true"></span>
             <span class="screw sw" aria-hidden="true"></span><span class="screw se" aria-hidden="true"></span>
@@ -57,8 +61,13 @@
               <div id="col-labels" class="coordinates horizontal" aria-hidden="true"></div>
               <div id="row-labels" class="coordinates vertical" aria-hidden="true"></div>
               <svg id="drawing" aria-hidden="true" focusable="false"></svg>
+              <svg id="optics" aria-hidden="true" focusable="false" hidden></svg>
               <div class="hit-grid" id="hit-grid" role="group" aria-label="花窗格，方向键移动，空格或回车嵌入"></div>
             </div>
+          </div>
+          <div id="lamp-bench" hidden>
+            <div class="rehearse-controls"><button type="button" class="secondary" id="test-beam" aria-pressed="true">试灯</button><div id="beam-solo" role="group" aria-label="单看一束光"></div><button type="button" class="primary" id="project-slide">开场放映</button></div>
+            <div id="projection-report"></div>
           </div>
           <p class="live-message" id="message" role="status" aria-live="polite" aria-atomic="true"></p>
           <div class="trialbar" id="trialbar" hidden><span>试摆中 · 可选格、旋转、翻面</span><button type="button" class="primary" id="seat-trial">嵌入此处</button></div>
@@ -66,6 +75,7 @@
             <div class="board-actions">
               <button type="button" class="subtle" id="undo"><span data-icon="undo"></span>撤销</button>
               <button type="button" class="subtle" id="reset"><span data-icon="reset"></span>重拼</button>
+              <button type="button" class="subtle mobile-project-jump" id="jump-tray">去托盘 ↓</button>
             </div>
             <button type="button" class="hint-btn" id="hint"><span data-icon="hint"></span><span id="hint-label">看一步提示</span></button>
           </div>
@@ -79,8 +89,15 @@
             <div class="shape-actions">
               <button type="button" id="turn"><span data-icon="rotate"></span>旋转</button>
               <button type="button" id="flip" hidden><span data-icon="flip"></span>翻面</button>
+              <button type="button" class="mobile-project-jump" id="jump-frame">回窗框 ↑</button>
             </div>
             <div class="objective" id="objective" hidden></div>
+          </section>
+          <section id="cue-sheet" aria-labelledby="cue-title" hidden>
+            <h3 id="cue-title">放映师的场记</h3>
+            <div id="scene-choice" role="group" aria-label="为提示选择幕景"></div>
+            <label id="star-label"><input id="seek-star" type="checkbox"><span id="star-copy"></span></label>
+            <details id="show-cue"><summary>翻看外公的调灯笔记</summary><p id="show-cue-text"></p></details>
           </section>
           <section class="order-card" id="order-card" hidden aria-labelledby="order-heading">
             <h3 id="order-heading">图纸上的约定</h3>
@@ -97,6 +114,7 @@
           </section>
         </aside>
       </div>
+      <details id="ticket-album" hidden><summary><span>我的戏票夹</span><span id="ticket-count"></span></summary><div id="ticket-grid"></div></details>
     </section>
 
     <section id="book" hidden aria-labelledby="book-heading">
@@ -219,6 +237,27 @@
       <p class="result-story" id="result-story"></p>
       <p class="result-progress" id="result-progress"></p>
       <div class="result-actions"><button type="button" class="primary" id="next"></button><button type="button" class="secondary" id="alternate" hidden></button><button type="button" class="secondary" id="result-book">看花窗册</button><button type="button" class="subtle" id="retry-gold" hidden>重拼金印</button></div>
+    </div>
+  </dialog>
+  <dialog id="lantern-guide" class="dialog" aria-labelledby="lantern-guide-title">
+    <div class="dialog-inner"><button type="button" class="round close" data-close aria-label="合上放映手册"><span data-icon="close"></span></button>
+      <p class="overline">放映棚手册</p><h2 id="lantern-guide-title">怎样点亮一幕戏</h2>
+      <div class="guide-list">
+        <div><span data-icon="pin"></span><p><strong>拼好一张玻璃片</strong>先选玻璃，再点窗格落下圆钉。有纹样的格子要配同纹玻璃。点已嵌的玻璃可以取回。</p></div>
+        <div><span data-icon="sun"></span><p><strong>让灯光照到方框出口</strong>圆牌是入口，方牌是节目需要的出口。边号从左到右或从上到下数。光遇银镜转直角，玻璃转动或翻面时，银镜也会跟着动。试灯会在第一格空处停住。</p></div>
+        <div><span data-icon="window"></span><p><strong>合像与暗星</strong>遇到合像圈，两束光要在圈心一横一竖直穿。让场记指定的灯经过玻璃上的暗星，还能在戏票背面多读一句。</p></div>
+      </div><p class="keys">数字键选片，方向键选格，空格嵌入。R 旋转，F 翻面，Z 撤销。</p>
+      <button type="button" class="primary" data-close>回到放映台</button>
+    </div>
+  </dialog>
+  <dialog id="ticket-dialog" class="dialog" aria-labelledby="ticket-title">
+    <div class="ticket-image-mat"><img id="ticket-image" alt=""><canvas id="ticket-map" width="620" height="360" role="img" aria-label="这张戏票实际使用的镜位和灯路" hidden></canvas></div>
+    <div class="dialog-inner"><button type="button" class="round close" data-close aria-label="合上戏票"><span data-icon="close"></span></button>
+      <p class="overline" id="ticket-number"></p><h2 id="ticket-title"></h2><p id="ticket-story"></p>
+      <p id="ticket-secret" hidden></p><p id="ticket-path"></p>
+      <button type="button" class="subtle" id="turn-ticket" aria-expanded="false" aria-controls="ticket-replay">翻面看镜位</button>
+      <div id="ticket-replay" hidden><p id="ticket-mirrors"></p><p id="ticket-compare"></p></div>
+      <div class="ticket-actions"><button type="button" class="primary" id="next-show"></button><button type="button" class="secondary" id="other-show" hidden></button><button type="button" class="subtle" id="print-ticket">保存戏票 PNG</button></div><p id="print-status" role="status"></p>
     </div>
   </dialog>
   <dialog id="lamp-dialog" class="dialog" aria-labelledby="lamp-dialog-title"><div class="dialog-inner">

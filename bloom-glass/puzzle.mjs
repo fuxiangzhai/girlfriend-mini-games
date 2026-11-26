@@ -17,6 +17,22 @@ export function shapeAt(piece, o) {
   return piece.cells.map(point => transform(point, o));
 }
 
+export const mirrorFalls = (falls, o) => falls !== Boolean((o & 1) ^ ((o & 4) >> 2));
+
+export function markCell(width, offset, place) {
+  const [dx,dy] = transform(offset,place.o);
+  return (place.y+dy)*width+place.x+dx;
+}
+
+export function poseKey(level,id,place,candidate=describe(level,id,place)) {
+  if (!candidate) return '';
+  const piece=level.pieces[id];
+  let key=String(candidate.mask)+':'+candidate.etch+(candidate.gold?'*':'');
+  if (piece.mirror) key+='m'+markCell(level.width,piece.mirror.offset,place)+(mirrorFalls(piece.mirror.falls,place.o)?'d':'u');
+  if (piece.star) key+='s'+markCell(level.width,piece.star,place);
+  return key;
+}
+
 export function etchAt(level,id,place) {
   const etch = level.pieces[id].etch;
   if (!place || !etch) return null;
@@ -81,8 +97,8 @@ function catalog(level) {
         const place = { x: at % level.width, y: Math.floor(at / level.width), o };
         const candidate = describe(level, id, place);
         if (!candidate) continue;
-        // Identical silhouettes can have their back flower in different cells.
-        const key = String(candidate.mask) + ':' + candidate.etch + (candidate.gold ? '*' : '');
+        // Equal silhouettes can still have different engraving or mirror positions.
+        const key = poseKey(level,id,place,candidate);
         if (seen.has(key)) continue;
         seen.add(key);
         const record = { ...candidate, place, id, bit: 1 << id };
@@ -100,7 +116,7 @@ function catalog(level) {
 }
 
 // Exact cover over both the remaining panes and the uncovered cells.
-export function solve(level, slots = level.pieces.map(() => null), requireGold = false, route = null) {
+export function solve(level, slots = level.pieces.map(() => null), requireGold = false, route = null, accept = null) {
   const { byPiece, byCell } = catalog(level);
   const result = [...slots], all = (1 << level.pieces.length) - 1;
   const marks = level.pieces.map(()=>null);
@@ -119,7 +135,7 @@ export function solve(level, slots = level.pieces.map(() => null), requireGold =
     used |= 1 << i;
   }
   function search(mask, pieces, gold) {
-    if (pieces === all) return !requireGold || gold;
+    if (pieces === all) return (!requireGold || gold) && (!accept || accept(result));
     let fewest;
     function consider(options) {
       const open = options.filter(c => !(c.bit & pieces) && !(c.mask & mask) && matches(c.id,c.etch));

@@ -1,4 +1,4 @@
-import { transform } from './puzzle.mjs';
+import { mirrorFalls, transform } from './puzzle.mjs';
 import { afterlightChapters, afterlightPlans } from './afterlight.mjs';
 
 export const pigments = [
@@ -80,7 +80,7 @@ const plans = [
     reply: '你把两把椅子并在窗下。四种花都在这里，这扇窗也有了答案。' },
 ];
 
-function makeLevel(plan, index, id, chapter) {
+export function makeLevel(plan, index, id, chapter) {
   const width = plan.map[0].length, cells = plan.map.join('').split('');
   const letters = [...new Set(cells)].filter(c => c !== '.').sort();
   const reference = [], clues = new Map(), rubbings = new Map(), engravings = [];
@@ -98,6 +98,9 @@ function makeLevel(plan, index, id, chapter) {
     }
     const cutPoint = ([x,y]) => transform([x-pin[0],y-pin[1]],cut);
     const piece = { ...pigments[i], cells:points.map(cutPoint) };
+    const mirror=plan.mirrors?.find(m=>m[0]===letter);
+    if (mirror) piece.mirror={offset:cutPoint(points[Number(mirror[1])]),falls:mirrorFalls(mirror[2]==='d',cut)};
+    if (plan.star?.[0]===letter) piece.star=cutPoint(points[Number(plan.star[1])]);
     const mark = (plan.etches || '').split(' ').find(s=>s[0]===letter);
     if (mark) {
       const [x,y] = points[Number(mark.slice(1))];

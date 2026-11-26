@@ -1,9 +1,11 @@
 import { chapters, volumes, levels, dailyLevel, dateKey } from './levels.mjs';
-import { turn, flip, shapeAt, fits, isGilded, suggest, etchAt, endingOf, transform } from './puzzle.mjs';
+import { turn, flip, shapeAt, fits, isGilded, suggest, etchAt, endingOf, transform, markCell, mirrorFalls } from './puzzle.mjs';
 import { address, cellLabel, orderLines, backIssue } from './brief.mjs';
 import { icon, thumbnail, drawBoard } from './glass.mjs';
 import { read, write, fresh, restore, save, record, award } from './save.mjs';
 import { setupNight } from './night-shift.mjs';
+import { lastShow, setupLantern } from './lantern-desk.mjs';
+import { paneDescription } from './lantern-glass.mjs';
 
 const $ = id => document.getElementById(id);
 const els = id => Array.from($(id).children);
@@ -49,6 +51,12 @@ function occupiedAt(x,y) {
   return state.slots.findIndex((p,i) => p && shapeAt(level.pieces[i],p.o).some(([dx,dy]) => p.x+dx === x && p.y+dy === y));
 }
 function baseText() {
+  if (level.projection) {
+    if(state.selected<0)return '玻璃已拼满。核对出光口后，点「开场放映」试演。';
+    if(trying)return '先选窗格试摆，再看试灯轨迹。点「嵌入此处」才会放下玻璃。';
+    return level.showIndex===0 && state.slots.filter(Boolean).length===1?'从西一进光。让蜜金片的银镜在 B1 把光折向北二。':
+      '已选'+level.pieces[state.selected].name+'。点窗格落下圆钉，银镜会随玻璃一起转。';
+  }
   if (state.selected < 0) return '这张试片已拼好，可以查看成品或撤销再试。';
   if (lesson) return '叶青已选好。点虚线中的圆钉，嵌入第一片。';
   if (level.index === 2 && !isGilded(level,state.slots)) return '试着让一枚圆钉对准四角星，成品会得到金印。';
@@ -81,7 +89,10 @@ function preview() {
 }
 function paint() {
   const ghost=preview();
-  drawBoard($('drawing'),level,state.slots,ghost,hint?.type === 'lift' ? hint.id : -1);
+  const seated=level.projection && ghost?.valid && state.slots[ghost.id] ?
+    state.slots.map((p,id)=>id===ghost.id?null:p) : state.slots;
+  drawBoard($('drawing'),level,seated,ghost,hint?.type === 'lift' ? hint.id : -1);
+  if (level.projection) lantern.paint(state.slots,ghost);
   if (level.hasEtches) $('order-lines').innerHTML=orderLines(level,state.slots,ghost);
   $('seat-trial').disabled = !trial || !ghost?.valid;
 }
@@ -96,7 +107,7 @@ function render() {
   $('undo').disabled = !history.length;
   $('reset').disabled = !history.length && !record(level) &&
     JSON.stringify(state.slots) === JSON.stringify(level.sample) && state.angles.every(o => !o);
-  $('hint-label').textContent = done ? '查看成品' : hint ? (hint.type === 'place' ? '照提示嵌入' : '取回这片') : '看一步提示';
+  $('hint-label').textContent = done && !level.projection ? '查看成品' : hint ? (hint.type === 'place' ? '照提示嵌入' : '取回这片') : '看一步提示';
   els('pieces').forEach((btn,id) => {
     const p = level.pieces[id], placed = state.slots[id];
     btn.classList.toggle('is-set',Boolean(placed));
@@ -105,7 +116,7 @@ function render() {
     const offset=p.etch && transform(p.etch,angle);
     const offsets=offset ? [offset[0] ? (offset[0]>0?'右':'左')+Math.abs(offset[0])+'格':'',
       offset[1] ? (offset[1]>0?'下':'上')+Math.abs(offset[1])+'格':''].filter(Boolean).join('、') : '';
-    btn.setAttribute('aria-label',p.name + '玻璃，' + p.mark + '纹，' +(offsets?'背花在圆钉'+offsets+'，':'')+ (placed ? '已嵌入，点按取回' : '点按选择'));
+    btn.setAttribute('aria-label',p.name + '玻璃，' + p.mark + '纹，' +(offsets?'背花在圆钉'+offsets+'，':'')+paneDescription(p,angle)+ (placed ? '已嵌入，点按取回' : '点按选择'));
     btn.innerHTML = thumbnail(p,angle,id) +
       (placed ? '<span class="check">'+icon('check')+'</span>' : '') + '<span class="piece-label">'+p.name+'</span>';
   });
@@ -120,6 +131,14 @@ function render() {
     const route=level.fork?.routes.find(r=>r.at===at);
     if (route) text.push(route.name+'信位');
     if (id>=0 && etchAt(level,id,state.slots[id])===at) text.push('实心背花');
+    if (level.projection) {
+      if (at===level.projection.cross) text.push('合像圈');
+      if(id>=0) {
+        const piece=level.pieces[id], p=state.slots[id];
+        if(piece.star && markCell(level.width,piece.star,p)===at)text.push('暗星');
+        if(piece.mirror && markCell(level.width,piece.mirror.offset,p)===at)text.push('银镜，'+(mirrorFalls(piece.mirror.falls,p.o)?'左上连右下':'左下连右上'));
+      }
+    }
     for (const [a,b] of level.seams) {
       if (at===a) text.push(b-a===1?'右侧有铅条':'下方有铅条');
       if (at===b) text.push(b-a===1?'左侧有铅条':'上方有铅条');
@@ -140,7 +159,7 @@ function setPage(page) {
   write('room',page);
 }
 function jacket(chapter) {
-  $('hero').classList.remove('is-night','is-roll');
+  $('hero').classList.remove('is-night','is-roll','is-lantern');
   const sequel=volumes[1].chapters.includes(chapter);
   $('hero').classList.toggle('is-letter',sequel);
   $('jacket').hidden=!sequel;
@@ -162,11 +181,12 @@ function preferRoute(index) {
 }
 function openLevel(target, showFinished = false) {
   level = target; ({ state, history } = restore(level));
-  hint = null; hover = null; drag = null; lesson = null; chapterOpen = level.chapter;
+  hint = null; hover = null; drag = null; lesson = null; if (!level.projection) chapterOpen = level.chapter;
   trying=false; trial=null;
   const preference=level.fork ? read('route:'+level.id) : null;
   hintRoute=Number.isInteger(preference) && level.fork?.routes[preference] ? preference : null;
-  jacket(level.chapter);
+  if (!level.projection) jacket(level.chapter);
+  lantern.configure(level);
   focusAt = level.cells.findIndex(c => c !== '.');
   if (level.index === 0 && !history.length && state.selected === 1 && state.slots.filter(Boolean).length === 1) {
     const step = suggest(level,state.slots,state.selected);
@@ -176,17 +196,24 @@ function openLevel(target, showFinished = false) {
       focusAt = step.place.y * level.width + step.place.x;
     }
   }
-  write('active',level.daily ? 'daily' : level.id);
+  write('bench:mode',level.projection?'lantern':'day');
+  write(level.projection?'lantern:active':'active',level.daily ? 'daily' : level.id);
   const chapter = chapters[level.chapter];
   $('chapter-label').textContent = level.daily ? '每日委托 · '+level.id.slice(4) :
     '第'+chapterNumbers[level.chapter]+'章·'+chapter.flower+' / 图纸'+number(level.index+1);
   $('level-title').textContent = level.title;
-  $('request').textContent = level.request; $('note-art').src = art(level.chapter);
+  $('request').textContent = level.request; if(!level.projection)$('note-art').src=art(level.chapter);
   $('instruction').textContent = level.seams.length ? '同纹填刻槽，整片玻璃不能跨过金边铅条。' :
     level.clues.size ? '刻纹格要配同纹玻璃。点选或拖入窗框。' : '点选或拖动玻璃，圆钉对准想放的窗格。';
   if (level.hasEtches) $('instruction').textContent='圆钉仍是落点。玻璃上的实心小花会一起转动。';
-  $('audition').hidden=$('afterlight-guide').hidden=$('order-card').hidden=!level.hasEtches;
-  $('level-title').closest('.work-heading').classList.toggle('with-light',level.hasEtches);
+  if(level.projection) {
+    $('chapter-label').textContent='巷口幻灯会 / 第 '+number(level.showIndex+1)+' 场';
+    $('instruction').textContent='点玻璃，再点窗格放圆钉。光从圆牌入，遇银镜转直角，向方牌出。';
+  }
+  $('note-art').closest('.note-card').querySelector('h3').textContent=level.projection?'棚边来信':'窗边来信';
+  $('audition').hidden=!(level.hasEtches || level.projection);
+  $('afterlight-guide').hidden=$('order-card').hidden=!level.hasEtches;
+  $('level-title').closest('.work-heading').classList.toggle('with-light',Boolean(level.hasEtches || level.projection));
   $('strategy').hidden=!level.tip;
   $('strategy').open=false; $('strategy-text').textContent=level.tip || '';
   $('route-picker').hidden=!level.fork;
@@ -209,7 +236,7 @@ function openLevel(target, showFinished = false) {
     const b=document.createElement('button'); b.type='button'; b.className='piece'; b.dataset.id=i; return b;
   }));
   setPage('bench'); render(); tell(baseText());
-  if (state.slots.every(Boolean)) {
+  if (!level.projection && state.slots.every(Boolean)) {
     award(level,isGilded(level,state.slots),endingOf(level,state.slots));
     if (showFinished) showResult();
   }
@@ -262,8 +289,8 @@ function placePane(id,place) {
   slots[id] = place; angles[id] = place.o;
   commit({ slots,angles, selected:slots.findIndex(p=>!p) });
   const done = slots.every(Boolean);
-  if (done) award(level,isGilded(level,slots),endingOf(level,slots));
-  render(); chime(id,done);
+  if (done && !level.projection) award(level,isGilded(level,slots),endingOf(level,slots));
+  render(); chime(id,done && !level.projection);
   if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     const spark = document.createElement('span');
     spark.className = 'seat-ring';
@@ -272,7 +299,8 @@ function placePane(id,place) {
     $('board').append(spark);
     setTimeout(()=>spark.remove(),460);
   }
-  if (done) { tell('试片已入册。'); showResult(); }
+  if (done && level.projection) tell(baseText());
+  else if (done) { tell('试片已入册。'); showResult(); }
   else tell(level.pieces[id].name+'已嵌入。'+(level.hasEtches?baseText():'接下来是'+level.pieces[state.selected].name+'。'));
 }
 function guidedPlace(id,x,y) {
@@ -297,16 +325,18 @@ function undo() {
   hint=null; lesson=null; hover=null; trial=null; save(level,state,history); render(); tell('已撤销上一步。'+baseText());
 }
 function showHint() {
-  if (state.slots.every(Boolean)) { showResult(); return; }
+  if (!level.projection && state.slots.every(Boolean)) { showResult(); return; }
   if (hint) {
     if (hint.type === 'lift') selectPane(hint.id);
     else placePane(hint.id,hint.place);
     return;
   }
-  hint = suggest(level,state.slots,state.selected,hintRoute); hover=null; lesson=null; trial=null;
+  hint = level.projection?lantern.step(state.slots,state.selected):suggest(level,state.slots,state.selected,hintRoute); hover=null; lesson=null; trial=null;
   if (!hint) return;
+  if (hint.type==='ready') {hint=null;render();tell('这套镜位已经能演「'+lantern.target()+'」。点「开场放映」即可收票。');return;}
   const { id,place } = hint;
-  if (hint.type === 'lift') tell('要完成'+(hintRoute===null?'余下的图纸':'「'+level.fork.routes[hintRoute].name+'」')+'，先取回红色虚线里的'+level.pieces[id].name+'。');
+  if (hint.type === 'lift' && level.projection) tell('要演「'+lantern.target()+'」，桌上至少要换 '+hint.count+' 片。先取回红色虚线里的'+level.pieces[id].name+'。');
+  else if (hint.type === 'lift') tell('要完成'+(hintRoute===null?'余下的图纸':'「'+level.fork.routes[hintRoute].name+'」')+'，先取回红色虚线里的'+level.pieces[id].name+'。');
   else {
     state = {...state,selected:id,angles:state.angles.map((o,i)=>i===id?place.o:o)};
     save(level,state,history);
@@ -407,6 +437,7 @@ function moveFocus(dx,dy) {
 }
 document.addEventListener('keydown',e => {
   if (activePage!=='bench' || document.querySelector('dialog[open]') || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+  if (e.target.closest?.('input,select,textarea,summary')) return;
   const key=e.key.toLowerCase(), directions={arrowleft:[-1,0],arrowright:[1,0],arrowup:[0,-1],arrowdown:[0,1]};
   if (directions[key]) { e.preventDefault(); moveFocus(...directions[key]); }
   else if (/^[1-6]$/.test(key) && Number(key)<=level.pieces.length) { e.preventDefault(); selectPane(Number(key)-1); $('hit-grid').querySelector('[tabindex="0"]')?.focus(); }
@@ -464,14 +495,14 @@ $('sequel').onclick=()=>{
 $('chapter-tabs').onclick=e=>{ const b=e.target.closest('[data-chapter]'); if (b) { showBook(+b.dataset.chapter); $('chapter-tabs').querySelector('[aria-pressed="true"]').focus(); } };
 $('level-list').onclick=e=>{ const b=e.target.closest('[data-index]'); if (b) { openLevel(levels[+b.dataset.index],true); window.scrollTo(0,0); } };
 $('daily').onclick=()=>{ openLevel(dailyLevel(dateKey()),true); window.scrollTo(0,0); };
-$('nav-bench').onclick=()=>{setPage('bench'); jacket(level.chapter); render();};
+$('nav-bench').onclick=()=>{setPage('bench'); if(level.projection)lantern.cover();else jacket(level.chapter); render();};
 $('brand').onclick=e=>{e.preventDefault(); $('nav-bench').click();};
 $('nav-book').onclick=()=>showBook(chapterOpen);
 const filmArt = id => './art/film-' + id + '.webp';
 const enterNight=setupNight(chime,nightCover,filmArt);
 function nightCover(edition) {
   const roll=edition==='roll';
-  $('hero').classList.remove('is-letter'); $('hero').classList.add('is-night');
+  $('hero').classList.remove('is-letter','is-lantern'); $('hero').classList.add('is-night');
   $('hero').classList.toggle('is-roll',roll);
   $('jacket').hidden=true; $('sequel').hidden=true;
   $('volume-name').textContent=roll?'Petal Panes · Contact Sheets':'Petal Panes · Night Shift';
@@ -483,7 +514,7 @@ function showNight(edition) {
 }
 $('nav-night').onclick=()=>showNight();
 $('nav-night').hidden=false;
-$('guide').onclick=()=>$('guide-dialog').showModal();
+$('guide').onclick=()=>$(level.projection?'lantern-guide':'guide-dialog').showModal();
 document.querySelectorAll('[data-close]').forEach(b=>{b.onclick=()=>b.closest('dialog').close();});
 document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{
   if (e.target!==d) return;
@@ -532,9 +563,15 @@ $('alternate').onclick=()=>{
   tell('这次找「'+route.name+'」的回信。让'+level.pieces[level.fork.pane].name+'背花落在 '+cellLabel(level,route.at)+'。');
   $('pieces').querySelector('[aria-pressed="true"]')?.focus();
 };
-const last=read('active');
 const lastRoom=read('room');
-const previous=levels.find(l=>l.id===last);
+function dayLevel() {
+  const last=read('active');
+  return last==='daily'?dailyLevel():levels.find(l=>l.id===last) || levels[0];
+}
+const slideArt = id => './art/slide-' + id + '.webp';
+const lantern=setupLantern({art:slideArt,open:openLevel,day:()=>openLevel(dayLevel()),slots:()=>state.slots,
+  clearStep:()=>{hint=null;lesson=null;trial=null;hover=null;render();},repaint:paint,tell,chime});
+chapterOpen=dayLevel().chapter;
 function consumeEntry() {
   try { window.history.replaceState(null,'',location.href.split('#')[0]); } catch { /* The game also works on restricted file URLs. */ }
 }
@@ -548,14 +585,19 @@ function openAfterlight() {
   consumeEntry();
 }
 if (location.hash==='#afterlight') openAfterlight();
+else if (location.hash==='#lantern') {openLevel(lastShow());consumeEntry();}
 else {
-  openLevel(last==='daily'?dailyLevel():previous || levels[0]);
+  openLevel(read('bench:mode')==='lantern'?lastShow():dayLevel());
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
     showNight(location.hash==='#shutters'?'roll':'night'); consumeEntry();
   } else if(lastRoom==='night') showNight();
 }
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#afterlight') openAfterlight();
+  if(location.hash==='#lantern') {
+    for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
+    openLevel(lastShow());consumeEntry();window.scrollTo(0,0);
+  }
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
     for(const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
     showNight(location.hash==='#shutters'?'roll':'night'); consumeEntry(); window.scrollTo(0,0);
