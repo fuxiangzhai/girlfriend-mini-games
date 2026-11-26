@@ -66,7 +66,8 @@ export function playMailSound(ctx, cue, bus) {
     }
     playingEcho.set(ctx, voices);
   }
-  const notes = echo ? [[0, 294, .10, .045], ...Array.from(cue.bells, (bell, i) => [.15 + i * .28, bell === "1" ? 660 : 988, .36, .055])] : phrases[cue] || [];
+  const notes = cue?.kind === "duet" ? duetNotes(cue.voices, cue.solo)
+    : echo ? [[0, 294, .10, .045], ...Array.from(cue.bells, (bell, i) => [.15 + i * .28, bell === "1" ? 660 : 988, .36, .055])] : phrases[cue] || [];
   for (const [delay, pitch, length, peak] of notes) {
     const start = now + delay;
     const voice = ctx.createOscillator();
@@ -100,4 +101,13 @@ export function playMailSound(ctx, cue, bus) {
     source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); };
     source.start(start, 0, length);
   }
+}
+
+function duetNotes(voices, solo = -1) {
+  const scales = [[262, 294, 330, 392], [523, 587, 659, 784]];
+  return voices.flatMap(({event, direction}, i) => {
+    if (event === "rest" || event === "held" || (solo !== -1 && solo !== i)) return [];
+    if (event === "arrive") return [[0, i ? 660 : 392, .32, .055]];
+    return [[0, scales[i][direction], event === "start" ? .15 : .105, .04]];
+  });
 }

@@ -13,6 +13,7 @@
   <body>
     <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
+        <symbol id="i-duet" viewBox="0 0 24 24"><path d="M7 16V6l12-3v11M7 9l12-3"/><ellipse cx="4.5" cy="17.5" rx="2.5" ry="1.8"/><ellipse cx="16.5" cy="15.5" rx="2.5" ry="1.8"/></symbol>
         <symbol id="i-switchback" viewBox="0 0 24 24"><path d="M3 20h12q5 0 5-4t-5-4H9q-4 0-4-3t4-3h9M15 3l4 3-4 3"/><circle cx="4" cy="20" r="1.3"/></symbol>
         <symbol id="g-siding" viewBox="0 0 64 64"><rect x="10" y="10" width="44" height="44" rx="8" fill="#273f3c" stroke="#e0b272" stroke-width="2.4" stroke-dasharray="6 3"/><path d="M20 23v-3h4m16 0h4v3m0 17v4h-4m-16 0h-4v-4" fill="none" stroke="#e4bb81" stroke-width="2"/><circle cx="32" cy="32" r="2.7" fill="#edce8b"/></symbol>
         <symbol id="g-blade" viewBox="0 0 64 64"><g transform="rotate(-45 32 32)"><rect x="9" y="27" width="46" height="10" rx="3" fill="#d99650" stroke="#fff0b9" stroke-width="1.8"/><path d="M14 30h34" stroke="#ffedb0" stroke-width="2"/></g></symbol>
@@ -77,12 +78,14 @@
               <button id="mode-open" type="button" aria-haspopup="dialog"><span id="mode-label">标准</span> <span aria-hidden="true">⌄</span></button></div>
             <div class="counters"><span id="mark-count" hidden></span><span id="turn-counter"><span data-t="turns">步数</span> <b id="moves">00</b><span id="budget"></span></span></div>
           </div>
+          <div id="duet-service" class="goal-strip" role="group" data-aria="duetService" hidden><span data-t="duetService">信号屋邮班</span><div class="goal-options"><button id="duet-normal" type="button" data-t="duetOrdinary"></button><button id="duet-enter" type="button" data-t="duetTitle"></button></div></div>
           <div id="goals" class="goal-strip" role="group" data-aria="deliveryGoal" hidden>
             <span data-t="deliveryGoal">投递方式</span><div class="goal-options"><button type="button" data-goal="direct" data-t="direct">直投</button><button type="button" data-goal="joint" data-t="joint">合印</button></div>
           </div>
           <div id="watch-switch" class="goal-strip" role="group" data-aria="watchShiftType" hidden><span data-t="watchShiftType">栈桥邮班</span><div class="goal-options"><button id="watch-normal" type="button" data-t="watchOrdinary">日常回信</button><button id="watch-enter" type="button" data-t="watchTitle">雾班听测</button></div></div>
           <div id="hill-switch" class="goal-strip" role="group" data-aria="hillService" hidden><span data-t="hillService">山坡邮班</span><div class="goal-options"><button id="hill-normal" type="button" data-t="hillOrdinary">日常投递</button><button id="hill-enter" type="button" data-t="hillTitle">橘坡分岔线</button></div></div>
           <div id="hill-tray" hidden><svg class="icon" aria-hidden="true"><use href="#i-switchback"/></svg><span id="hill-stock"></span><button id="hill-wallet-link" type="button" aria-controls="hill-book" data-t="hillToWallet"></button><span class="hill-cycle" data-t="hillCycle"></span></div>
+          <div id="duet-head" hidden><strong id="duet-phase"></strong><span id="duet-station"></span></div>
           <div id="watch-head" hidden>
             <div class="watch-ribbon"><label for="watch-shift" data-t="watchShift">班次</label><select id="watch-shift"></select><span id="watch-phase"></span></div>
             <div id="watch-shores"><span data-t="watchChoose">从哪盏岸灯发光</span><div id="watch-ports" role="group" data-aria="watchChoose"></div></div>
@@ -97,10 +100,22 @@
               </svg>
               <svg id="beam" aria-hidden="true"><g id="film-overlay"></g><g class="beam-lines"><g data-ray="moon"></g><g data-ray="star"></g></g><g id="courier" class="courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g><g id="star-courier" class="courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g></svg>
               <div id="tiles" class="tiles"></div>
+              <div id="duet-markers" aria-hidden="true" hidden><i>☾</i><i>✦</i></div>
               <span id="watch-origin" aria-hidden="true" hidden></span>
             </div>
           </div>
           <p id="route-description" class="sr-only"></p>
+          <section id="duet-controls" data-aria="duetTitle" hidden>
+            <div id="duet-console" hidden>
+              <label><span data-t="duetMoonBearing"></span><select id="duet-moon"></select></label>
+              <label><span data-t="duetStarBearing"></span><select id="duet-star"></select></label>
+              <div class="duet-delay"><label for="duet-delay" data-t="duetDeparture"></label><output id="duet-rest" for="duet-delay"></output>
+                <div><button id="duet-earlier" type="button" data-aria="duetEarlier">−</button><input id="duet-delay" type="range" step="1" value="0"><button id="duet-later" type="button" data-aria="duetLater">+</button></div></div>
+            </div>
+            <p id="duet-status" role="status"></p>
+            <div class="duet-actions"><button id="duet-undo" type="button" data-t="undo"></button><button id="duet-back" type="button" data-t="duetBack"></button><button id="duet-hint" type="button" data-t="hint"></button><button id="duet-main" class="dispatch" type="button"></button></div>
+            <div class="duet-links"><button id="duet-to-score" type="button" data-t="duetToScore"></button><button id="duet-again" type="button" data-t="duetAgain"></button><button id="duet-live" type="button" data-t="duetLive"></button></div>
+          </section>
           <section id="watch-panel" data-aria="watchTitle" hidden>
             <div class="watch-readings" id="watch-readings"><div><small data-t="watchForecast">纸上预测</small><strong id="watch-prediction"></strong></div><div><small data-t="watchActual">实测回声</small><strong id="watch-answer" aria-live="polite" aria-atomic="true"></strong></div></div>
             <p id="watch-status" role="status"></p>
@@ -141,6 +156,15 @@
             </div>
           </article>
           <section class="brief" aria-labelledby="brief-title"><h3 id="brief-title" data-t="fieldNotes">投递手记</h3><p id="brief">今晚的第一封信从这里出发。点一下海面上的圆镜，让月光拐向信箱。</p></section>
+          <section id="duet-book" aria-labelledby="duet-book-title" hidden>
+            <div class="duet-book-head"><svg class="icon" aria-hidden="true"><use href="#i-duet"/></svg><h3 id="duet-book-title" data-t="duetScore"></h3><span id="duet-count"></span></div>
+            <label class="duet-choice"><span data-t="duetRehearse"></span><select id="duet-piece"></select></label>
+            <p id="duet-clue"></p>
+            <div id="duet-sheet"><div id="duet-staves"></div><p id="duet-readout"></p>
+              <div class="duet-player"><button id="duet-play" type="button"></button><input id="duet-beat" type="range" min="0" max="1" value="0" step="1" data-aria="duetScrub"></div></div>
+            <label id="duet-archive-row" class="duet-choice"><span data-t="duetShelf"></span><select id="duet-archive"></select></label>
+            <p id="duet-coda" hidden data-t="duetCoda"></p>
+          </section>
           <section id="hill-book" aria-labelledby="hill-book-title" hidden>
             <div class="hill-book-head"><svg class="icon" aria-hidden="true"><use href="#i-switchback"/></svg><h3 id="hill-book-title" data-t="hillBook">缆车票夹</h3><span id="hill-count"></span></div>
             <div id="hill-lines" role="group" data-aria="hillBook"></div>
@@ -175,6 +199,7 @@
       <div class="dialog-head"><div><h2 id="album-title" data-t="album">明信片夹</h2><p id="album-summary"></p></div><button class="close" type="button" data-aria="close" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
       <div id="chapters" class="chapters" role="group" data-aria="chapters"><button type="button" data-chapter="coast"><span data-t="coast">沿海夜邮</span> <small>6</small></button><button type="button" data-chapter="replies"><span data-t="replies">回信篇</span> <small>3</small></button><button type="button" data-chapter="together"><span data-t="together">两岸合邮</span> <small>3</small></button><button type="button" data-chapter="darkroom"><span data-t="darkroom">潮汐暗房</span> <small>3</small></button></div>
       <div id="album-grid" class="album-grid"></div>
+      <button id="album-duet" class="desk-entry duet-entry" type="button" hidden><svg class="icon"><use href="#i-duet"/></svg><span><strong data-t="duetTitle"></strong><small data-t="duetAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-hill" class="desk-entry hill-entry" type="button" hidden><svg class="icon"><use href="#i-switchback"/></svg><span><strong data-t="hillTitle">橘坡分岔线</strong><small data-t="hillAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-watch" class="desk-entry watch-entry" type="button" hidden><svg class="icon"><use href="#i-chime"/></svg><span><strong data-t="watchTitle">雾班听测</strong><small data-t="watchAlbumLink">去风铃栈桥听一班雾里的回信。</small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-desk" class="desk-entry" type="button" aria-haspopup="dialog" aria-controls="dispatch-desk"><svg class="icon"><use href="#i-anchor"/></svg><span><strong data-t="deskTitle">邮路调度台</strong><small data-t="deskAlbumLink">回到熟悉的渡口，试试另一种送法。</small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
@@ -190,6 +215,7 @@
       <div class="receipt-body">
         <h2 id="receipt-title"></h2><p id="letter-text"></p>
         <div id="watch-slip" hidden><strong data-t="watchSlipTitle">栈桥交班条</strong><p></p><small></small></div>
+        <div id="duet-slip" hidden><small data-t="duetSlip"></small><strong></strong><p></p><span></span></div>
         <div id="hill-slip" hidden><div class="hill-slip-map"></div><div><span data-t="hillStub">橘子坡 · 留存票根</span><strong></strong><small></small><p></p></div></div>
         <div class="postscript" id="postscript" hidden><strong data-t="onTheBack">票根背面</strong><p id="postscript-text"></p><button id="alternate-route" type="button">寻找合印邮路</button><button id="read-ending" type="button" data-t="readEnding" hidden>展开两人的约定</button></div>
         <figure id="film-proof" hidden><figcaption data-t="contactTitle">这次冲印的接触样片</figcaption><div id="contact-sheet"></div></figure>
@@ -201,6 +227,7 @@
         <button id="receipt-watch" class="desk-entry watch-entry" type="button" hidden><svg class="icon"><use href="#i-chime"/></svg><span data-t="watchOpen">回风铃栈桥值雾班</span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-hill" class="desk-entry hill-entry" type="button" hidden><svg class="icon"><use href="#i-switchback"/></svg><span></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <p class="export-status"><span id="export-status" role="status"></span> <a id="export-link" data-t="openImage" hidden>打开图片</a></p>
+        <button id="receipt-duet" class="desk-entry duet-entry" type="button" hidden><svg class="icon"><use href="#i-duet"/></svg><span data-t="duetReturn"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <div class="receipt-footer"><button class="again" id="replay" type="button" data-t="replay">重走这段邮路</button><button class="primary" id="next" type="button"><span>下一站</span><svg class="icon"><use href="#i-next"/></svg></button></div>
       </div>
     </dialog>

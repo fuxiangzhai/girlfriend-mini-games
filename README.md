@@ -18,6 +18,10 @@
 
 第三章「两岸合邮」从两座信号屋出发，经过雾钟渡口，在星湾转桥会合。前往「信夹 → 两岸合邮」或直接打开[本章第一站](./moon-mail/index.html#signals)。两束光共用镜片，金色实线送到月亮信箱，青色虚线送到星星信箱。点航图下的光路名称可以单独追踪其中一束。
 
+第三章第一站可以切到**两岸同拍**。先转动原图的圆镜，把月信与星信都引到菱形邮戳。盖印后，出发钟归零。两封信各选一个方向，可以改拨一面镜，也可以让其中一封晚几拍启程。两封都进入自己的信箱，且到达拍数相同，才可寄出。[试玩两岸同拍](./moon-mail/index.html#signals-duet)
+
+标准图上，月信绕岸走五格、星信等四拍走一格，两岸会在第五拍同亮。也可以让两封各走五格，同时出发。拖动灯谱的拍号能看见每封信在哪里等、走到哪一格。点「独听」可以单独追踪一束光，也可以合起来听两封信应答。已寄灯谱可随时取出试听，当前草稿会保留。轻松和标准图各有五种实际邮路，挑战图有四种。[查看实机灯谱](./docs/signal-duet.webp)
+
 「直投」接通两只信箱即可寄出。「合印」还需要两束光同时穿过菱形邮戳，每站都有另一条走法。成功投递后，票根背面会展开一段留言，导出明信片时也会印上。集齐同一难度的三枚合印，信夹里就能拼出两个人见面的约定。两种投递方式分别保存进度和最佳步数。
 
 第四章「潮汐暗房」把海边的贝壳、海藻和两把椅子拍成三张明信片。转镜让光经过字母感光点、进入相机，按快门就能在同一张底片上存下一层。第二张要给纸角留白，第三张要安排三次曝光的先后。拍过的编号可以点开，在航图上用虚线对照当时的光路。底片和转镜都可以撤销。冲印后，明信片会附上你实际拍过的每一条光路。[试玩潮汐暗房](./moon-mail/index.html#shellprint)
@@ -44,9 +48,11 @@ At **Wind Chime Pier**, select **Fog Watch**. Call from a shore lamp, compare th
 
 At **Orange Hill Station**, choose **Hillside Switchbacks**. Fit, flip or lift two switch mirrors across four square sockets. Each difficulty has four distinct ways to collect both stamps and reach the same box from the same start. Select an unissued ticket for a clue or an issued ticket to overlay its actual route. Each ticket comes with a note from the journey.
 
+At **Twin Signal Huts**, choose **Signal Duet**. Gather both letters at the diamond desk, then aim each one, change up to one mirror, and set a departure gap. Each cell takes one beat. Both boxes must light on the same beat. Scrub the two-part score to see where the letters waited or travelled, play their two voices, or listen to a filed score while your rehearsal stays on the desk.
+
 ![雾钟渡口的航图，两束光穿过同一枚菱形邮戳，分别照到月亮和星星信箱](./docs/moon-mail.webp)
 
-在仓库根目录运行 `node --test` 可验证全部关卡的光路、曝光组合、调度委托、雾班线索、橘坡分岔线的四种实际走法，以及存档恢复与提示（Node.js 18 及以上）。
+在仓库根目录运行 `node --test` 可验证各关光路、曝光组合、调度委托、雾班线索、橘坡走法、两岸同拍的双信轨迹与时序，以及存档恢复与提示（Node.js 18 及以上）。
 
 ## GitHub Pages
 

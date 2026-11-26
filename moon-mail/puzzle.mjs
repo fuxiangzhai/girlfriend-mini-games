@@ -92,6 +92,7 @@ function traceBeam(board, mask, x, y, direction, mailbox, fromEdge = false, stra
       lines.push(line);
     } else if (tile === "&") {
       crossed = true;
+      if (mailbox === "&") end = "dock";
     } else if ("abcd".includes(tile)) {
       exposure |= 1 << (tile.charCodeAt(0) - 97);
     } else if (tile === mailbox) {
@@ -105,8 +106,12 @@ function traceBeam(board, mask, x, y, direction, mailbox, fromEdge = false, stra
   return { lines, lit, sequence, wrongOrder, turns, end, crossed, exposure };
 }
 
+export function traceFrom(board, mask, cell, heading, destination, straightMirrors = 0) {
+  return traceBeam(board, mask, cell % board.width, Math.floor(cell / board.width), heading, destination, false, straightMirrors);
+}
+
 export function trace(board, mask, straightMirrors = 0) {
-  const lamp = (cell, headings, box) => traceBeam(board, mask, cell % board.width, Math.floor(cell / board.width), headings.indexOf(board.tiles[cell]), box, false, straightMirrors);
+  const lamp = (cell, headings, box) => traceFrom(board, mask, cell, headings.indexOf(board.tiles[cell]), box, straightMirrors);
   const moon = lamp(board.source, arrows, "M");
   const rays = [moon];
   if (board.starSource === undefined) return { ...moon, rays };
