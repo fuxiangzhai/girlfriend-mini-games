@@ -1,5 +1,7 @@
 // Short, gesture-triggered cues. All voices pass through the shared mute/volume gain.
 const phrases = {
+  sashGlide: [[.04, 356, .09, .03], [.10, 475, .13, .035]],
+  teaServed: [[0, 523, .16, .055], [.12, 784, .24, .045], [.25, 1046, .31, .028]],
   starPin: [[0, 740, .11, .047], [.06, 1110, .22, .035]],
   switchRail: [[0, 430, .055, .055], [.045, 720, .085, .033]],
   punchTicket: [[0, 215, .065, .075], [.095, 659, .19, .045], [.20, 988, .28, .035]],
@@ -19,6 +21,7 @@ const phrases = {
   sent:    [[0, 392, .24, .065], [.11, 494, .24, .06], [.22, 587, .30, .055], [.34, 784, .43, .06]],
 };
 const textures = {
+  sashGlide: [[0, .14, 1200, .07]],
   pencil: [[0, .055, 1900, .072]],
   switchRail: [[0, .039, 1650, .075]],
   punchTicket: [[0, .065, 820, .13]],

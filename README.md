@@ -8,6 +8,10 @@
 
 从首页顶部点「月光邮局」，或打开 [月光邮局](./moon-mail/index.html)。转动海上的圆镜，让月光经过沿途的邮戳、照到收信箱，再点「寄出月光」拆信。「沿海夜邮」的六封信从白沙灯塔一路寄到晨光窗台。「回信篇」从海角温室出发，经过风铃栈桥，抵达望海天文台。回信的编号邮戳要按数字顺序首次经过。
 
+晨光窗台的**推窗早茶**让同一束光暖过两只茶杯，再抵达原来的信箱。横窗只能左右滑，升降窗只能上下滑，同框的两片镜一起移动、一起翻面。日班原图上，先暖蓝纹杯最短走 13 格，先暖橙花杯最短走 15 格。也可以从另一扇潮门先进，看看回窗的光会落在哪里。[试玩推窗早茶](./moon-mail/index.html#dawn-sashes)
+
+试推之前可以留一张窗影。虚线会和正在调的晨光叠在一起，对调窗位还能取回每份摆法自己的撤销记录。日班图有 13 条实际投递路线，挑战图有 10 条。早餐便签记下各自寄过的最短光路，两杯的先后、潮门和实际走线都印在可保存的杯垫上。[查看窗台实机画面](./docs/morning-window.webp)
+
 沿海夜邮的「山坡上的灯」可以切换到**橘坡分岔线**。四处方框道岔共用两片岔镜。点空位装镜，再点翻面，第三下取回。每次从相同的开班镜位出发，经过坡顶和坡脚两枚邮戳，把信投进同一个邮箱。先到哪枚戳、从哪一侧进站，都可能改变这趟拿到的车票。每档难度有四条实际可走的线路。[试玩橘坡分岔线](./moon-mail/index.html#funicular-switchbacks)
 
 缆车票夹中的空票可以翻看线索，签过的票可以叠回航图，查看两条路从哪一格分开。想再试一趟就点回执里的「同图再寄一封」。标准模式可对选中的车票求助，专家模式沿用橘子坡的山顶航图。旧票的盖戳顺序、里程和车窗小记随时可以重读，也会随明信片一起导出。集齐四张，司机会送来一份回程礼物。[查看缆车票夹实机画面](./docs/hillside-switchbacks.webp)
@@ -56,7 +60,9 @@ At **Twin Signal Huts**, choose **Signal Duet**. Gather both letters at the diam
 
 ![雾钟渡口的航图，两束光穿过同一枚菱形邮戳，分别照到月亮和星星信箱](./docs/moon-mail.webp)
 
-在仓库根目录运行 `node --test` 可验证各关光路、曝光组合、调度委托、雾班线索、橘坡走法、两岸同拍的双信时序、一笔星图的全部可行轨迹与岔口，以及存档恢复与提示（Node.js 18 及以上）。
+At **The Morning Window**, choose **Tea at the Window**. Slide a frame one square along its track, or tap a mirror to tilt the panes sharing its frame. Warm both cups and reach the same mailbox. Keep a tracing before experimenting and swap the two settings to compare their paths. A filed coaster prints the actual route and the order in which the cups warmed.
+
+在仓库根目录运行 `node --test` 可验证各关光路、曝光组合、调度委托、雾班线索、橘坡走法、两岸同拍的双信时序、一笔星图的岔口、推窗早茶的窗位与实际投递路线，以及存档恢复与提示（Node.js 18 及以上）。
 
 ## GitHub Pages
 

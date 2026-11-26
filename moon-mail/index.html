@@ -13,6 +13,9 @@
   <body>
     <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
+        <symbol id="i-sash" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="16" rx="1.5"/><path d="M12 3v16M3 10h18M2 21h20M6 7h2m7 7h2"/></symbol>
+        <symbol id="g-amberCup" viewBox="0 0 64 64"><path d="M47 25h5c10 0 9 13-4 14" stroke="#ffe3b0" stroke-width="3.6" fill="none"/><path d="M11 22h37l-3 17c-2 8-9 12-15 12S15 46 14 39Z" fill="#d39a68" stroke="#f7dec1" stroke-width="2.6"/><ellipse cx="29.5" cy="22" rx="18.5" ry="4.7" fill="#6b4939" stroke="#f6ddbc" stroke-width="2.5"/><path d="m29 28 2.6 5.1 5.5.9-4 4.1.7 5.4-4.8-2.6-4.8 2.6.7-5.4-4-4.1 5.5-.9Z" fill="#fff0cc"/><path d="M11 52q17 5 37 0" fill="none" stroke="#eac39a" stroke-width="2.6"/></symbol>
+        <symbol id="g-blueCup" viewBox="0 0 64 64"><path d="M47 25h5c10 0 9 13-4 14" stroke="#c2e7ef" stroke-width="3.6" fill="none"/><path d="M11 22h37l-3 17c-2 8-9 12-15 12S15 46 14 39Z" fill="#80acb8" stroke="#c6eaf1" stroke-width="2.6"/><ellipse cx="29.5" cy="22" rx="18.5" ry="4.7" fill="#435b61" stroke="#d5edf0" stroke-width="2.5"/><path d="M16 32q14 6 29 0m-28 6q13 6 27 0" fill="none" stroke="#eaffff" stroke-width="2.4"/><path d="M11 52q17 5 37 0" fill="none" stroke="#b9dce3" stroke-width="2.6"/></symbol>
         <symbol id="i-atlas" viewBox="0 0 24 24"><path d="m4 16 5-10 6 7 5-9"/><circle cx="4" cy="16" r="2"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="13" r="2"/><path d="M20 1v6m-3-3h6"/></symbol>
         <symbol id="g-eyelet" viewBox="0 0 64 64"><circle cx="32" cy="32" r="12" fill="#26374f" stroke="#bca279" stroke-width="2.3"/><circle cx="32" cy="32" r="7.5" fill="none" stroke="#ead499" stroke-width="2"/><path d="M32 14v4m14 14h4M32 46v4M14 32h4" stroke="#bcaa86" stroke-width="1.8"/></symbol>
         <symbol id="i-duet" viewBox="0 0 24 24"><path d="M7 16V6l12-3v11M7 9l12-3"/><ellipse cx="4.5" cy="17.5" rx="2.5" ry="1.8"/><ellipse cx="16.5" cy="15.5" rx="2.5" ry="1.8"/></symbol>
@@ -88,6 +91,14 @@
           <div id="hill-switch" class="goal-strip" role="group" data-aria="hillService" hidden><span data-t="hillService">山坡邮班</span><div class="goal-options"><button id="hill-normal" type="button" data-t="hillOrdinary">日常投递</button><button id="hill-enter" type="button" data-t="hillTitle">橘坡分岔线</button></div></div>
           <div id="hill-tray" hidden><svg class="icon" aria-hidden="true"><use href="#i-switchback"/></svg><span id="hill-stock"></span><button id="hill-wallet-link" type="button" aria-controls="hill-book" data-t="hillToWallet"></button><span class="hill-cycle" data-t="hillCycle"></span></div>
           <div id="duet-head" hidden><strong id="duet-phase"></strong><span id="duet-station"></span></div>
+          <div id="sash-service" class="goal-strip" role="group" data-aria="sashService" hidden><span data-t="sashService"></span><div class="goal-options"><button type="button" id="sash-normal" data-t="hillOrdinary"></button><button type="button" id="sash-enter" data-t="sashTitle"></button></div></div>
+          <div id="sash-head" hidden>
+            <p data-t="sashQuick"></p>
+            <div class="sash-handles">
+              <div data-frame="0"><strong data-t="sashFrame0"></strong><small id="sash-pos0"></small><div><button type="button" data-sash-action="0" data-aria="sashSlide0">←</button><button type="button" data-sash-action="4" data-aria="sashTilt0" data-t="sashTilt"></button><button type="button" data-sash-action="1" data-aria="sashSlide1">→</button></div></div>
+              <div data-frame="1"><strong data-t="sashFrame1"></strong><small id="sash-pos1"></small><div><button type="button" data-sash-action="2" data-aria="sashSlide2">↑</button><button type="button" data-sash-action="5" data-aria="sashTilt1" data-t="sashTilt"></button><button type="button" data-sash-action="3" data-aria="sashSlide3">↓</button></div></div>
+            </div>
+          </div>
           <div id="atlas-service" class="goal-strip" role="group" data-aria="atlasService" hidden><span data-t="atlasService"></span><div class="goal-options"><button id="atlas-normal" type="button" data-t="watchOrdinary"></button><button id="atlas-enter" type="button" data-t="atlasTitle"></button></div></div>
           <div id="atlas-head" hidden>
             <div class="atlas-strip"><span id="atlas-stars"></span><span id="atlas-steps"></span><strong id="atlas-pin"></strong><button type="button" id="atlas-to-book" data-t="atlasNotebookLink" data-aria="atlasBook" aria-controls="atlas-book"></button></div>
@@ -107,12 +118,21 @@
                 <g><path d="M630 287q-69-6-88 39t-78 49q-66 5-81 50t-71 57"/><path d="M630 296q-64-6-82 38t-77 49q-68 6-80 50t-72 57"/><path d="M630 305q-58-7-76 37t-76 49q-70 6-80 50t-67 55"/></g>
               </svg>
               <svg id="beam" aria-hidden="true"><g id="film-overlay"></g><g class="beam-lines"><g data-ray="moon"></g><g data-ray="star"></g></g><g id="courier" class="courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g><g id="star-courier" class="courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g></svg>
+              <svg id="sash-rails" aria-hidden="true" hidden></svg>
               <div id="tiles" class="tiles"></div>
               <div id="duet-markers" aria-hidden="true" hidden><i>☾</i><i>✦</i></div>
               <span id="watch-origin" aria-hidden="true" hidden></span>
             </div>
           </div>
           <p id="route-description" class="sr-only"></p>
+          <section id="sash-controls" data-aria="sashTitle" hidden>
+            <div class="sash-meter"><span id="sash-cups"></span><span id="sash-gates"></span><button type="button" id="sash-to-book" data-t="sashBook" aria-controls="sash-book"></button></div>
+            <p id="sash-status" role="status"></p>
+            <div class="actions"><div class="chart-tools"><button type="button" id="sash-undo" data-t="undo"></button><button type="button" id="sash-reset" data-t="reset"></button><button type="button" id="sash-hint" data-t="hint"></button></div><button type="button" class="dispatch" id="sash-send"></button></div>
+            <div class="sash-memory"><button type="button" id="sash-keep" data-t="sashKeep"></button><button type="button" id="sash-swap" data-t="sashSwap"></button><label><input type="checkbox" id="sash-show"><span data-t="sashShow"></span></label><button type="button" id="sash-again" data-t="sashAgain" hidden></button></div>
+            <p id="sash-comparison"></p>
+            <details class="sash-guide"><summary data-t="sashGuide"></summary><p data-t="sashRules"></p></details>
+          </section>
           <section id="atlas-controls" data-aria="atlasTitle" hidden>
             <p id="atlas-status" role="status"></p>
             <div class="actions"><div class="chart-tools"><button id="atlas-undo" type="button" data-t="undo"></button><button id="atlas-reset" type="button" data-t="atlasErase"></button><button id="atlas-hint" type="button" data-t="hint"></button></div><button id="atlas-send" type="button" class="dispatch"></button></div>
@@ -171,6 +191,12 @@
             </div>
           </article>
           <section class="brief" aria-labelledby="brief-title"><h3 id="brief-title" data-t="fieldNotes">投递手记</h3><p id="brief">今晚的第一封信从这里出发。点一下海面上的圆镜，让月光拐向信箱。</p></section>
+          <section id="sash-book" aria-labelledby="sash-book-title" hidden>
+            <header><svg class="icon" aria-hidden="true"><use href="#i-sash"/></svg><h3 id="sash-book-title" data-t="sashBook"></h3><span id="sash-count"></span></header>
+            <div id="sash-orders" role="group" data-aria="sashChoose"></div>
+            <p id="sash-request"></p><p id="sash-notes"></p>
+            <label id="sash-shelf" hidden><span data-t="sashShelf"></span><select id="sash-album"></select></label><button type="button" id="sash-read" data-t="sashRead" hidden></button>
+          </section>
           <section id="atlas-book" aria-labelledby="atlas-book-title" hidden>
             <div class="atlas-book-head"><svg class="icon" aria-hidden="true"><use href="#i-atlas"/></svg><h3 id="atlas-book-title" data-t="atlasBook"></h3><span id="atlas-count"></span></div>
             <p data-t="atlasBookHelp"></p>
@@ -220,6 +246,7 @@
       <div class="dialog-head"><div><h2 id="album-title" data-t="album">明信片夹</h2><p id="album-summary"></p></div><button class="close" type="button" data-aria="close" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
       <div id="chapters" class="chapters" role="group" data-aria="chapters"><button type="button" data-chapter="coast"><span data-t="coast">沿海夜邮</span> <small>6</small></button><button type="button" data-chapter="replies"><span data-t="replies">回信篇</span> <small>3</small></button><button type="button" data-chapter="together"><span data-t="together">两岸合邮</span> <small>3</small></button><button type="button" data-chapter="darkroom"><span data-t="darkroom">潮汐暗房</span> <small>3</small></button></div>
       <div id="album-grid" class="album-grid"></div>
+      <button id="album-sash" class="desk-entry sash-entry" type="button" hidden><svg class="icon"><use href="#i-sash"/></svg><span><strong data-t="sashTitle"></strong><small data-t="sashAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-atlas" class="desk-entry atlas-entry" type="button" hidden><svg class="icon"><use href="#i-atlas"/></svg><span><strong data-t="atlasTitle"></strong><small data-t="atlasAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-duet" class="desk-entry duet-entry" type="button" hidden><svg class="icon"><use href="#i-duet"/></svg><span><strong data-t="duetTitle"></strong><small data-t="duetAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-hill" class="desk-entry hill-entry" type="button" hidden><svg class="icon"><use href="#i-switchback"/></svg><span><strong data-t="hillTitle">橘坡分岔线</strong><small data-t="hillAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
@@ -242,6 +269,7 @@
         <div class="postscript" id="postscript" hidden><strong data-t="onTheBack">票根背面</strong><p id="postscript-text"></p><button id="alternate-route" type="button">寻找合印邮路</button><button id="read-ending" type="button" data-t="readEnding" hidden>展开两人的约定</button></div>
         <figure id="film-proof" hidden><figcaption data-t="contactTitle">这次冲印的接触样片</figcaption><div id="contact-sheet"></div></figure>
         <p id="atlas-slip" hidden></p>
+        <p id="sash-slip" hidden></p>
         <div id="editor" hidden><label for="message" data-t="writeLabel">写给收信人的话</label><textarea id="message" rows="3" maxlength="200"></textarea>
           <div class="edit-actions"><span data-t="noteLimit">限 200 字，留空恢复原文</span><button id="use-message" type="button" data-t="saveNote">保存寄语</button><button id="cancel-edit" type="button" data-t="cancel">取消</button></div>
         </div>
@@ -250,6 +278,7 @@
         <button id="receipt-watch" class="desk-entry watch-entry" type="button" hidden><svg class="icon"><use href="#i-chime"/></svg><span data-t="watchOpen">回风铃栈桥值雾班</span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-hill" class="desk-entry hill-entry" type="button" hidden><svg class="icon"><use href="#i-switchback"/></svg><span></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <p class="export-status"><span id="export-status" role="status"></span> <a id="export-link" data-t="openImage" hidden>打开图片</a></p>
+        <button id="receipt-sash" class="desk-entry sash-entry" type="button" hidden><svg class="icon"><use href="#i-sash"/></svg><span data-t="sashAgain"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-atlas" class="desk-entry atlas-entry" type="button" hidden><svg class="icon"><use href="#i-atlas"/></svg><span data-t="atlasAgain"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-atlas-fork" class="desk-entry atlas-entry" type="button" hidden><svg class="icon"><use href="#i-undo"/></svg><span></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-duet" class="desk-entry duet-entry" type="button" hidden><svg class="icon"><use href="#i-duet"/></svg><span data-t="duetReturn"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>

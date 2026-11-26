@@ -14,6 +14,7 @@ import { prepareHill, moveHill, restoreHill, hillSetting, traceHill, hillTrip, h
 import { hillKey, hillTickets, hillSummary, drawHillBook, drawHillSlip } from "./hillside-ui.js";
 import { createSignalDuet, duetKey, duetSummary } from "./duet-ui.js";
 import { createStarAtlas, atlasKey, atlasStory, atlasSummary, starPrint } from "./atlas-ui.js";
+import { createMorningWindow, sashKey, teaStory, teaSummary, teaPrint } from "./sashes-ui.js";
 
 const byId = id => document.getElementById(id);
 const pad = value => String(value).padStart(2, "0");
@@ -21,6 +22,7 @@ const memory = new Map();
 const memoryOnly = new Set();
 const prefix = "moon-mail:v1:";
 const services = {
+  sashes: {station:"dawn", hash:"dawn-sashes", access:"sashAccess", map:"sashMap", icon:"#i-sash"},
   atlas: {station:"observatory", hash:"observatory-atlas", access:"atlasAccess", map:"atlasMap", icon:"#i-atlas"},
   duet: {station:"signals", hash:"signals-duet", access:"duetAccess", map:"duetMap", icon:"#i-duet"},
   watch: {station:"chimes", hash:"chimes-watch", access:"watchChartAccess", map:"watchTitle", icon:"#i-chime"},
@@ -84,10 +86,12 @@ const pier = letters.findIndex(letter => letter.id === "chimes");
 const slope = letters.findIndex(letter => letter.id === "funicular");
 const huts = letters.findIndex(letter => letter.id === "signals");
 const dome = letters.findIndex(letter => letter.id === "observatory");
+const sill = letters.findIndex(letter => letter.id === "dawn");
+const sashes = createMorningWindow({letter:letters[sill], read, write, cue, delivered:updateCount, receipt:id=>showReceipt(sill,false,id)});
 const atlas = createStarAtlas({ letter: letters[dome], read, write, cue, delivered: updateCount, receipt: ink => showReceipt(dome, false, ink) });
 const duet = createSignalDuet({ letter: letters[huts], read, write, cue, delivered: updateCount, receipt: id => showReceipt(huts, false, id) });
 const fog = createFogWatch({ letter: letters[pier], read, write, cue, delivered: updateCount, openReceipt: record => showReceipt(pier, true, record) });
-let activeService, receiptDuet, receiptAtlas;
+let activeService, receiptDuet, receiptAtlas, receiptTea;
 let active, board, chart, mask, path, history, sent, hint;
 let frames = [], reading;
 let compared = -1, justExposed = false;
@@ -105,7 +109,8 @@ function delivered(index) {
     || (index === pier && Boolean(fog.latest(difficulty)))
     || (index === slope && hillTickets(letters[slope], difficulty, read).size > 0)
     || (index === huts && Boolean(duet.record(difficulty)))
-    || (index === dome && Boolean(atlas.record(difficulty)));
+    || (index === dome && Boolean(atlas.record(difficulty)))
+    || (index === sill && Boolean(sashes.record(difficulty)));
 }
 function hasImprint(index) { return read(routeKey(index, "imprint")) === true; }
 const meetingStops = letters.map((letter, index) => ({letter, index})).filter(stop => stop.letter.chapter === "together");
@@ -244,10 +249,11 @@ function render() {
     });
     byId("joint-count").textContent = t("sealCount", {n: path.jointCount});
   }
-  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter", "hill-enter", "hill-normal", "duet-enter", "atlas-enter"]) byId(id).disabled = sending;
+  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter", "hill-enter", "hill-normal", "duet-enter", "atlas-enter", "sash-enter"]) byId(id).disabled = sending;
 }
 
 function openRoute(index, fresh = false, requestedGoal, service) {
+  if (activeService === "sashes") sashes.leave();
   if (activeService === "atlas") atlas.leave();
   if (activeService === "watch") fog.leave();
   if (activeService === "duet") duet.leave();
@@ -293,6 +299,7 @@ function openRoute(index, fresh = false, requestedGoal, service) {
 function presentRoute() {
   const letter = localLetter(letters[active], language);
   const service = services[activeService];
+  const onSashes = activeService === "sashes";
   const onAtlas = activeService === "atlas", onDuet = activeService === "duet", onWatch = activeService === "watch";
   byId("serial").textContent = "NO. " + pad(active + 1) + " / " + pad(letters.length);
   byId("scene").src = letter.image;
@@ -302,6 +309,12 @@ function presentRoute() {
   byId("time").textContent = letter.time;
   byId("brief").textContent = service ? t(activeService + "Brief") : difficulty === "expert" ? letter.expertNote : letter.brief;
   const chartPanel = document.querySelector(".chart-panel");
+  chartPanel.classList.toggle("on-sashes", onSashes);
+  byId("sash-service").hidden = active !== sill;
+  byId("sash-enter").setAttribute("aria-pressed",String(onSashes));
+  byId("sash-normal").setAttribute("aria-pressed",String(!onSashes));
+  for (const id of ["sash-head","sash-controls","sash-book"]) byId(id).hidden = !onSashes;
+  byId("sash-rails").toggleAttribute("hidden",!onSashes);
   chartPanel.classList.toggle("on-watch", onWatch);
   chartPanel.classList.toggle("on-duet", onDuet);
   chartPanel.classList.toggle("on-atlas", onAtlas);
@@ -339,7 +352,8 @@ function presentRoute() {
   for (const key of document.querySelectorAll(".single-symbol")) key.hidden = paired || film;
   for (const key of document.querySelectorAll(".film-symbol")) key.hidden = !film;
   byId("guide-instructions").textContent = t(film ? "filmGuide" : paired ? "pairInstructions" : "instructions");
-  if (onAtlas) atlas.mount(difficulty, t);
+  if (onSashes) sashes.mount(difficulty, t);
+  else if (onAtlas) atlas.mount(difficulty, t);
   else if (onDuet) duet.mount(difficulty, t);
   else if (onWatch) fog.mount(difficulty, t);
   else {
@@ -499,10 +513,11 @@ byId("send").addEventListener("click", async () => {
     }
     if (!document.hidden) sound.play(board.hill ? "punchTicket" : "sent");
   }
-  showReceipt(active, !firstDelivery, board.hill ? hillTrip(board, path).id : active === slope || active === huts || active === dome ? null : undefined);
+  showReceipt(active, !firstDelivery, board.hill ? hillTrip(board, path).id : [slope,huts,dome,sill].includes(active) ? null : undefined);
 });
 
 function fillAlbum() {
+  byId("album-sash").hidden = chapter !== "coast";
   byId("album-atlas").hidden = chapter !== "replies";
   byId("album-duet").hidden = chapter !== "together";
   byId("album-watch").hidden = chapter !== "replies";
@@ -530,6 +545,7 @@ function fillAlbum() {
     status.textContent = best !== null ? t(best === 1 ? "albumBestOne" : "albumBest", {n: best}) : t(active === index ? "inProgress" : "visit");
     if (index === pier && wasDelivered && best === null) status.textContent = t("watchDelivered");
     if (index === dome && wasDelivered && best === null) status.textContent = t("atlasFiled");
+    if (index === sill && wasDelivered && best === null) status.textContent = t("sashPosted");
     if (index === slope && wasDelivered && best === null) status.textContent = t("hillFiled", {n: hillTickets(station, difficulty, read).size, total: 4});
     button.append(image, title, status);
     if (station.chapter === "together") {
@@ -583,6 +599,19 @@ function showAlbum(selectedChapter = letters[active].chapter) {
   album.showModal();
 }
 byId("open-album").addEventListener("click", () => showAlbum());
+function openSashes(reference) {
+  if (album.open) album.close();
+  if (receipt.open) receipt.close();
+  cue("paper");
+  openRoute(sill,false,undefined,"sashes");
+  if (reference && read(sashKey(difficulty,"draft"))?.sent === true) sashes.fresh(reference);
+  byId("sash-head").querySelector("button:not(:disabled)")?.focus({preventScroll:true});
+  byId("sash-head").scrollIntoView({block:"nearest"});
+}
+byId("sash-enter").addEventListener("click", () => { if (activeService !== "sashes" && !sending) openSashes(); });
+byId("sash-normal").addEventListener("click", () => { if (activeService === "sashes") { cue("paper"); openRoute(sill); } });
+byId("album-sash").addEventListener("click", () => openSashes());
+byId("receipt-sash").addEventListener("click", () => openSashes(receiptTea?.trip.id));
 function openAtlas(reference, branch = false) {
   if (album.open) album.close();
   if (receipt.open) receipt.close();
@@ -686,6 +715,8 @@ function clearExport() {
 }
 
 function setEditing(value) {
+  byId("sash-slip").hidden = value || !receiptTea;
+  byId("receipt-sash").hidden = value || viewed !== sill;
   byId("atlas-slip").hidden = value || !receiptAtlas;
   byId("receipt-atlas").hidden = value || viewed !== dome;
   const forkCell = receiptAtlas && atlas.forkCell(difficulty, receiptAtlas.sketch.ink);
@@ -712,6 +743,7 @@ function setEditing(value) {
 
 function showReceipt(index, rustle = true, record) {
   viewed = index;
+  receiptTea = index === sill && record !== null && (record !== undefined || bestFor(sill) === null) ? sashes.record(difficulty,record) : null;
   receiptAtlas = index === dome && record !== null && (record !== undefined || bestFor(dome) === null) ? atlas.record(difficulty, record) : null;
   if (activeService === "duet") duet.stop();
   receiptDuet = null;
@@ -730,6 +762,11 @@ function showReceipt(index, rustle = true, record) {
   byId("receipt-image").alt = letter.artAlt;
   byId("receipt-title").textContent = letter.title;
   byId("letter-text").textContent = messageFor(index);
+  if (index === sill) {
+    const draft = read(sashKey(difficulty,"draft"));
+    byId("receipt-sash").querySelector("span").textContent = t(!receiptTea ? "sashTitle" : draft && !draft.sent ? "sashResume" : "sashAgain");
+    if (receiptTea) byId("sash-slip").textContent = teaStory(receiptTea,t);
+  }
   if (index === dome) {
     const draft = read(atlasKey(difficulty, "draft"));
     byId("receipt-atlas").querySelector("span").textContent = t(receiptAtlas ? draft?.ink && !draft.sent ? "atlasResume" : "atlasAgain" : "atlasTitle");
@@ -751,7 +788,8 @@ function showReceipt(index, rustle = true, record) {
   }
   const proof = byId("contact-sheet");
   proof.replaceChildren();
-  byId("film-proof").querySelector("figcaption").textContent = t(receiptAtlas ? "atlasProof" : "contactTitle");
+  byId("film-proof").querySelector("figcaption").textContent = t(receiptTea ? "sashProof" : receiptAtlas ? "atlasProof" : "contactTitle");
+  if (receiptTea) proof.append(teaPrint(receiptTea,t));
   if (receiptAtlas) proof.append(starPrint(receiptAtlas, t));
   if (letter.plate) {
     const printBoard = index === active ? board : prepareFilm(letter, difficulty);
@@ -770,8 +808,8 @@ function updateReceiptRoutes() {
   const paired = station.chapter === "together";
   const goal = paired && read(routeKey(viewed, "goal")) === "joint" ? "joint" : "direct";
   const draft = read(routeKey(viewed, "route", goal));
-  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty)) || viewed === slope || viewed === dome) && draft?.sent === false && draft.history?.length > 0;
-  byId("replay").textContent = t(resume ? "continueRoute" : "replay");
+  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty)) || [slope,dome,sill].includes(viewed)) && draft?.sent === false && draft.history?.length > 0;
+  byId("replay").textContent = t(receiptTea ? (resume ? "sashRegularResume" : "sashRegularOpen") : (resume ? "continueRoute" : "replay"));
   byId("replay").dataset.resume = String(resume);
   if (!paired) return;
   const collected = hasImprint(viewed);
@@ -813,10 +851,12 @@ byId("save-image").addEventListener("click", async () => {
     const letter = localLetter(letters[index], language);
     const last = receiptWatch;
     const trip = receiptHill?.trip;
-    const back = receiptAtlas ? [atlasStory(receiptAtlas, t), atlasSummary(receiptAtlas, t)].join("\n") : receiptDuet ? [t("duetName_" + receiptDuet.id), duetSummary(receiptDuet.score, t), t("duetStory_" + receiptDuet.id)].join("\n")
+    const back = receiptTea ? [teaStory(receiptTea,t),teaSummary(receiptTea,t)].join("\n") : receiptAtlas ? [atlasStory(receiptAtlas, t), atlasSummary(receiptAtlas, t)].join("\n") : receiptDuet ? [t("duetName_" + receiptDuet.id), duetSummary(receiptDuet.score, t), t("duetStory_" + receiptDuet.id)].join("\n")
       : trip ? t("hillName_" + trip.id) + "\n" + hillSummary(prepareHill(letters[slope], difficulty), trip, t) + "\n" + t("hillStory_" + trip.id)
       : last ? t("watchStory") + "\n" + watchSlip(t, last.shift, last) : hasImprint(index) ? letter.postscript : undefined;
-    const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, back, byId("contact-sheet").firstElementChild, receiptAtlas ? "atlasLog" : receiptDuet ? "duetSlip" : trip ? "hillStub" : last ? "watchSlipTitle" : "onTheBack", receiptAtlas ? "atlasProof" : "contactTitle");
+    const backTitle = receiptTea ? "sashTable" : receiptAtlas ? "atlasLog" : receiptDuet ? "duetSlip" : trip ? "hillStub" : last ? "watchSlipTitle" : "onTheBack";
+    const proofTitle = receiptTea ? "sashProof" : receiptAtlas ? "atlasProof" : "contactTitle";
+    const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, back, byId("contact-sheet").firstElementChild, backTitle, proofTitle);
     if (version !== exportVersion || !receipt.open) return;
     exportURL = URL.createObjectURL(blob);
     const download = document.createElement("a");
@@ -863,7 +903,7 @@ function switchLanguage() {
   applyLanguage();
   presentRoute();
   if (album.open) fillAlbum();
-  if (receipt.open) showReceipt(viewed, false, viewed === dome ? receiptAtlas?.sketch.ink ?? null : viewed === huts ? receiptDuet?.id ?? null : viewed === slope ? receiptHill?.trip.id ?? null : receiptWatch);
+  if (receipt.open) showReceipt(viewed, false, viewed === sill ? receiptTea?.trip.id ?? null : viewed === dome ? receiptAtlas?.sketch.ink ?? null : viewed === huts ? receiptDuet?.id ?? null : viewed === slope ? receiptHill?.trip.id ?? null : receiptWatch);
   dispatchDesk.refresh();
 }
 byId("language-switch").addEventListener("click", switchLanguage);
@@ -911,6 +951,12 @@ setVolume(Number.isInteger(savedVolume) && savedVolume >= 0 && savedVolume <= 10
 applyLanguage();
 window.addEventListener("pageshow", updateCount);
 window.addEventListener("storage", event => {
+  if (event.key?.startsWith(prefix + sashKey(difficulty,"cup."))) {
+    if (activeService === "sashes") sashes.refresh();
+    updateCount();
+    if (album.open) fillAlbum();
+    return;
+  }
   if (event.key?.startsWith(prefix + atlasKey(difficulty, "chart."))) {
     if (activeService === "atlas") atlas.refresh();
     updateCount();
