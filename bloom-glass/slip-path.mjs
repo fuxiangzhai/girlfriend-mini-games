@@ -1,6 +1,7 @@
 import {fits,poseKey,shapeAt} from './puzzle.mjs';
 import {performances,readProjector,validLayout} from './projection.mjs';
 import {fresh,read,validDraft,write} from './save.mjs';
+import {acceptsMark,versionOf} from './duet-marks.mjs';
 
 const signature=(level,slots)=>slots.map((p,id)=>p?poseKey(level,id,p):null);
 const changes=(a,b)=>a.flatMap((key,id)=>key===b[id]?[]:[id]);
@@ -41,7 +42,8 @@ export function canTakeRequests(level,takes) {
   return frames.at(-1).scenes.length===2 && Boolean(slots) && middleOptions(level).has(marked(signature(level,slots)));
 }
 export function playGraph(level,ending,encore=false) {
-  encore=encore && level.play.frames.at(-1).scenes.length===2;
+  const relay=Boolean(level.play.delivery);
+  encore=encore && (relay || level.play.frames.at(-1).scenes.length===2);
   let cache=graphs.get(level);
   if(!cache){cache=new Map();graphs.set(level,cache);}
   const key=ending+(encore?':both':'');
@@ -50,9 +52,10 @@ export function playGraph(level,ending,encore=false) {
   const tails=frames.map(()=>[]);
   for(let i=frames.length-1;i>=0;i--){
     for(const option of opts) {
-      if(!frames[i].scenes.includes(option.scene))continue;
+      if(!frames[i].scenes.includes(option.scene) || !acceptsMark(frames[i],level.width,option.rays))continue;
+      if(encore && relay && !fitsPeer(level,i,option.rays))continue;
       if(i===frames.length-1){if(option.scene===ending)tails[i].push(option);continue;}
-      if(encore && i===frames.length-2 && !middleOptions(level).has(marked(option.keys)))continue;
+      if(encore && !relay && i===frames.length-2 && !middleOptions(level).has(marked(option.keys)))continue;
       const hold=makeHold(level,option.slots,frames[i+1]);
       if(tails[i+1].some(next=>allows(hold,next.keys)))tails[i].push(option);
     }
@@ -63,8 +66,8 @@ export function playGraph(level,ending,encore=false) {
 export function takeScene(level,takes,slots) {
   const frame=level.play.frames[takes.length];
   if(!frame || !validLayout(level,slots))return -1;
-  const scene=readProjector(level,slots).scene;
-  if(!frame.scenes.includes(scene))return -1;
+  const {scene,rays}=readProjector(level,slots);
+  if(!frame.scenes.includes(scene) || !acceptsMark(frame,level.width,rays))return -1;
   return allows(makeHold(level,takes.at(-1),frame),signature(level,slots))?scene:-1;
 }
 export function sightline(level,takes,slots,ending,encore=false,quiet=false) {
@@ -79,9 +82,10 @@ export function changeTotal(level,takes) {
   return keys.reduce((n,row,i)=>n+(i?changes(keys[i-1],row).length:0),0);
 }
 const quietScores=new WeakMap();
-export function quietScore(level) {
-  if(quietScores.has(level))return quietScores.get(level);
-  const frames=level.play.frames,tails=playGraph(level,frames.at(-1).scenes[0]),rest=tails.map(()=>new Map());
+export function quietScore(level,both=false) {
+  const frames=level.play.frames,tails=playGraph(level,frames.at(-1).scenes[0],both);
+  if(quietScores.has(tails))return quietScores.get(tails);
+  const rest=tails.map(()=>new Map());
   for(let i=frames.length-1;i>=0;i--){
     for(const layout of tails[i]){
       if(i===frames.length-1){rest[i].set(layout,0);continue;}
@@ -94,15 +98,35 @@ export function quietScore(level) {
     }
   }
   const score={target:Math.min(...rest[0].values()),rest};
-  quietScores.set(level,score);return score;
+  quietScores.set(tails,score);return score;
+}
+function fitsPeer(level,index,rays){
+  return acceptsMark({mark:level.play.frames[index].peerMark},level.width,rays);
+}
+export function firstMissedMark(level,takes){
+  return takes.findIndex((board,i)=>!fitsPeer(level,i,readProjector(level,board).rays));
 }
 function reachable(level,takes,tails,encore,quiet) {
   const hold=makeHold(level,takes.at(-1),level.play.frames[takes.length]);
+  if(encore && level.play.delivery && firstMissedMark(level,takes)>=0)return {hold,options:[]};
   if(encore && level.play.frames.at(-1).scenes.length===2 && takes.length===tails.length-1 && !canTakeRequests(level,takes))return {hold,options:[]};
   const options=tails[takes.length].filter(s=>allows(hold,s.keys));
   if(!quiet || level.play.first==null)return {hold,options};
-  const {target,rest}=quietScore(level),used=changeTotal(level,takes);
+  const {target,rest}=quietScore(level,encore),used=changeTotal(level,takes);
   return {hold,options:options.filter(s=>used+(hold?changes(hold.keys,s.keys).length:0)+rest[takes.length].get(s)<=target)};
+}
+// The currently assembled board is fixed. Price only legal continuations of
+// that exact geometry, including the changes already paid before this cue.
+export function remainingCost(level,takes,board,both=false){
+  if(takeScene(level,takes,board)<0 || both && firstMissedMark(level,takes)>=0)return null;
+  const keys=signature(level,board),scores=quietScore(level,both).rest[takes.length];
+  for(const [option,remaining] of scores){
+    if(option.keys.every((key,i)=>key===keys[i])){
+      const paid=changeTotal(level,[...takes,board]);
+      return {remaining,total:paid+remaining};
+    }
+  }
+  return null;
 }
 export function rewindPoint(level,takes,ending,encore=false,quiet=false) {
   const tails=playGraph(level,ending,encore);
@@ -149,7 +173,7 @@ function validTakes(level,raw) {
 const draftKey=level=>'slip:draft:'+(level.play.first==null?level.id:'slip-'+level.play.id);
 export const savedOrder=level=>read(draftKey(level))?.order===1?1:0;
 export function restorePlay(level,raw=read(draftKey(level))) {
-  if(level.play.first!=null && raw?.order!==level.play.first)raw=null;
+  if(level.play.first!=null && raw?.order!==versionOf(level))raw=null;
   const takes=validTakes(level,raw?.takes),frame=level.play.frames[takes.length];
   const hold=makeHold(level,takes.at(-1),frame);
   const intact=Array.isArray(raw?.takes) && raw.takes.length===takes.length;
@@ -160,7 +184,7 @@ export function restorePlay(level,raw=read(draftKey(level))) {
 }
 export function savePlay(level,takes,state,history) {
   const draft={takes,state,history:history.slice(-40)};
-  if(level.play.first!=null)draft.order=level.play.first;
+  if(level.play.first!=null)draft.order=versionOf(level);
   write(draftKey(level),draft);
 }
 export function storePlaybill(level,takes) {
@@ -168,6 +192,9 @@ export function storePlaybill(level,takes) {
   const scene=readProjector(level,takes.at(-1)).scene;
   const key='slip:bill:'+level.id+':'+scene;
   write(level.play.first==null?key:key+':'+changeTotal(level,takes),takes);
+  if(level.play.delivery && firstMissedMark(level,takes)<0){
+    write('slip:double:'+level.id+':'+changeTotal(level,takes),takes);
+  }
   if(canTakeRequests(level,takes) && !encoreBill(level)){
     // Keep each ending separately: another tab can perform its counterpart.
     // The prefix is the geometry, not the pose encoding of a symmetric pane.
@@ -177,6 +204,16 @@ export function storePlaybill(level,takes) {
     if(sameCast(level,pair))write('slip:encore:'+level.id,pair);
   }
   return true;
+}
+export function doubleBill(level){
+  if(!level.play.delivery)return null;
+  const frames=level.play.frames,cap=frames.reduce((n,f)=>n+(f.limit||0),0);
+  for(let cost=0;cost<=cap;cost++){
+    const raw=read('slip:double:'+level.id+':'+cost);
+    if(Array.isArray(raw) && raw.length===frames.length && validTakes(level,raw).length===frames.length &&
+      changeTotal(level,raw)===cost && firstMissedMark(level,raw)<0)return raw;
+  }
+  return null;
 }
 export function playbill(level,ending) {
   const key='slip:bill:'+level.id+':'+ending,frames=level.play.frames;

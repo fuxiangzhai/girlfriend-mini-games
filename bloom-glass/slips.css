@@ -105,9 +105,29 @@
 #duet-alt-proof-text { background:#eeeedf; color:#46524b; border-radius:4px; padding:7px 9px; font-size:.81rem; margin:5px 0; }
 #duet-alt-caption,#duet-receipt { font:.86rem/1.55 var(--serif); margin:6px 0; color:#465147; }
 #duet-receipt { background:#eeeddb; padding:6px 9px; border-left:2px solid #7a8365; }
+#to-relay { min-height:32px; padding:3px 9px; font-size:.8rem; }
+#relay-cue { display:grid; grid-template-columns:auto 1fr; align-items:baseline; gap:2px 9px; padding:7px 10px; margin:0 0 8px; color:#443c31; background:#f6ebcc; border-left:3px solid #aa794c; }
+#relay-owner { font:700 .86rem var(--serif); } #relay-task { font-size:.82rem; }
+#relay-reading { grid-column:1/-1; color:#5b5144; font-size:.76rem; }
+#relay-reading:empty { display:none; }
+.relay-prop { position:absolute; height:auto; pointer-events:none; filter:drop-shadow(0 1px 1px #3f2d26a8); }
+.relay-prop img { width:100%; height:auto; }
+.relay-prop.is-stamped::after { content:''; position:absolute; right:6%; top:46%; width:16%; aspect-ratio:1; box-sizing:border-box; background:#944334; border:1px solid #ffedc1; }
+.relay-prop.is-stamped[data-seal="1"]::after { border-radius:50%; background:#286256; }
+#relay-goal { margin:6px 0 8px; padding:7px 9px; border-left:2px solid #a67d50; background:#f5ead4; }
+#relay-goal label { font-size:.83rem; font-weight:650; cursor:pointer; } #relay-goal input { accent-color:#785737; vertical-align:middle; }
+#relay-goal p,#relay-archive>p { margin:4px 0 0; font-size:.8rem; color:#555446; }
+#relay-archive { margin-top:12px; padding-top:10px; border-top:1px dashed #b6a982; } #relay-archive h3 { font:700 1rem var(--serif); }
+#relay-tickets { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr)); gap:8px; margin-top:8px; }
+#relay-tickets button { flex:1; padding:5px 7px; border:1px solid #aaa088; border-radius:5px; text-align:left; background:#fff9e9; color:#49463c; font-size:.82rem; }
+#relay-tickets small { display:block; font-size:.72rem; }
+#relay-tickets button:disabled { opacity:1; color:#675f50; background:#eee8d8; border-style:dashed; }
+#relay-tickets .read-double { margin-top:6px; width:100%; background:#e3ead9; color:#364c3f; }
 @media(max-width:520px) {
   .compare-open #duet-stage-pair,.compare-open #slip-proof-pair { grid-template-columns:1fr; gap:7px; }
   .compare-open #duet-stage-pair .slip-screen { width:min(100%,48dvh); margin-inline:auto; }
+  .relay-show.compare-open #duet-stage-pair .slip-screen { width:min(100%,39dvh,286px); }
+  .relay-show.compare-open #duet-stage-pair strong,.relay-show.compare-open #duet-stage-pair small { text-align:center; }
   #quiet-count { margin-left:0; display:block; }
 }
 @media(max-width:650px){

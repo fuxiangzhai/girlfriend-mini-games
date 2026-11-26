@@ -1,5 +1,6 @@
 import {describe, fits, markCell, mirrorFalls, poseKey, shapeAt, solve} from './puzzle.mjs';
 import {traceLight} from './light-path.mjs';
+import {readMark} from './duet-marks.mjs';
 import {read,write} from './save.mjs';
 
 // The clear carrier admits light only through a seated pane. An unfilled cell
@@ -28,21 +29,7 @@ export function readProjector(level,slots) {
       star:lit.some(([x,y])=>rows[y][x]==='*')};
   });
   const full=slots.every(Boolean);
-  let registered=true;
-  if (projection.cross!=null) {
-    const directions=rays.map(ray=>{
-      const straight=new Set();
-      for (let i=1;i<ray.points.length-1;i++) {
-        const [x,y]=ray.points[i];
-        if (y*width+x!==projection.cross) continue;
-        const a=ray.points[i-1],b=ray.points[i+1];
-        if (a[0]===b[0]) straight.add('v');
-        if (a[1]===b[1]) straight.add('h');
-      }
-      return straight;
-    });
-    registered=['v','h'].some((d,i)=>directions[0].has(d) && directions[1].has(i?'v':'h'));
-  }
+  const registered=projection.cross==null || readMark(rays,width,projection.cross).crossed;
   const scene=full && registered?projection.scenes.findIndex(s=>s.exits.every((port,i)=>rays[i].exit===port)):-1;
   return {rays,full,registered,scene,star:scene>=0 && Boolean(rays[projection.starLamp]?.star)};
 }
@@ -53,7 +40,7 @@ export function performances(level) {
   const list=[];
   solve(level,undefined,false,null,slots=>{
     const result=readProjector(level,slots);
-    if (result.scene>=0) list.push({scene:result.scene,star:result.star,slots:[...slots],keys:slots.map((p,id)=>poseKey(level,id,p))});
+    if (result.scene>=0) list.push({scene:result.scene,star:result.star,rays:result.rays,slots:[...slots],keys:slots.map((p,id)=>poseKey(level,id,p))});
     return false;
   });
   solutions.set(level,list);

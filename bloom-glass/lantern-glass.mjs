@@ -59,7 +59,7 @@ export function opticsOverlay(level,scene,result,filter=-1) {
   return '<g aria-hidden="true">'+addresses.join('')+marks.join('')+ports.join('')+'</g>';
 }
 
-function drawMap(ctx,level,slots,rays,x,y,w,h) {
+function drawMap(ctx,level,slots,rays,x,y,w,h,mark) {
   const size=Math.min((w-40)/level.width,(h-36)/level.height);
   const left=x+(w-size*level.width)/2,top=y+(h-size*level.height)/2;
   ctx.fillStyle='#253941';ctx.fillRect(x,y,w,h);
@@ -88,16 +88,23 @@ function drawMap(ctx,level,slots,rays,x,y,w,h) {
     const path=r.points.map(xy).map(([a,b])=>[Math.max(x+4,Math.min(x+w-4,a)),Math.max(y+4,Math.min(y+h-4,b))]);
     line(path,'#293747',5);line(path,colors[i],3,i?[6,4]:[]);
   });
-  if(level.projection.cross!=null){
-    const at=level.projection.cross,[px,py]=xy([at%level.width,Math.floor(at/level.width)]);
-    ctx.beginPath();ctx.arc(px,py,size*.29,0,Math.PI*2);ctx.strokeStyle='#243743';ctx.lineWidth=3;ctx.stroke();
-    ctx.strokeStyle='#f7f0cb';ctx.lineWidth=1.3;ctx.stroke();
+  const at=mark && mark.kind!=='wait'?mark.cell:level.projection.cross;
+  if(at!=null){
+    const [px,py]=xy([at%level.width,Math.floor(at/level.width)]);
+    ctx.beginPath();
+    if(mark?.kind==='stamp')ctx.rect(px-size*.28,py-size*.28,size*.56,size*.56);else ctx.arc(px,py,size*.29,0,Math.PI*2);
+    ctx.strokeStyle='#243743';ctx.lineWidth=4;ctx.stroke();
+    ctx.strokeStyle=mark?.kind==='stamp'?colors[mark.lamp]:'#f7f0cb';ctx.lineWidth=1.8;ctx.stroke();
+    if(mark){
+      ctx.font='bold '+Math.max(12,size*.22)+'px sans-serif';ctx.fillStyle='#233347';ctx.fillRect(px-size*.46,py-size*.48,size*.42,size*.25);
+      ctx.fillStyle='#fff4db';ctx.fillText(squareName(at%level.width,Math.floor(at/level.width)),px-size*.44,py-size*.29);
+    }
   }
 }
 
 export function drawTicketMap(canvas,level,receipt) {
   const ctx=canvas.getContext('2d');
-  drawMap(ctx,level,receipt.slots,receipt.result.rays,0,0,canvas.width,canvas.height);
+  drawMap(ctx,level,receipt.slots,receipt.result.rays,0,0,canvas.width,canvas.height,receipt.mark);
 }
 
 export async function ticketImage(level,scene,receipt,src) {

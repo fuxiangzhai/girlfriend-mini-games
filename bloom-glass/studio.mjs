@@ -621,7 +621,7 @@ function openAfterlight() {
 }
 if (location.hash==='#afterlight') openAfterlight();
 else if (location.hash==='#lantern') {openLevel(lastShow());consumeEntry();}
-else if (location.hash==='#slips' || location.hash==='#duets') {openLevel(location.hash==='#duets'?lastDuet():lastPlay());consumeEntry();}
+else if (['#slips','#duets','#relay'].includes(location.hash)) {openLevel(location.hash==='#slips'?lastPlay():lastDuet(location.hash==='#relay'));consumeEntry();}
 else {
   const mode=read('bench:mode');openLevel(mode==='slips'?lastPlay():mode==='lantern'?lastShow():dayLevel());
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
@@ -630,9 +630,9 @@ else {
 }
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#afterlight') openAfterlight();
-  if(location.hash==='#lantern' || location.hash==='#slips' || location.hash==='#duets') {
+  if(['#lantern','#slips','#duets','#relay'].includes(location.hash)) {
     for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
-    openLevel(location.hash==='#duets'?lastDuet():location.hash==='#slips'?lastPlay():lastShow());consumeEntry();window.scrollTo(0,0);
+    openLevel(location.hash==='#lantern'?lastShow():location.hash==='#slips'?lastPlay():lastDuet(location.hash==='#relay'));consumeEntry();window.scrollTo(0,0);
   }
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
     for(const dialog of document.querySelectorAll('dialog[open]')) dialog.close();

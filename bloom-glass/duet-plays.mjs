@@ -1,5 +1,7 @@
 import {makeLevel} from './levels.mjs';
 import {slipPlays} from './slip-plays.mjs';
+import {makeRelayCasts} from './duet-relays.mjs';
+import {versionOf} from './duet-marks.mjs';
 
 // The two glasses have independent stops. A lamp's exit selects its actor's
 // stop, so holding that lamp also holds the actor still throughout the cue.
@@ -53,7 +55,12 @@ export const duetCasts=scripts.map((script,index)=>{
   });
 });
 
-export const programmes=[...slipPlays,...duetCasts.map(cast=>cast[0])];
-export const partnerOrder=level=>duetCasts[level.showIndex-slipPlays.length][1-level.play.first];
+export const relayCasts=makeRelayCasts(slipPlays.length+duetCasts.length);
+const casts=[...duetCasts,...relayCasts];
+export const programmes=[...slipPlays,...casts.map(cast=>cast[0])];
+export const partnerOrder=level=>casts[level.showIndex-slipPlays.length][1-versionOf(level)];
 export const isDuet=level=>level?.play?.first!=null;
-export const orderName=level=>level.play.names[level.play.first]+'先动';
+export function orderName(level){
+  const d=level.play.delivery;
+  return d?d.stops[d.version]+d.verb:level.play.names[level.play.first]+'先动';
+}
