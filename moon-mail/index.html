@@ -13,6 +13,11 @@
   <body>
     <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
+        <symbol id="i-chair" viewBox="0 0 24 24"><path d="m5 13-1-8q3-5 8-2l1 9m-7 0 11-1 4 4-13 2-4-4Zm2 4-1 5m12-7 1 6M8 4l1 7"/></symbol>
+        <symbol id="g-wicker" viewBox="0 0 64 64"><g stroke="#453429" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m16 36-2 16m26-19 2 17m-17-9-2 17m27-20 2 17" fill="none"/><path d="m13 34 24-4 17 8-27 6z" fill="#d49b54"/><path d="M16 35C12 23 6 9 17 7c15-5 19-4 21 5l1 19Z" fill="#a8733f" stroke="#f2c787"/><path d="m17 12 4 20m3-21 3 20m3-21 3 20" stroke="#ffde9d" stroke-width="2.1"/><path d="m15 16 19-4m-18 10 19-4m-18 10 18-4" stroke="#574732" stroke-width="1.2"/></g></symbol>
+        <symbol id="g-slat" viewBox="0 0 64 64"><g stroke="#2f4647" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 34-2 18m27-20 2 17m-15-8-2 17m25-20 2 16" fill="none"/><path d="m12 34 26-4 16 9-28 5Z" fill="#92aaa1"/><path d="m15 34-3-25 4-1 3 25m17-2-3-25 4-1 3 25" fill="#a8b9aa"/><path d="m15 10 20-4 1 6-20 4Zm1 12 20-4 1 5-20 4Z" fill="#a5c5ba"/></g></symbol>
+        <symbol id="g-dryingrack" viewBox="0 0 64 64"><g stroke-linecap="round" stroke-linejoin="round"><path d="m9 52 9-42m27 43 8-43m-37 5 36-4m-40 27 35-4" fill="none" stroke="#d4af84" stroke-width="3"/><path d="m18 18 12-1-3 15-12 2zm16-2 13-2-3 16-12 2z" fill="#745e58" stroke="#e2d4ae" stroke-width="2"/><path d="m18 28 5-5 4 4m7-2 6-5 3 4" fill="none" stroke="#c5c9b4" stroke-width="2"/></g></symbol>
+        <symbol id="g-curtain" viewBox="0 0 64 64"><path d="M12 12h40v42H12z" fill="#24383e" stroke="#cda677" stroke-width="3"/><path d="M15 15h17q-1 19-15 23l4 13h-6Zm34 0H33q1 19 13 23l-4 13h7Z" fill="#a45e52" stroke="#de9c80" stroke-width="1.6"/><path d="m17 36 6-3m18 0 6 3" stroke="#efd08d" stroke-width="3"/></symbol>
         <symbol id="i-frond" viewBox="0 0 24 24"><path d="M7 21c0-7 5-11 8-17M10 13c-4-.5-5-4-4-7 3 1 5 4 4 7Zm2-4c0-3.5 1.5-6 4-7 1 3-1 6-4 7Zm-3 8c4 0 7-2 8-5-4 0-7 1-8 5Zm5-8c3.5 0 5.5-2 6-4-3-.5-5 1-6 4Z"/></symbol>
         <symbol id="i-afterglow" viewBox="0 0 24 24"><path d="M5 20h14m-11 0 2-9h4l2 9M9 11h6M9 9V6l3-2 3 2v3ZM2 5l4 1m12 0 4-1M2 10l4-1m12 0 4 1"/></symbol>
         <symbol id="g-watchtower" viewBox="0 0 64 64"><path d="M17 54h31l-6-6-5-24H27l-5 24Z" fill="#ece6cc" stroke="#273d4b" stroke-width="2"/><path d="M25 34h14l2 8H23z" fill="#bb705a"/><path d="M24 24h16v-9l-8-6-8 6z" fill="#ffda8f" stroke="#495361" stroke-width="2.3"/><path d="M22 15h20l-10-8Zm1 11h18" fill="#b9715a" stroke="#e9c198" stroke-width="2"/><path d="M30 54v-7h5v7" fill="#54616a"/></symbol>
@@ -113,6 +118,12 @@
           <div id="bike-service" class="goal-strip" role="group" data-aria="bikeService" hidden><span data-t="bikeService"></span><div class="goal-options"><button type="button" id="bike-normal" data-t="duetOrdinary"></button><button type="button" id="bike-enter" data-t="bikeTitle"></button></div></div>
           <div id="glow-service" class="goal-strip" role="group" data-aria="glowService" hidden><span data-t="glowService"></span><div class="goal-options"><button id="glow-normal" type="button" data-t="hillOrdinary"></button><button id="glow-enter" type="button" data-t="glowTitle"></button></div></div>
           <div id="sun-service" class="goal-strip" role="group" data-aria="sunService" hidden><span data-t="sunService"></span><div class="goal-options"><button id="sun-normal" type="button" data-t="sunOrdinary"></button><button id="sun-enter" type="button" data-t="sunTitle"></button></div></div>
+          <div id="chair-service" class="goal-strip" role="group" data-aria="chairService" hidden><span data-t="chairService"></span><div class="goal-options"><button id="chair-normal" type="button" data-t="sunOrdinary"></button><button id="chair-enter" type="button" data-t="chairTitle"></button></div></div>
+          <div id="chair-head" hidden>
+            <div class="chair-meter"><strong id="chair-stage"></strong><span id="chair-budget"></span></div>
+            <div class="chair-positions"><span><svg aria-hidden="true"><use href="#g-wicker"/></svg><b id="chair-wicker-at"></b></span><span><svg aria-hidden="true"><use href="#g-slat"/></svg><b id="chair-slat-at"></b></span><small id="chair-offsets"></small></div>
+            <p id="chair-intro" tabindex="-1"></p>
+          </div>
           <div id="sun-head" hidden>
             <p id="sun-intro" tabindex="-1"></p>
             <div class="sun-workbench"><div id="sun-fronds" role="group" data-aria="sunChoose">
@@ -170,7 +181,9 @@
               <svg id="sash-rails" aria-hidden="true" hidden></svg>
               <svg id="graft-stems" preserveAspectRatio="none" aria-hidden="true" hidden></svg>
               <canvas id="sun-paper" aria-hidden="true" hidden></canvas>
+              <svg id="chair-floor" preserveAspectRatio="none" aria-hidden="true" hidden></svg>
               <div id="tiles" class="tiles"></div>
+              <svg id="chair-motion" preserveAspectRatio="none" aria-hidden="true" hidden></svg>
               <svg id="glow-overlay" preserveAspectRatio="none" aria-hidden="true" hidden><g id="glow-beams"></g><g id="glow-wake"></g><use id="glow-boat" href="#g-glowboat" width="66" height="66"/></svg>
               <div id="bike-layer" hidden>
                 <svg id="bike-tracks" viewBox="0 0 600 500" preserveAspectRatio="none" aria-hidden="true"></svg>
@@ -186,6 +199,12 @@
             </div>
           </div>
           <p id="route-description" class="sr-only"></p>
+          <section id="chair-controls" data-aria="chairTitle" hidden>
+            <div id="chair-dirs" role="group" data-aria="chairChoose"></div>
+            <p id="chair-status" role="status"></p><p id="chair-advice" role="status" hidden></p><button id="chair-hint-back" type="button" data-t="chairHintBack" hidden></button>
+            <div class="actions"><div class="chart-tools"><button id="chair-undo" type="button" data-t="undo"></button><button id="chair-hint" type="button" data-t="hint"></button></div><button id="chair-push" type="button"></button><button id="chair-shot" type="button" class="dispatch"></button></div>
+            <div class="chair-foot"><details><summary data-t="chairRulesTitle"></summary><p data-t="chairRules"></p><button type="button" id="chair-reset" data-t="chairReset"></button></details><button id="chair-to-book" type="button" data-t="chairBook" aria-controls="chair-book"></button></div>
+          </section>
           <section id="sun-controls" data-aria="sunTitle" hidden>
             <div class="sun-line"><strong id="sun-stage"></strong><button id="sun-view" type="button" data-t="sunLoupe" aria-pressed="false"></button></div>
             <div id="sun-readings" role="group" data-aria="sunReadings"></div>
@@ -291,6 +310,15 @@
             </div>
           </article>
           <section class="brief" aria-labelledby="brief-title"><h3 id="brief-title" data-t="fieldNotes">投递手记</h3><p id="brief">今晚的第一封信从这里出发。点一下海面上的圆镜，让月光拐向信箱。</p></section>
+          <section id="chair-book" aria-labelledby="chair-book-title" hidden>
+            <header><svg class="icon" aria-hidden="true"><use href="#i-camera"/></svg><h3 id="chair-book-title" data-t="chairBook"></h3><span id="chair-count"></span></header>
+            <div id="chair-strip" role="group" data-aria="chairStrip"></div>
+            <div class="chair-retake"><span id="chair-legend"></span><button id="chair-retake" type="button" hidden></button><button id="chair-now" type="button" data-t="chairNow" hidden></button></div>
+            <div id="chair-styles" role="group" data-aria="chairStyleGoal"></div>
+            <div id="chair-shelf" hidden><label for="chair-file" data-t="chairShelf"></label><select id="chair-file"></select><div><button type="button" id="chair-branch" data-t="chairBranch"></button><button type="button" id="chair-read" data-t="chairRead"></button><button type="button" id="chair-compare" aria-controls="chair-lightbox" data-t="chairCompare"></button></div>
+              <div id="chair-lightbox" hidden><canvas id="chair-wipe" role="img"></canvas><label for="chair-divider" data-t="chairWipe"></label><input id="chair-divider" type="range" min="0" max="100" step="1" value="50"></div>
+            </div>
+          </section>
           <section id="sun-book" aria-labelledby="sun-book-title" hidden>
             <header><svg class="icon" aria-hidden="true"><use href="#i-frond"/></svg><h3 id="sun-book-title" data-t="sunBook"></h3><span id="sun-count"></span></header>
             <p id="sun-invitation"></p>
@@ -383,6 +411,7 @@
       <div class="dialog-head"><div><h2 id="album-title" data-t="album">明信片夹</h2><p id="album-summary"></p></div><button class="close" type="button" data-aria="close" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
       <div id="chapters" class="chapters" role="group" data-aria="chapters"><button type="button" data-chapter="coast"><span data-t="coast">沿海夜邮</span> <small>6</small></button><button type="button" data-chapter="replies"><span data-t="replies">回信篇</span> <small>3</small></button><button type="button" data-chapter="together"><span data-t="together">两岸合邮</span> <small>3</small></button><button type="button" data-chapter="darkroom"><span data-t="darkroom">潮汐暗房</span> <small>3</small></button></div>
       <div id="album-grid" class="album-grid"></div>
+      <button id="album-chairs" class="desk-entry chair-entry" type="button" hidden><svg class="icon"><use href="#i-chair"/></svg><span><strong data-t="chairTitle"></strong><small data-t="chairAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-sun" class="desk-entry sun-entry" type="button" hidden><svg class="icon"><use href="#i-frond"/></svg><span><strong data-t="sunTitle"></strong><small data-t="sunAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-glow" class="desk-entry glow-entry" type="button" hidden><svg class="icon"><use href="#i-afterglow"/></svg><span><strong data-t="glowTitle"></strong><small data-t="glowAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-bike" class="desk-entry bike-entry" type="button" hidden><svg class="icon"><use href="#i-bike"/></svg><span><strong data-t="bikeTitle"></strong><small data-t="bikeAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
@@ -416,6 +445,7 @@
         <p id="graft-slip" hidden></p>
         <p id="bike-story" hidden></p>
         <p id="sun-story" hidden></p>
+        <p id="chair-story" hidden></p>
         <button id="sun-spread" type="button" aria-controls="contact-sheet" hidden></button>
         <p id="glow-story" hidden></p>
         <div id="editor" hidden><label for="message" data-t="writeLabel">写给收信人的话</label><textarea id="message" rows="3" maxlength="200"></textarea>
@@ -426,6 +456,7 @@
         <button id="receipt-watch" class="desk-entry watch-entry" type="button" hidden><svg class="icon"><use href="#i-chime"/></svg><span data-t="watchOpen">回风铃栈桥值雾班</span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-hill" class="desk-entry hill-entry" type="button" hidden><svg class="icon"><use href="#i-switchback"/></svg><span></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <p class="export-status"><span id="export-status" role="status"></span> <a id="export-link" data-t="openImage" hidden>打开图片</a></p>
+        <button id="receipt-chairs" class="desk-entry chair-entry" type="button" hidden><svg class="icon"><use href="#i-chair"/></svg><span data-t="chairTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-sun" class="desk-entry sun-entry" type="button" hidden><svg class="icon"><use href="#i-frond"/></svg><span data-t="sunTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-glow" class="desk-entry glow-entry" type="button" hidden><svg class="icon"><use href="#i-afterglow"/></svg><span data-t="glowTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-bike" class="desk-entry bike-entry" type="button" hidden><svg class="icon"><use href="#i-bike"/></svg><span data-t="bikeTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>

@@ -29,7 +29,7 @@ function wrapLines(ctx, text, width) {
 export async function postcardPNG(letter, number, message, language, t, postscript, proof, backTitle = "onTheBack", proofTitle = "contactTitle") {
   const image = new Image();
   image.src = letter.image;
-  await image.decode();
+  await Promise.all([image.decode(),proof?.paintReady]);
   const canvas = document.createElement("canvas");
   const width = 1200;
   const margin = 56;
