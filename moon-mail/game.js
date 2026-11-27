@@ -21,6 +21,8 @@ import { createGlasshouse, graftKey, pressPrint, specimenSummary } from "./graft
 import { glassGarden } from "./grafts.mjs";
 import { bellCourse } from "./bell-rides.mjs";
 import { createBridgeBells, bikeKey, rideSummary, ridePrint } from "./bell-rides-ui.js";
+import { lightStation } from "./afterglow.mjs";
+import { createAfterglow, glowKey, glowSummary, glowPrint } from "./afterglow-ui.js";
 
 const byId = id => document.getElementById(id);
 const pad = value => String(value).padStart(2, "0");
@@ -28,6 +30,7 @@ const memory = new Map();
 const memoryOnly = new Set();
 const prefix = "moon-mail:v1:";
 const services = {
+  glow: {station:"lighthouse", hash:"lighthouse-afterglow", access:"glowAccess", map:"glowMap", icon:"#i-afterglow"},
   bike: {station:"bridge", hash:"bridge-bells", access:"bikeAccess", map:"bikeMap", icon:"#i-bike"},
   graft: {station:"glasshouse", hash:"glasshouse-herbarium", access:"graftAccess", map:"graftMap", icon:"#i-cutting"},
   reel: {station:"arches", hash:"arches-reel", access:"reelAccess", map:"reelMap", icon:"#i-reel"},
@@ -99,6 +102,8 @@ const sill = letters.findIndex(letter => letter.id === "dawn");
 const strait = letters.findIndex(letter => letter.id === "arches");
 const greenhouse = letters.findIndex(letter => letter.id === "glasshouse");
 const bridge = letters.findIndex(letter => letter.id === "bridge");
+const lighthouse = letters.findIndex(letter => letter.id === "lighthouse");
+const glow = createAfterglow({letter:letters[lighthouse], read, write, cue, delivered:updateCount, receipt:code => showReceipt(lighthouse,false,code)});
 const bikes = createBridgeBells({letter:letters[bridge], read, write, cue, delivered:updateCount, receipt:code => showReceipt(bridge, false, code)});
 const graft = createGlasshouse({letter:letters[greenhouse], read, write, cue, delivered:updateCount, receipt:id => showReceipt(greenhouse, false, id)});
 const reel = createTideRoom({letter: letters[strait], read, write, cue, delivered: updateCount, receipt: id => showReceipt(strait, false, id)});
@@ -106,7 +111,7 @@ const sashes = createMorningWindow({letter:letters[sill], read, write, cue, deli
 const atlas = createStarAtlas({ letter: letters[dome], read, write, cue, delivered: updateCount, receipt: ink => showReceipt(dome, false, ink) });
 const duet = createSignalDuet({ letter: letters[huts], read, write, cue, delivered: updateCount, receipt: id => showReceipt(huts, false, id) });
 const fog = createFogWatch({ letter: letters[pier], read, write, cue, delivered: updateCount, openReceipt: record => showReceipt(pier, true, record) });
-let activeService, receiptDuet, receiptAtlas, receiptTea, receiptReel, receiptGraft, receiptBike;
+let activeService, receiptDuet, receiptAtlas, receiptTea, receiptReel, receiptGraft, receiptBike, receiptGlow;
 let active, board, chart, mask, path, history, sent, hint;
 let frames = [], reading;
 let compared = -1, justExposed = false;
@@ -125,6 +130,7 @@ function delivered(index) {
     || (index === slope && hillTickets(letters[slope], difficulty, read).size > 0)
     || (index === huts && Boolean(duet.record(difficulty)))
     || (index === bridge && Boolean(bikes.record(difficulty)))
+    || (index === lighthouse && Boolean(glow.record(difficulty)))
     || (index === dome && Boolean(atlas.record(difficulty)))
     || (index === strait && Boolean(reel.record(difficulty)))
     || (index === greenhouse && Boolean(graft.record(difficulty)))
@@ -267,7 +273,7 @@ function render() {
     });
     byId("joint-count").textContent = t("sealCount", {n: path.jointCount});
   }
-  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter", "hill-enter", "hill-normal", "duet-enter", "atlas-enter", "sash-enter", "reel-enter", "graft-enter", "bike-enter"]) byId(id).disabled = sending;
+  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter", "hill-enter", "hill-normal", "duet-enter", "atlas-enter", "sash-enter", "reel-enter", "graft-enter", "bike-enter", "glow-enter"]) byId(id).disabled = sending;
 }
 
 function openRoute(index, fresh = false, requestedGoal, service) {
@@ -328,6 +334,13 @@ function presentRoute() {
   byId("time").textContent = letter.time;
   byId("brief").textContent = service ? t(activeService + "Brief") : difficulty === "expert" ? letter.expertNote : letter.brief;
   const chartPanel = document.querySelector(".chart-panel");
+  const onGlow = activeService === "glow";
+  chartPanel.classList.toggle("on-glow", onGlow);
+  byId("glow-service").hidden = active !== lighthouse;
+  byId("glow-normal").setAttribute("aria-pressed", String(!onGlow));
+  byId("glow-enter").setAttribute("aria-pressed", String(onGlow));
+  for (const id of ["glow-head","glow-controls","glow-book"]) byId(id).hidden = !onGlow;
+  byId("glow-overlay").toggleAttribute("hidden", !onGlow);
   const onBike = activeService === "bike";
   chartPanel.classList.toggle("on-bike", onBike);
   byId("bike-service").hidden = active !== bridge;
@@ -391,7 +404,8 @@ function presentRoute() {
   for (const key of document.querySelectorAll(".single-symbol")) key.hidden = paired || film;
   for (const key of document.querySelectorAll(".film-symbol")) key.hidden = !film;
   byId("guide-instructions").textContent = t(film ? "filmGuide" : paired ? "pairInstructions" : "instructions");
-  if (onBike) bikes.mount(difficulty, t);
+  if (onGlow) glow.mount(difficulty, t);
+  else if (onBike) bikes.mount(difficulty, t);
   else if (onGraft) graft.mount(difficulty, t);
   else if (onReel) reel.mount(difficulty, t);
   else if (onSashes) sashes.mount(difficulty, t);
@@ -555,10 +569,11 @@ byId("send").addEventListener("click", async () => {
     }
     if (!document.hidden) sound.play(board.hill ? "punchTicket" : "sent");
   }
-  showReceipt(active, !firstDelivery, board.hill ? hillTrip(board, path).id : [slope,huts,dome,sill,strait,greenhouse,bridge].includes(active) ? null : undefined);
+  showReceipt(active, !firstDelivery, board.hill ? hillTrip(board, path).id : [slope,huts,dome,sill,strait,greenhouse,bridge,lighthouse].includes(active) ? null : undefined);
 });
 
 function fillAlbum() {
+  byId("album-glow").hidden = chapter !== letters[lighthouse].chapter;
   byId("album-bike").hidden = chapter !== letters[bridge].chapter;
   byId("album-graft").hidden = chapter !== letters[greenhouse].chapter;
   byId("album-reel").hidden = chapter !== letters[strait].chapter;
@@ -593,6 +608,7 @@ function fillAlbum() {
     if (index === sill && wasDelivered && best === null) status.textContent = t("sashPosted");
     if (index === strait && wasDelivered && best === null) status.textContent = t("reelPosted");
     if (index === greenhouse && wasDelivered && best === null) status.textContent = t("graftFiled");
+    if (index === lighthouse && wasDelivered && best === null) status.textContent = t("glowFiled");
     if (index === slope && wasDelivered && best === null) status.textContent = t("hillFiled", {n: hillTickets(station, difficulty, read).size, total: 4});
     button.append(image, title, status);
     if (station.chapter === "together") {
@@ -647,6 +663,20 @@ function showAlbum(selectedChapter = letters[active].chapter) {
   album.showModal();
 }
 byId("open-album").addEventListener("click", () => showAlbum());
+function openGlow(code) {
+  if (album.open) album.close();
+  if (receipt.open) receipt.close();
+  openRoute(lighthouse,false,undefined,"glow");
+  if (code) glow.another(code);
+  else {
+    cue("paper"); byId("glow-intro").focus({preventScroll:true});
+    byId("glow-head").scrollIntoView({block:"nearest"});
+  }
+}
+byId("glow-enter").addEventListener("click", () => { if (!sending && activeService!=="glow") openGlow(); });
+byId("glow-normal").addEventListener("click", () => { if (activeService==="glow") { cue("paper"); openRoute(lighthouse); } });
+byId("album-glow").addEventListener("click", () => openGlow());
+byId("receipt-glow").addEventListener("click", () => openGlow(receiptGlow?.code));
 function openBikes(code) {
   if (album.open) album.close();
   if (receipt.open) receipt.close();
@@ -805,6 +835,8 @@ function clearExport() {
 }
 
 function setEditing(value) {
+  byId("glow-story").hidden = value || !receiptGlow;
+  byId("receipt-glow").hidden = value || viewed !== lighthouse;
   byId("bike-story").hidden = value || !receiptBike;
   byId("receipt-bike").hidden = value || viewed !== bridge;
   byId("graft-slip").hidden = value || !receiptGraft;
@@ -838,11 +870,12 @@ function setEditing(value) {
 }
 
 function proofTitle() {
-  return receiptBike ? "bikeProof" : receiptGraft ? "graftProof" : receiptReel ? "reelProof" : receiptTea ? "sashProof" : receiptAtlas ? "atlasProof" : "contactTitle";
+  return receiptGlow ? "glowProof" : receiptBike ? "bikeProof" : receiptGraft ? "graftProof" : receiptReel ? "reelProof" : receiptTea ? "sashProof" : receiptAtlas ? "atlasProof" : "contactTitle";
 }
 
 function showReceipt(index, rustle = true, record) {
   viewed = index;
+  receiptGlow = index === lighthouse && record !== null && (record !== undefined || bestFor(lighthouse) === null) ? glow.record(difficulty,record) : null;
   const onlyBikes = index === bridge && bestFor(bridge) === null && bestFor(bridge, "joint") === null && !hasImprint(bridge);
   receiptBike = index === bridge && record !== null && (record !== undefined || onlyBikes) ? bikes.record(difficulty, record) : null;
   receiptGraft = index === greenhouse && record !== null && (record !== undefined || bestFor(greenhouse) === null) ? graft.record(difficulty, record) : null;
@@ -867,6 +900,10 @@ function showReceipt(index, rustle = true, record) {
   byId("receipt-image").alt = letter.artAlt;
   byId("receipt-title").textContent = letter.title;
   byId("letter-text").textContent = messageFor(index);
+  if (index === lighthouse) {
+    byId("receipt-glow").querySelector("span").textContent = t(receiptGlow ? "glowAgain" : "glowTitle");
+    if (receiptGlow) byId("glow-story").textContent = t("glowStory_"+receiptGlow.style);
+  }
   if (index === bridge) {
     byId("receipt-bike").querySelector("span").textContent = t(receiptBike ? "bikeAgain" : "bikeTitle");
     if (receiptBike) byId("bike-story").textContent = t("bikeStory_" + receiptBike.style);
@@ -906,6 +943,7 @@ function showReceipt(index, rustle = true, record) {
   const proof = byId("contact-sheet");
   proof.replaceChildren();
   byId("film-proof").querySelector("figcaption").textContent = t(proofTitle());
+  if (receiptGlow) proof.append(glowPrint(lightStation(letters[lighthouse],difficulty),receiptGlow,t));
   if (receiptBike) proof.append(ridePrint(bellCourse(letters[bridge],difficulty).board, receiptBike, t));
   if (receiptGraft) proof.append(pressPrint(glassGarden(letters[greenhouse],difficulty).board, receiptGraft, t));
   if (receiptReel) proof.append(reelPrint(tideCourse(letters[strait], difficulty).board, receiptReel, t));
@@ -928,8 +966,8 @@ function updateReceiptRoutes() {
   const paired = station.chapter === "together";
   const goal = paired && read(routeKey(viewed, "goal")) === "joint" ? "joint" : "direct";
   const draft = read(routeKey(viewed, "route", goal));
-  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty)) || [slope,dome,sill,strait,greenhouse].includes(viewed)) && draft?.sent === false && draft.history?.length > 0;
-  byId("replay").textContent = t(receiptTea || receiptReel || receiptGraft || receiptBike ? (resume ? "sashRegularResume" : "sashRegularOpen") : (resume ? "continueRoute" : "replay"));
+  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty)) || [slope,dome,sill,strait,greenhouse,lighthouse].includes(viewed)) && draft?.sent === false && draft.history?.length > 0;
+  byId("replay").textContent = t(receiptTea || receiptReel || receiptGraft || receiptBike || receiptGlow ? (resume ? "sashRegularResume" : "sashRegularOpen") : (resume ? "continueRoute" : "replay"));
   byId("replay").dataset.resume = String(resume);
   if (!paired) return;
   const collected = hasImprint(viewed);
@@ -971,13 +1009,14 @@ byId("save-image").addEventListener("click", async () => {
     const letter = localLetter(letters[index], language);
     const last = receiptWatch;
     const trip = receiptHill?.trip;
-    const back = receiptBike ? [t("bikeStory_" + receiptBike.style), rideSummary(receiptBike, t)].join("\n")
+    const back = receiptGlow ? [t("glowStory_"+receiptGlow.style),glowSummary(lightStation(letters[lighthouse],difficulty),receiptGlow,t)].join("\n")
+      : receiptBike ? [t("bikeStory_" + receiptBike.style), rideSummary(receiptBike, t)].join("\n")
       : receiptGraft ? [t("graftStory_" + receiptGraft.kind), specimenSummary(glassGarden(letters[greenhouse], difficulty).board, receiptGraft, t)].join("\n")
       : receiptReel ? [t("reelStory_" + receiptReel.coast), reelSummary(receiptReel, t)].join("\n")
       : receiptTea ? [teaStory(receiptTea,t),teaSummary(receiptTea,t)].join("\n") : receiptAtlas ? [atlasStory(receiptAtlas, t), atlasSummary(receiptAtlas, t)].join("\n") : receiptDuet ? [t("duetName_" + receiptDuet.id), duetSummary(receiptDuet.score, t), t("duetStory_" + receiptDuet.id)].join("\n")
       : trip ? t("hillName_" + trip.id) + "\n" + hillSummary(prepareHill(letters[slope], difficulty), trip, t) + "\n" + t("hillStory_" + trip.id)
       : last ? t("watchStory") + "\n" + watchSlip(t, last.shift, last) : hasImprint(index) ? letter.postscript : undefined;
-    const backTitle = receiptBike ? "bikeBook" : receiptGraft ? "graftBook" : receiptReel ? "reelBook" : receiptTea ? "sashTable" : receiptAtlas ? "atlasLog" : receiptDuet ? "duetSlip" : trip ? "hillStub" : last ? "watchSlipTitle" : "onTheBack";
+    const backTitle = receiptGlow ? "glowBook" : receiptBike ? "bikeBook" : receiptGraft ? "graftBook" : receiptReel ? "reelBook" : receiptTea ? "sashTable" : receiptAtlas ? "atlasLog" : receiptDuet ? "duetSlip" : trip ? "hillStub" : last ? "watchSlipTitle" : "onTheBack";
     const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, back, byId("contact-sheet").firstElementChild, backTitle, proofTitle());
     if (version !== exportVersion || !receipt.open) return;
     exportURL = URL.createObjectURL(blob);
@@ -1025,7 +1064,7 @@ function switchLanguage() {
   applyLanguage();
   presentRoute();
   if (album.open) fillAlbum();
-  if (receipt.open) showReceipt(viewed, false, viewed === bridge ? receiptBike?.code ?? null : viewed === greenhouse ? receiptGraft?.id ?? null : viewed === strait ? receiptReel?.id ?? null : viewed === sill ? receiptTea?.trip.id ?? null : viewed === dome ? receiptAtlas?.sketch.ink ?? null : viewed === huts ? receiptDuet?.id ?? null : viewed === slope ? receiptHill?.trip.id ?? null : receiptWatch);
+  if (receipt.open) showReceipt(viewed, false, viewed === lighthouse ? receiptGlow?.code ?? null : viewed === bridge ? receiptBike?.code ?? null : viewed === greenhouse ? receiptGraft?.id ?? null : viewed === strait ? receiptReel?.id ?? null : viewed === sill ? receiptTea?.trip.id ?? null : viewed === dome ? receiptAtlas?.sketch.ink ?? null : viewed === huts ? receiptDuet?.id ?? null : viewed === slope ? receiptHill?.trip.id ?? null : receiptWatch);
   dispatchDesk.refresh();
 }
 byId("language-switch").addEventListener("click", switchLanguage);
@@ -1074,6 +1113,12 @@ setVolume(Number.isInteger(savedVolume) && savedVolume >= 0 && savedVolume <= 10
 applyLanguage();
 window.addEventListener("pageshow", updateCount);
 window.addEventListener("storage", event => {
+  if (event.key?.startsWith(prefix + glowKey(difficulty,"")) && !event.key.endsWith(".draft")) {
+    if (activeService === "glow") glow.refresh();
+    updateCount();
+    if (album.open) fillAlbum();
+    return;
+  }
   if (event.key?.startsWith(prefix + bikeKey(difficulty, "")) && !event.key.endsWith(".draft")) {
     if (activeService === "bike") bikes.refresh();
     updateCount();
