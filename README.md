@@ -8,6 +8,10 @@
 
 从首页顶部点「月光邮局」，或打开 [月光邮局](./moon-mail/index.html)。转动海上的圆镜，让月光经过沿途的邮戳、照到收信箱，再点「寄出月光」拆信。「沿海夜邮」的六封信从白沙灯塔一路寄到晨光窗台。「回信篇」从海角温室出发，经过风铃栈桥，抵达望海天文台。回信的编号邮戳要按数字顺序首次经过。
 
+双拱海峡的**回潮航带**把信装进发条纸船。给循环的纸带写下舵令，水面和星戳各读一拍，固定镜引导船头，穿拱会反转读带顺序。日班同一张图有两种走法恰好都用 11 格，只改星戳上读到的那一拍，就能选择立即掉头，或沿 E4、E5 的南堤绕回。挑战档换到原站夜图，可以试着穿一、两或三次拱再靠岸。[试玩回潮航带](./moon-mail/index.html#arches-reel)
+
+试航滑块可以逐格回放，选中一拍就能看见它在哪些格子响过。反过来，点水格能找到当时的舵令，再点还能翻看小船第二次经过的情形。寄出后可借回那卷航带，在旧航迹上改一拍，看新旧小船最先从哪一格分开。明信片会印上实际航迹和舵令。[查看双拱海峡实机画面](./docs/twin-arch-reel.webp)
+
 晨光窗台的**推窗早茶**让同一束光暖过两只茶杯，再抵达原来的信箱。横窗只能左右滑，升降窗只能上下滑，同框的两片镜一起移动、一起翻面。日班原图上，先暖蓝纹杯最短走 13 格，先暖橙花杯最短走 15 格。也可以从另一扇潮门先进，看看回窗的光会落在哪里。[试玩推窗早茶](./moon-mail/index.html#dawn-sashes)
 
 试推之前可以留一张窗影。虚线会和正在调的晨光叠在一起，对调窗位还能取回每份摆法自己的撤销记录。日班图有 13 条实际投递路线，挑战图有 10 条。早餐便签记下各自寄过的最短光路，两杯的先后、潮门和实际走线都印在可保存的杯垫上。[查看窗台实机画面](./docs/morning-window.webp)
@@ -42,7 +46,7 @@
 
 ![雾钟渡口调度台，平衡班的旧航线叠在加急班的航图上，工时多一小时，两封信早四拍到齐](./docs/dispatch-desk.webp)
 
-点航图上的难度名或顶部「设置」即可换档。轻松档会先调好一部分镜片并标出下一步。标准档提供按需提示。挑战档每站都有独立的航图，须在最少步数内送达，撤销可以返还步数。各档独立保存路线、撤销记录与最佳步数。原版存档可在标准档继续。
+点航图上的难度名或顶部「设置」即可换档。日常投递的轻松档会先调好一部分镜片并标出下一步，标准档提供按需提示，挑战档要在本站的另一张航图上以最少步数送达。各专门邮班的难度说明也在这里。回潮航带的轻松档铆定两拍并标出建议舵令，标准档可以问一步提示，挑战档独立编七拍。各档分别保存进度，原版存档可在标准档继续。
 
 顶部的语言按钮可随时切换简体中文和 English。设置内可试听、静音或调节音量。转镜、邮戳、潮门、寄送和拆信等声音由浏览器实时合成。键盘可用 Tab 选中镜片后按空格或回车旋转。「信夹」可以选关、重读、改写寄语并导出 PNG。自写的寄语在切换语言和难度后保留。
 
@@ -56,13 +60,15 @@ At **Wind Chime Pier**, select **Fog Watch**. Call from a shore lamp, compare th
 
 At **Orange Hill Station**, choose **Hillside Switchbacks**. Fit, flip or lift two switch mirrors across four square sockets. Each difficulty has four distinct ways to collect both stamps and reach the same box from the same start. Select an unissued ticket for a clue or an issued ticket to overlay its actual route. Each ticket comes with a note from the journey.
 
+At **Twin Arch Strait**, choose **The Tide Reel**. Write helm orders for a clockwork paper boat. Water and the stamp advance the reel, fixed mirrors turn the bow, and each arch reverses the reading direction. Tap a square to find the beat that sent the boat there, then tap again to inspect a later visit. Two different eleven-step deliveries part at the stamp on F4. Borrow a filed reel to explore that fork. The seven-beat night chart has landings after one, two or three crossings.
+
 At **Twin Signal Huts**, choose **Signal Duet**. Gather both letters at the diamond desk, then aim each one, change up to one mirror, and set a departure gap. Each cell takes one beat. Both boxes must light on the same beat. Scrub the two-part score to see where the letters waited or travelled, play their two voices, or listen to a filed score while your rehearsal stays on the desk.
 
 ![雾钟渡口的航图，两束光穿过同一枚菱形邮戳，分别照到月亮和星星信箱](./docs/moon-mail.webp)
 
 At **The Morning Window**, choose **Tea at the Window**. Slide a frame one square along its track, or tap a mirror to tilt the panes sharing its frame. Warm both cups and reach the same mailbox. Keep a tracing before experimenting and swap the two settings to compare their paths. A filed coaster prints the actual route and the order in which the cups warmed.
 
-在仓库根目录运行 `node --test` 可验证各关光路、曝光组合、调度委托、雾班线索、橘坡走法、两岸同拍的双信时序、一笔星图的岔口、推窗早茶的窗位与实际投递路线，以及存档恢复与提示（Node.js 18 及以上）。
+在仓库根目录运行 `node --test` 可验证各关光路、曝光组合、调度委托、雾班线索、橘坡走法、两岸同拍的双信时序、一笔星图的岔口、推窗早茶的窗位、回潮航带的逐格航迹，以及存档恢复与提示（Node.js 18 及以上）。
 
 ## GitHub Pages
 

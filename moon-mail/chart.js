@@ -62,7 +62,8 @@ export function mountChart(board, onRotate, t, options = {}) {
     const isMirror = index !== undefined;
     const berth = options.berths?.indexOf(cell) ?? -1;
     const plotCell = options.onPlot && tile !== "#";
-    const element = document.createElement(plotCell || isMirror || berth >= 0 ? "button" : "span");
+    const inspectCell = options.onInspect && (tile === "." || tile === "*");
+    const element = document.createElement(plotCell || inspectCell || (isMirror && !options.fixedMirrors) || berth >= 0 ? "button" : "span");
     const starDirection = starArrows.indexOf(tile);
     const direction = starDirection !== -1 ? starDirection : arrows.indexOf(tile);
     let name = features[tile] || "water";
@@ -79,6 +80,14 @@ export function mountChart(board, onRotate, t, options = {}) {
       element.type = "button";
       element.dataset.cell = cell;
       element.addEventListener("click", () => options.onPlot(cell));
+    } else if (inspectCell) {
+      element.type = "button";
+      element.disabled = true;
+      element.addEventListener("click", () => options.onInspect(cell));
+    } else if (isMirror && options.fixedMirrors) {
+      element.classList.toggle("falling", tile === "B");
+      element.setAttribute("role", "img");
+      element.setAttribute("aria-label", t("fixedMirrorLabel", {cell: coordinate(board, cell), slope: t(tile === "B" ? "falling" : "rising")}));
     } else if (isMirror) {
       element.type = "button";
       element.dataset.mirror = index;
