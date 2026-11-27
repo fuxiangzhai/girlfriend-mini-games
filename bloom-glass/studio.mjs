@@ -621,7 +621,7 @@ function openAfterlight() {
 }
 if (location.hash==='#afterlight') openAfterlight();
 else if (location.hash==='#lantern') {openLevel(lastShow());consumeEntry();}
-else if (['#slips','#duets','#relay','#receipts','#folds','#tails','#sidefold','#courier'].includes(location.hash)) {openLevel(slipEntry());openTailEntry();consumeEntry();}
+else if (['#slips','#duets','#relay','#receipts','#folds','#tails','#sidefold','#courier','#counterfold'].includes(location.hash)) {openLevel(slipEntry());openTailEntry();consumeEntry();}
 else {
   const mode=read('bench:mode');openLevel(mode==='slips'?lastPlay():mode==='lantern'?lastShow():dayLevel());
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
@@ -631,7 +631,7 @@ else {
 }
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#afterlight') openAfterlight();
-  if(['#lantern','#slips','#duets','#relay','#receipts','#folds','#tails','#sidefold','#courier'].includes(location.hash)) {
+  if(['#lantern','#slips','#duets','#relay','#receipts','#folds','#tails','#sidefold','#courier','#counterfold'].includes(location.hash)) {
     for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
     openLevel(location.hash==='#lantern'?lastShow():slipEntry());openTailEntry();consumeEntry();window.scrollTo(0,0);
   }
@@ -641,9 +641,9 @@ window.addEventListener('hashchange',()=>{
   }
 });
 function openTailEntry(){
-  if(['#tails','#sidefold','#courier'].includes(location.hash))slips.tails.openLast(false,location.hash==='#sidefold',location.hash==='#courier');
+  if(['#tails','#sidefold','#courier','#counterfold'].includes(location.hash))slips.tails.openLast(false,location.hash==='#sidefold',location.hash==='#counterfold'?'pair':location.hash==='#courier');
 }
 function slipEntry(){
-  if(['#folds','#receipts','#tails','#sidefold','#courier'].includes(location.hash))return lastReceipt(location.hash!=='#receipts');
+  if(['#folds','#receipts','#tails','#sidefold','#courier','#counterfold'].includes(location.hash))return lastReceipt(location.hash!=='#receipts');
   return location.hash==='#slips'?lastPlay():lastDuet(location.hash==='#relay');
 }

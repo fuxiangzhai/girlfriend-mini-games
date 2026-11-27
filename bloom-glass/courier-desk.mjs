@@ -1,4 +1,5 @@
-import {beginCourier,completedPath,courierBook,courierCue,fare,fileCourier,forecasts,orders,readCourier,roadsFor,saveCourier,savedCourier,stopStep,takeCourier,ways} from './courier-score.mjs';
+import {beginCourier,budget,changeWay,completedPath,courierBook,courierCue,fare,fileCourier,forecasts,oppositeOrder,orders,readCourier,roadsFor,saveCourier,savedCourier,secondLetter,stopStep,takeCourier,wayFor,ways} from './courier-score.mjs';
+import {setupCounterDesk} from './counter-desk.mjs';
 import {courierEnding,courierPage,cueName,handoffNotes,orderName,paceNames,stepNote,wayNames} from './courier-plays.mjs';
 import {courierPrint} from './courier-print.mjs';
 import {drawTicketMap} from './lantern-glass.mjs';
@@ -20,6 +21,7 @@ function drawMap(canvas,l,slots){
 }
 export function setupCourierDesk(art,changed){
   let l,w=null,renderToken=0,archiveDirty=true;
+  const counter=setupCounterDesk(()=>({l,w,token:renderToken}),update,art,drawMap);
   function update(next,note='',focus=''){
     if(!next)return;
     w=next;renderToken++;changed(note,focus);
@@ -47,9 +49,15 @@ export function setupCourierDesk(art,changed){
   function rebook(pin){
     update(courierBook(w.source,w.flap,w.route,pin,w.order,w.way),'','courier-book-title');
   }
+  const forOrder=order=>({...w,order,way:w.pair?wayFor(w.pair,order):w.way,pace:'quiet'});
+  const forWay=way=>({...w,way,pair:w.pair?changeWay(w.pair,w.order,way):null,pace:'quiet'});
   function renderBook(){
     const page=courierPage(l),roads=roadsFor(l,w),local=fare(l,w);
-    $('courier-book-art').src=art(l.play.artId,page.layer);
+    const paceLabel=p=>w.pair && p==='quiet'?'两封合排省响':paceNames[p];
+    $('courier-book-art').src=art(l.play.artId,w.pair?'twins':page.layer);
+    $('courier-book-title').textContent=w.pair?'从首站寄两封':'点一趟三站戏';
+    $('courier-way-title').textContent=w.pair?'第一封怎样递':'两站之间怎么递';
+    $('courier-order-title').textContent=w.pair?'第一封的次序':'三站次序';
     const select=$('courier-road');select.disabled=Boolean(w.pin);
     select.innerHTML=[0,1].flatMap(flap=>[0,1].map(route=>{
       const road=roads.find(r=>r.route===route && r.flap===flap);
@@ -58,23 +66,26 @@ export function setupCourierDesk(art,changed){
     })).join('');select.value=String(2*w.flap+w.route);
     $('courier-pin').textContent=w.pin?'沿用已演过的第八拍。三处都从这一套玻璃留路，原先的换片计入整趟响数。':'第八拍只排一次。三站的收场镜位都要能从这一拍走到。';
     $('courier-release').hidden=!w.pin;
-    $('courier-ways').innerHTML=ways.map(way=>chip('data-courier-way',way,wayNames[way],sound(fare(l,{...w,way})),w.way===way)).join('');
+    $('courier-ways').innerHTML=ways.map(way=>chip('data-courier-way',way,wayNames[way],(w.pair?'两封 ':'')+sound(fare(l,forWay(way))),w.way===way)).join('');
     $('courier-rule').textContent=w.way==='direct'?'至少有一程要守住上一站的一盏灯，最多换三片，直接把笺递过去。其余路段沿原折往返。':'每到一站都能捎一句话。前两站送达后，亲手还原共同的第八拍，再把折里的话送去下一站。';
-    $('courier-orders').innerHTML=orders.map(order=>chip('data-courier-order',order,orderName(l,order),sound(fare(l,{...w,order})),order===w.order)).join('');
+    $('courier-orders').innerHTML=orders.map(order=>chip('data-courier-order',order,orderName(l,order),(w.pair?'两封 ':'')+sound(fare(l,forOrder(order))),order===w.order)).join('');
     $('courier-begin').disabled=!Number.isFinite(local);
-    $('courier-fare').textContent=Number.isFinite(local)?'整趟最低 '+sound(local)+'。每步落片时，和上一步镜位不同的玻璃各计一响。':w.pin?'这一套第八拍接不出所选走法。可以换次序、回折捎话或另排第八拍。':'这条路线接不出所选走法。可以换道、换序或点「回折捎话」。';
+    $('courier-begin').textContent=w.pair?'开演对笺的第一封':'照这张笺开演';
+    $('courier-fare').textContent=Number.isFinite(local)?(w.pair?'两封合排最低 ':'整趟最低 ')+sound(local)+'。每步落片时，和上一步镜位不同的玻璃各计一响。':w.pin?'这一套第八拍接不出所选走法。可以换次序、回折捎话或另排第八拍。':'这条路线接不出所选走法。可以换折痕、首站或递法。';
     $('courier-cheaper').hidden=!Number.isFinite(roads[0].price) || roads[0].price>=local;
     $('courier-cheaper').textContent='另排「'+routeNames(l,roads[0].flap)[roads[0].route]+'」 · '+sound(roads[0].price);
     const plans=forecasts(l,w);$('courier-forecast').hidden=!plans.length;
     if(plans.length){
       const chosen=plans.find(p=>p.pace===w.pace) || plans[0];
       const handoffs=handoffNotes(l,chosen.path.steps);
-      $('courier-book-note').textContent=handoffs.map(h=>h.label).join('　／　')+'。最后由'+tailPage(l).shortStops[+w.order[2]]+'收笺。';
-      $('courier-forecast-title').textContent=plans.length>1?'比较 '+plans.length+' 种排法 · '+paceNames[chosen.pace]:'看逐步排法 · '+sound(chosen.path.total);
+      $('courier-book-note').textContent=w.pair?'从'+tailPage(l).shortStops[Number(w.order[0])]+'出发，先排「'+orderName(l,w.order)+'」，再排「'+orderName(l,oppositeOrder(w.order))+'」。':handoffs.map(h=>h.label).join('　／　')+'。最后由'+tailPage(l).shortStops[+w.order[2]]+'收笺。';
+      $('courier-forecast-title').textContent=plans.length>1?'比较 '+plans.length+' 种排法 · '+paceLabel(chosen.pace):'看逐步排法 · '+sound(budget(chosen.path));
       $('courier-paces').hidden=plans.length<2;
-      $('courier-paces').innerHTML=plans.map(p=>chip('data-courier-pace',p.pace,paceNames[p.pace],sound(p.path.total),p===chosen)).join('');
+      $('courier-paces').innerHTML=plans.map(p=>chip('data-courier-pace',p.pace,paceLabel(p.pace),w.pair?'本封 '+p.path.total+' ／ 另一封 '+p.path.partner.total:sound(p.path.total),p===chosen)).join('');
       $('courier-forecast-steps').innerHTML=chosen.path.steps.map(s=>'<li>'+cueName(l,s)+' <strong>'+sound(s.cost)+'</strong></li>').join('');
-      $('courier-forecast-note').textContent='这一排合计 '+sound(chosen.path.total)+'。开演后提示会照这一排引路，也可以自己另调镜位。';
+      $('counter-partner-steps').hidden=!w.pair;
+      if(w.pair)$('counter-partner-steps').textContent='另一封从首站接走　'+chosen.path.partner.steps.slice(2).map(s=>cueName(l,s)+' '+sound(s.cost)).join(' → ');
+      $('courier-forecast-note').textContent=(w.pair?'本封 '+chosen.path.total+' 响，另一封 '+chosen.path.partner.total+' 响。扣去共用的 '+(chosen.path.steps[0].cost+chosen.path.steps[1].cost)+' 响，两封合排 '+sound(chosen.path.joint):'这一排合计 '+sound(chosen.path.total))+'。开演后提示会照这一排引路，也可以自己另调镜位。';
     }else $('courier-book-note').textContent='这道折痕接不上所点的次序与递法。翻看其他路线，或把这一趟改作回折捎话。';
   }
   function renderRun(cue){
@@ -84,14 +95,15 @@ export function setupCourierDesk(art,changed){
     $('courier-line').textContent=stepNote(l,w,w.steps);
     let prev=w.source.tape[6],spent=0;
     for(const step of w.steps){spent+=differentPanes(l,prev,step.slots).length;prev=step.slots;}
-    $('courier-ledger').textContent='已落片 '+sound(spent)+' · 从这里演完整趟最低 '+sound(cue.best)+'。'+(w.pace!=='quiet'?'照「'+paceNames[w.pace]+'」排是 '+sound(cue.guide.total)+'。':'');
+    $('courier-ledger').textContent='本封已落片 '+sound(spent)+' · '+(w.pair?'两封从这里合排最低 ':'从这里演完整趟最低 ')+sound(cue.best)+'。'+(w.pace!=='quiet'?'照「'+paceNames[w.pace]+'」排是 '+sound(budget(cue.guide))+'。':'');
     $('courier-reference').hidden=!w.steps.length;
     if(w.steps.length){
       drawMap($('courier-reference-map'),l,w.steps[0].slots);
       const changes=differentPanes(l,w.slots,w.steps[0].slots).map(i=>l.pieces[i].name);
       $('courier-reference-note').textContent=changes.length?'桌上和第八拍相差 '+changes.length+' 片，分别是'+changes.join('、')+'。':'桌上正是这一趟的第八拍。';
     }
-    $('courier-rewind').disabled=w.steps.length<=(w.pin?1:0);
+    $('courier-rewind').disabled=w.steps.length<=(w.mate?2:w.pin?1:0);
+    $('courier-rebook').textContent=w.mate?'回首站重排这封':'重选这趟戏';
   }
   function renderFinish(){
     const path=completedPath(l,w),page=courierPage(l),ends=tailPage(l).endings,ending=courierEnding(l,w);
@@ -106,7 +118,7 @@ export function setupCourierDesk(art,changed){
     });
     $('courier-scenes').replaceChildren(...scenes);
     const back=path.steps.filter(s=>s.kind==='back').length,n=path.steps.filter(s=>s.kind==='direct').length;
-    const kept=fare(l,{...w,pin:w.steps[0].slots}),best=roadsFor(l,w)[0];
+    const solo=courierBook(w.source,w.flap,w.route,null,w.order,w.way),kept=fare(l,{...solo,pin:w.steps[0].slots}),best=roadsFor(l,solo)[0];
     $('courier-total').textContent=orderName(l,w.order)+'。直递 '+n+' 次，折回 '+back+' 次，整趟 '+sound(path.total)+'。沿用这套第八拍最低 '+sound(kept)+'。';
     $('courier-challenge').hidden=path.total<=best.price;
     $('courier-challenge').textContent=(kept===best.price?'留原镜位重排':'改排「'+routeNames(l,best.flap)[best.route]+'」')+' · 挑战 '+sound(best.price);
@@ -127,29 +139,33 @@ export function setupCourierDesk(art,changed){
     }
     $('courier-count').textContent='实演 '+ownCount+' · 试排 '+trial;
     $('courier-files').innerHTML=buttons.join('') || '<p>走完三站后，落款会收在这里。</p>';archiveDirty=false;
+    if($('courier-shelf').open)counter.shelf(l);
   }
   function draw(cue){
     $('courier-book').hidden=w?.phase!=='book';$('courier-run').hidden=w?.phase!=='play';$('courier-letter').hidden=w?.phase!=='done';
-    $('courier-shelf').hidden=!w;if(!w)return;
+    $('courier-shelf').hidden=!w;counter.draw(l,w,cue);if(!w)return;
     if(w.phase==='book')renderBook();else if(w.phase==='play')renderRun(cue);else renderFinish();
     if(archiveDirty)shelf();
   }
   $('courier-road').onchange=()=>{const code=+$('courier-road').value;update({...w,flap:code>>1,route:code%2,pace:'quiet'});};
-  $('courier-orders').onclick=e=>{const b=e.target.closest('[data-courier-order]');if(b)update({...w,order:b.dataset.courierOrder,pace:'quiet'});};
-  $('courier-ways').onclick=e=>{const b=e.target.closest('[data-courier-way]');if(b)update({...w,way:b.dataset.courierWay,pace:'quiet'});};
+  $('courier-orders').onclick=e=>{const b=e.target.closest('[data-courier-order]');if(b)update(forOrder(b.dataset.courierOrder));};
+  $('courier-ways').onclick=e=>{const b=e.target.closest('[data-courier-way]');if(b)update(forWay(b.dataset.courierWay));};
   $('courier-paces').onclick=e=>{const b=e.target.closest('[data-courier-pace]');if(b)update({...w,pace:b.dataset.courierPace});};
-  $('courier-release').onclick=()=>rebook(null);
+  $('courier-release').onclick=()=>update({...w,pin:null,pace:'quiet'},'','courier-book-title');
   $('courier-cheaper').onclick=()=>{const r=roadsFor(l,w)[0];update({...w,pin:null,flap:r.flap,route:r.route,pace:'quiet'},'','courier-begin');};
   $('courier-begin').onclick=()=>update(beginCourier(l,w),'','tail-cue');
-  $('courier-rebook').onclick=()=>rebook(w.pin);
+  $('courier-rebook').onclick=()=>{
+    if(w.mate)update(secondLetter(l,w.mate,w.way),'已回到两封共同的首站。','tail-cue');
+    else update({...courierBook(w.source,w.flap,w.route,w.pin,w.order,w.way),pair:w.pair},'','courier-book-title');
+  };
   $('courier-next-order').onclick=()=>rebook(w.steps[0].slots);
   $('courier-challenge').onclick=()=>{
-    const pin=w.steps[0].slots,best=roadsFor(l,w)[0];
-    const next=fare(l,{...w,pin})===best.price?courierBook(w.source,w.flap,w.route,pin,w.order,w.way):courierBook(w.source,best.flap,best.route,null,w.order,w.way);
+    const pin=w.steps[0].slots,solo=courierBook(w.source,w.flap,w.route,null,w.order,w.way),best=roadsFor(l,solo)[0];
+    const next=fare(l,{...solo,pin})===best.price?{...solo,pin}:{...solo,flap:best.flap,route:best.route};
     update(next,'','courier-book-title');
   };
   $('courier-rewind').onclick=()=>{
-    if(w.steps.length<=(w.pin?1:0))return;
+    if(w.steps.length<=(w.mate?2:w.pin?1:0))return;
     const steps=w.steps.slice(0,-1);update({...w,steps,slots:steps.at(-1)?.slots||w.source.tape[6],selected:-1},'已撤回上一步落片，可以换一套镜位。','tail-cue');
   };
   $('courier-files').onclick=e=>{
@@ -172,8 +188,16 @@ export function setupCourierDesk(art,changed){
     const next=takeCourier(l,w);
     if(!next)return false;
     if(next.phase==='done'){if(!fileCourier(l,next))return false;archiveDirty=true;}
-    update(next,'',next.phase==='done'?'courier-title':'tail-cue');return true;
+    update(next,'',next.phase==='done'?(next.mate?'counter-title':'courier-title'):'tail-cue');return true;
   }
-  return {open,hide,draw,advance,get state(){return w;},cue:()=>courierCue(l,w),remember:()=>saveCourier(l,w),
+  function spotlight(){
+    if(w.phase!=='book')return;
+    $('counter-book').open=true;
+    if(!w.pair){
+      const pair=['fd','df','dd','ff'].find(p=>wayFor(p,w.order)===w.way && Number.isFinite(fare(l,{...w,pair:p})));
+      if(pair)update({...w,pair});
+    }
+  }
+  return {open,hide,draw,advance,spotlight,get state(){return w;},cue:()=>courierCue(l,w),remember:()=>saveCourier(l,w),
     hint:cue=>socketHint(l,w.slots,{...cue,options:cue.recommended},()=>0),invalidate:()=>{renderToken++;}};
 }

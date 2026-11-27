@@ -102,7 +102,7 @@ export function setupTails(art,formal,chime){
     if(options.album){$('tail-album').querySelector('summary').focus();}else $('tail-title').focus({preventScroll:true});
   }
   function refresh(note=''){
-    const focus=document.activeElement,attr=['data-tail-route','data-tail-plan','data-tail-view','data-tail-end','data-tail-pane','data-tail-pose','data-courier-order','data-courier-way','data-courier-pace'].find(a=>focus?.hasAttribute(a)),v=attr && focus.getAttribute(attr);
+    const focus=document.activeElement,attr=['data-tail-route','data-tail-plan','data-tail-view','data-tail-end','data-tail-pane','data-tail-pose','data-courier-order','data-courier-way','data-courier-pace','data-counter-pair','data-counter-course'].find(a=>focus?.hasAttribute(a)),v=attr && focus.getAttribute(attr);
     remember();draw();
     if(attr)dialog.querySelector('['+attr+'="'+v+'"]:not(:disabled)')?.focus({preventScroll:true});
     if(note)tell(note);
@@ -195,7 +195,7 @@ export function setupTails(art,formal,chime){
     $('tail-cue').textContent=(step.kind==='mid'?'第八拍':step.kind==='back'?'折回':'第 '+(stops+1)+' 站')+' · '+cueName(l,step);
     $('tail-take').textContent=step.kind==='back'?'落片，认回原折':step.kind==='mid'?'落片，留住三处':stops===2?'落片收走笺':'落片，送到这一站';
     const result=glassBench(w),matched=cueMatch(l,cue,w.slots);showExits(null);
-    if(matched)tell('这套镜位可以落片，照此演完整趟最低 '+price(cue.prices.get(matched))+'。');
+    if(matched)tell('这套镜位可以落片，'+(w.pair?'照此两封合排最低 ':'照此演完整趟最低 ')+price(cue.prices.get(matched))+'。');
     else if(step.kind==='back')tell('把银镜拨回这一趟共同的第八拍。可以展开「对照共同的第八拍」看原位。');
     else if(sameExits(result,cue.goal))tell('两灯到了出口，还要给接下来的站点留下合适的镜位。');
     else tell('守住原灯，点一片可调的玻璃，再点它的银镜插槽。提示会把后面几程一并算进去。');
@@ -429,6 +429,7 @@ export function setupTails(art,formal,chime){
   function openLast(album=false,spotlight=false,journey=false){
     const last=levels.find(v=>v.id===read('slip:tail-last'));
     start(last||(spotlight || journey?insertCasts[0][0][0]:insertCasts[0][1][1]),null,{album,spotlight,resume:Boolean(last),courier:journey});
+    if(journey==='pair')courier.spotlight();
   }
   return {start,openLast,resume:()=>openLast(false,false,read('slip:courier-open')===true),shouldResume:()=>read('slip:tail-open')===true};
 }

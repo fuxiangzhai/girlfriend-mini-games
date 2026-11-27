@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {foldPartner,insertCasts} from '../bloom-glass/duet-plays.mjs';
-import {courierBook,fare,orders} from '../bloom-glass/courier-score.mjs';
+import {courierBook,courierCue,fare,orders,stationCourses} from '../bloom-glass/courier-score.mjs';
+import {pairEnding} from '../bloom-glass/counter-plays.mjs';
 import {foldOptions,recordFold} from '../bloom-glass/fold-score.mjs';
 import {poseKey,solve} from '../bloom-glass/puzzle.mjs';
 import {readProjector} from '../bloom-glass/projection.mjs';
@@ -235,6 +236,7 @@ test('resuming a side fold restores partial sockets and its whole commission, an
 
 test('all six itineraries on every three-way eighth match independently lifted panes, paid reversals and the cheapest ordered transfers',()=>{
   let itineraries=0,canPass=0,cheaper=0;
+  const pairCounts={ff:0,fd:0,df:0,dd:0},chapters=new Set();
   for(const family of insertCasts)for(const cast of family){
     const l=cast[0],sources=new Map();
     for(const level of cast)for(const tape of signedSevens(level))sources.set(signature(level,tape[6]),{tape,peer:null});
@@ -248,6 +250,7 @@ test('all six itineraries on every three-way eighth match independently lifted p
     }
     for(const source of sources.values())for(const flap of [0,1])for(const route of [0,1]){
       for(const m of tailRoutes(l,source.tape[6],route,flap).filter(v=>v.finals.every(f=>f.length))){
+        const suffixes=new Map();
         for(const order of orders){
           const [a,b,c]=Array.from(order,Number),keeper=e=>tailKeeper(l,route,e,flap);
           let pass=Infinity,fold=Infinity;
@@ -255,6 +258,9 @@ test('all six itineraries on every three-way eighth match independently lifted p
             const first=m.cost+live(m.row,x,keeper(a)),back1=live(x,m.row,keeper(a))+live(m.row,y,keeper(b));
             const back2=live(y,m.row,keeper(b))+live(m.row,z,keeper(c));
             const direct1=Math.min(live(x,y,0),live(x,y,1)),direct2=Math.min(live(y,z,0),live(y,z,1));
+            const key=order+':'+x.index,legs=suffixes.get(key) || {ff:Infinity,df:Infinity,fd:Infinity,dd:Infinity};
+            legs.ff=Math.min(legs.ff,back1+back2);legs.df=Math.min(legs.df,direct1+back2);
+            legs.fd=Math.min(legs.fd,back1+direct2);legs.dd=Math.min(legs.dd,direct1+direct2);suffixes.set(key,legs);
             fold=Math.min(fold,first+back1+back2);
             pass=Math.min(pass,first+direct1+back2,first+back1+direct2,first+direct1+direct2);
           }
@@ -262,8 +268,29 @@ test('all six itineraries on every three-way eighth match independently lifted p
           assert.equal(fare(l,courierBook(source,flap,route,m.row.slots,order,'direct')),pass);
           assert.ok(Number.isFinite(fold));itineraries++;if(Number.isFinite(pass))canPass++;if(pass<fold)cheaper++;
         }
+        for(const [first,rows] of m.finals.entries())for(const row of rows){
+          const [left,right]=orders.filter(o=>Number(o[0])===first),keeper=tailKeeper(l,route,first,flap);
+          const leftLegs=suffixes.get(left+':'+row.index),rightLegs=suffixes.get(right+':'+row.index);
+          const shared=m.cost+live(m.row,row,keeper);
+          const desk={...courierBook(source,flap,route,m.row.slots,left,'fold'),phase:'play',slots:row.slots,steps:[
+            {kind:'mid',end:null,keeper:tailKeeper(l,route,null,flap),slots:m.row.slots},{kind:'first',end:first,keeper,slots:row.slots}
+          ]};
+          const courses=stationCourses(l,desk);
+          for(const [order,legs] of [[left,leftLegs],[right,rightLegs]])for(const [pattern,cost] of Object.entries(legs)){
+            const actual=courses.find(c=>c.order===order && c.legs===pattern);
+            assert.equal(actual?.path.total??Infinity,shared+cost);
+          }
+          const suffix=(legs,letter)=>letter==='f'?legs.ff:Math.min(legs.df,legs.fd,legs.dd);
+          for(const pair of Object.keys(pairCounts)){
+            const expected=shared+suffix(leftLegs,pair[0])+suffix(rightLegs,pair[1]);
+            const cue=courierCue(l,{...desk,pair,way:pair[0]==='d'?'direct':'fold'});
+            assert.equal(cue?.best??Infinity,expected);
+            if(Number.isFinite(expected)){pairCounts[pair]++;chapters.add(pairEnding(l,first,pair).title);}
+          }
+        }
       }
     }
   }
   assert.deepEqual([itineraries,canPass,cheaper],[354,236,191]);
+  assert.deepEqual(pairCounts,{ff:453,fd:416,df:224,dd:187});assert.equal(chapters.size,19);
 });

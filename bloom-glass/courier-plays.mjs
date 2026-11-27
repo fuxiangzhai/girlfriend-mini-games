@@ -2,7 +2,7 @@ import {lampNames} from './light-path.mjs';
 import {tailPage} from './tail-plays.mjs';
 
 export const wayNames={direct:'沿灯直递',fold:'回折捎话'};
-export const paceNames={quiet:'整趟省响',first:'首站少动',last:'末站少动',pass:'直递少动'};
+export const paceNames={quiet:'整趟省响',first:'首站少动',last:'末站少动',pass:'直递少动',thisLetter:'本封省响',otherLetter:'另一封省响'};
 const pages={
   postmark:{
     layer:'basket',intro:'阿婆把饭篮提到灯下。桥下、饭桌和夜学都要到，最后一个接篮的人负责把它送回家。',
