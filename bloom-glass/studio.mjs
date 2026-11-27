@@ -621,26 +621,29 @@ function openAfterlight() {
 }
 if (location.hash==='#afterlight') openAfterlight();
 else if (location.hash==='#lantern') {openLevel(lastShow());consumeEntry();}
-else if (['#slips','#duets','#relay','#receipts','#folds','#tails','#sidefold'].includes(location.hash)) {openLevel(slipEntry());if(['#tails','#sidefold'].includes(location.hash))slips.tails.openLast(false,location.hash==='#sidefold');consumeEntry();}
+else if (['#slips','#duets','#relay','#receipts','#folds','#tails','#sidefold','#courier'].includes(location.hash)) {openLevel(slipEntry());openTailEntry();consumeEntry();}
 else {
   const mode=read('bench:mode');openLevel(mode==='slips'?lastPlay():mode==='lantern'?lastShow():dayLevel());
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
     showNight(location.hash==='#shutters'?'roll':'night'); consumeEntry();
   } else if(lastRoom==='night') showNight();
-  else if(mode==='slips' && slips.tails.shouldResume())slips.tails.openLast();
+  else if(mode==='slips' && slips.tails.shouldResume())slips.tails.resume();
 }
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#afterlight') openAfterlight();
-  if(['#lantern','#slips','#duets','#relay','#receipts','#folds','#tails','#sidefold'].includes(location.hash)) {
+  if(['#lantern','#slips','#duets','#relay','#receipts','#folds','#tails','#sidefold','#courier'].includes(location.hash)) {
     for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
-    openLevel(location.hash==='#lantern'?lastShow():slipEntry());if(['#tails','#sidefold'].includes(location.hash))slips.tails.openLast(false,location.hash==='#sidefold');consumeEntry();window.scrollTo(0,0);
+    openLevel(location.hash==='#lantern'?lastShow():slipEntry());openTailEntry();consumeEntry();window.scrollTo(0,0);
   }
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
     for(const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
     showNight(location.hash==='#shutters'?'roll':'night'); consumeEntry(); window.scrollTo(0,0);
   }
 });
+function openTailEntry(){
+  if(['#tails','#sidefold','#courier'].includes(location.hash))slips.tails.openLast(false,location.hash==='#sidefold',location.hash==='#courier');
+}
 function slipEntry(){
-  if(['#folds','#receipts','#tails','#sidefold'].includes(location.hash))return lastReceipt(location.hash!=='#receipts');
+  if(['#folds','#receipts','#tails','#sidefold','#courier'].includes(location.hash))return lastReceipt(location.hash!=='#receipts');
   return location.hash==='#slips'?lastPlay():lastDuet(location.hash==='#relay');
 }

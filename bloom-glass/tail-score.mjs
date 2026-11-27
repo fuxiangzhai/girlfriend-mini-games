@@ -98,18 +98,22 @@ export function insertPane(l,rack,slots,id,place){
   return fits(l,next,id,place) && allows(rack.hold,keys(l,next))?next:null;
 }
 export function tailHint(l,s,cue){
-  const current=keys(l,s.slots),options=[...cue.options],start=s.source.tape[6];
-  if(!options.length)return null;
+  const start=s.source.tape[6];
   function price(row){
     if(s.prep)return distance(cue.rack.from.keys,row.keys);
     if(s.mid)return distance(rowAt(l,s.mid).keys,row.keys);
     const m=tailRoutes(l,start,s.route,s.flap).find(x=>x.row===row);return sharedPrice(m,aimMask(s));
   }
+  return socketHint(l,s.slots,cue,price);
+}
+export function socketHint(l,slots,cue,price){
+  const current=keys(l,slots),options=[...cue.options];
+  if(!options.length)return null;
   const best=options.sort((a,b)=>price(a)-price(b) || distance(current,a.keys)-distance(current,b.keys))[0];
   if(sameSequence(best.keys,current))return {ready:true};
   const diff=l.pieces.map((_,i)=>i).filter(i=>current[i]!==best.keys[i]);
   diff.sort((a,b)=>Number(current[a]===cue.rack.from.keys[a])-Number(current[b]===cue.rack.from.keys[b]));
-  for(const id of diff)if(insertPane(l,cue.rack,s.slots,id,best.slots[id]))return {id,place:best.slots[id]};
+  for(const id of diff)if(insertPane(l,cue.rack,slots,id,best.slots[id]))return {id,place:best.slots[id]};
   return {reset:true};
 }
 export function practiceSource(l){

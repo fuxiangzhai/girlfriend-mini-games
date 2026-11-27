@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {foldPartner,insertCasts} from '../bloom-glass/duet-plays.mjs';
+import {courierBook,fare,orders} from '../bloom-glass/courier-score.mjs';
 import {foldOptions,recordFold} from '../bloom-glass/fold-score.mjs';
 import {poseKey,solve} from '../bloom-glass/puzzle.mjs';
 import {readProjector} from '../bloom-glass/projection.mjs';
@@ -230,4 +231,39 @@ test('resuming a side fold restores partial sockets and its whole commission, an
   saveTailDesk(l,{...s,end:0});assert.equal(readTailDesk(l,false),null);
   const revised=prepOptions(l,source,0,1,7);assert.ok(revised.length);
   for(const row of revised)assert.ok(Number.isFinite(bestPrice(tailRoutes(l,row.slots,0,1),7)));
+});
+
+test('all six itineraries on every three-way eighth match independently lifted panes, paid reversals and the cheapest ordered transfers',()=>{
+  let itineraries=0,canPass=0,cheaper=0;
+  for(const family of insertCasts)for(const cast of family){
+    const l=cast[0],sources=new Map();
+    for(const level of cast)for(const tape of signedSevens(level))sources.set(signature(level,tape[6]),{tape,peer:null});
+    const edges=new Map();
+    function live(a,b,k){
+      const key=[a.index,b.index,k].join(':');if(edges.has(key))return edges.get(key);
+      const diff=differentPanes(l,a.slots,b.slots),lift=a.slots.map((p,i)=>diff.includes(i)?null:p);
+      const ray=readProjector(l,lift).rays[k],original=readProjector(l,a.slots).rays[k];
+      const cost=diff.length<=3 && ray.exit===original.exit && JSON.stringify(ray.points)===JSON.stringify(original.points)?diff.length:Infinity;
+      edges.set(key,cost);return cost;
+    }
+    for(const source of sources.values())for(const flap of [0,1])for(const route of [0,1]){
+      for(const m of tailRoutes(l,source.tape[6],route,flap).filter(v=>v.finals.every(f=>f.length))){
+        for(const order of orders){
+          const [a,b,c]=Array.from(order,Number),keeper=e=>tailKeeper(l,route,e,flap);
+          let pass=Infinity,fold=Infinity;
+          for(const x of m.finals[a])for(const y of m.finals[b])for(const z of m.finals[c]){
+            const first=m.cost+live(m.row,x,keeper(a)),back1=live(x,m.row,keeper(a))+live(m.row,y,keeper(b));
+            const back2=live(y,m.row,keeper(b))+live(m.row,z,keeper(c));
+            const direct1=Math.min(live(x,y,0),live(x,y,1)),direct2=Math.min(live(y,z,0),live(y,z,1));
+            fold=Math.min(fold,first+back1+back2);
+            pass=Math.min(pass,first+direct1+back2,first+back1+direct2,first+direct1+direct2);
+          }
+          assert.equal(fare(l,courierBook(source,flap,route,m.row.slots,order,'fold')),fold);
+          assert.equal(fare(l,courierBook(source,flap,route,m.row.slots,order,'direct')),pass);
+          assert.ok(Number.isFinite(fold));itineraries++;if(Number.isFinite(pass))canPass++;if(pass<fold)cheaper++;
+        }
+      }
+    }
+  }
+  assert.deepEqual([itineraries,canPass,cheaper],[354,236,191]);
 });

@@ -7,24 +7,19 @@ import {differentPanes} from './slip-path.mjs';
 import {endingStory,endsIn,foldName,jointText,routeNames,tailMargin,tailPage} from './tail-plays.mjs';
 import {actualPrice,tailCost} from './tail-score.mjs';
 
-export async function tailPrint(l,r,art,legs,view){
-  const page=tailPage(l),ending=page.endings[r.end],paper=document.createElement('canvas');
-  const members=endsIn(view),others=members.filter(e=>e!==r.end);
-  paper.width=1200;paper.height=[890,1080,1300][others.length];
+export function paperInk(l,paper){
   const g=paper.getContext('2d'),serif='"Songti SC","SimSun",serif',sans='"Microsoft YaHei","PingFang SC",sans-serif';
   function label(s,x,y,size=22,face=serif,ink='#35463d'){
     g.fillStyle=ink;g.font=size+'px '+face;g.fillText(s,x,y);
   }
   function wrap(s,x,y,w,size=23,leading=35){
     let line='';g.font=size+'px '+serif;
-    for(const ch of s){
-      if(line && g.measureText(line+ch).width>w){label(line,x,y,size);y+=leading;line='';}
-      line+=ch;
+    // Set Chinese punctuation with its neighbour so a full stop never sits alone.
+    for(const unit of s.match(/[「『《（“‘]*.[，。！？、）》」』”’]*/gu) || []){
+      if(line && g.measureText(line+unit).width>w){label(line,x,y,size);y+=leading;line='';}
+      line+=unit;
     }
     label(line,x,y,size);return y;
-  }
-  async function illustration(e){
-    const image=new Image();image.src=art(l.play.artId,page.endings[e].layer);await image.decode();return image;
   }
   function map(board,x,y,w,h){
     const cell=document.createElement('canvas');cell.width=w;cell.height=h;
@@ -33,6 +28,16 @@ export async function tailPrint(l,r,art,legs,view){
   }
   g.fillStyle='#2c443c';g.fillRect(0,0,1200,paper.height);g.fillStyle='#f7eed9';g.fillRect(12,12,1176,paper.height-24);
   g.strokeStyle='#b09b72';g.strokeRect(24,24,1152,paper.height-48);
+  return {g,label,wrap,map,sans,serif};
+}
+export async function tailPrint(l,r,art,legs,view){
+  const page=tailPage(l),ending=page.endings[r.end],paper=document.createElement('canvas');
+  const members=endsIn(view),others=members.filter(e=>e!==r.end);
+  paper.width=1200;paper.height=[890,1080,1300][others.length];
+  const {g,label,wrap,map,sans}=paperInk(l,paper);
+  async function illustration(e){
+    const image=new Image();image.src=art(l.play.artId,page.endings[e].layer);await image.decode();return image;
+  }
   label('留 灯 换 景　 ／　 折 后 戏 笺',48,67,18,sans,'#6f6049');
   label(ending.title,45,128,49);label(l.play.coda.paper+' · '+orderName(l)+' · '+readingNames[l.play.coda.mode],48,169,23);
   g.textAlign='right';label((r.source.peer?'骑缝续演':'借谱试排')+'　／　续场 '+tailCost(l,r)+' 响',1150,124,24,sans);g.textAlign='left';
