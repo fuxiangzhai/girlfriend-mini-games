@@ -4,13 +4,16 @@ import {describe,fits,poseKey,solve} from './puzzle.mjs';
 import {readProjector,validLayout} from './projection.mjs';
 import {allows,differentPanes,makeHold,storePlaybill,takeScene} from './slip-path.mjs';
 import {read,write} from './save.mjs';
-import {tailPorts} from './tail-plays.mjs';
+import {endsIn,tailGroups,tailKeeper,tailPorts} from './tail-plays.mjs';
 
 const cache=new WeakMap();
 const keys=(l,board)=>board.map((p,i)=>p?poseKey(l,i,p):'');
 const sameSequence=(a,b)=>a.every((p,i)=>p===b[i]);
 const distance=(a,b)=>a.reduce((n,k,i)=>n+Number(k!==b[i]),0);
 const bit=n=>n===0 || n===1;
+const endId=n=>bit(n) || n===2;
+const setting=(route,flap)=>flap?'side'+route:String(route);
+export const aimMask=s=>s.both?(s.stops??3):1<<s.end;
 
 // The closing cue can deliberately return to the seventh cue's exits.
 // Index the physical lamps directly, including boards outside the old script.
@@ -35,12 +38,15 @@ export function tailRack(l,base,keeper){
   const poses=l.pieces.map((_,i)=>[...new Map(rows.map(r=>[r.keys[i],r.slots[i]])).values()]);
   const rack={from,hold,rows,poses};c.moves.set(id,rack);return rack;
 }
-export function tailRoutes(l,base,route){
-  const c=catalogue(l),rack=tailRack(l,base,route),id=rack.from.index+':'+route;
+export function tailRoutes(l,base,route,flap=0){
+  const c=catalogue(l),rack=tailRack(l,base,tailKeeper(l,route,null,flap)),id=rack.from.index+':'+setting(route,flap);
   if(c.routes.has(id))return c.routes.get(id);
-  const arrivals=tailPorts(l,route),mids=[];
+  const arrivals=tailPorts(l,route,null,flap),mids=[];
   for(const row of rack.rows.filter(r=>sameSequence(r.ports,arrivals))){
-    const finals=[0,1].map(e=>tailRack(l,row.slots,e?1-route:route).rows.filter(r=>sameSequence(r.ports,tailPorts(l,route,e))));
+    const finals=[0,1,2].map(e=>{
+      const keeper=tailKeeper(l,route,e,flap),goal=tailPorts(l,route,e,flap);
+      return keeper==null?[]:tailRack(l,row.slots,keeper).rows.filter(r=>sameSequence(r.ports,goal));
+    });
     if(!finals.some(a=>a.length))continue;
     const cost=distance(rack.from.keys,row.keys);
     const prices=finals.map(list=>Math.min(...list.map(last=>cost+distance(row.keys,last.keys))));
@@ -48,25 +54,35 @@ export function tailRoutes(l,base,route){
   }
   c.routes.set(id,mids);return mids;
 }
-export const tailPrices=mids=>[0,1].map(e=>Math.min(...mids.map(m=>m.prices[e])));
-export function midAt(l,source,route,board){
+export const tailPrices=mids=>[0,1,2].map(e=>Math.min(...mids.map(m=>m.prices[e])));
+// A shared eighth cue is staged once. The ninth cue is set afresh from it
+// for every requested destination, even if the same pane moves in both.
+export const sharedPrice=(m,mask)=>endsIn(mask).reduce((sum,e)=>sum+m.prices[e]-m.cost,m.cost);
+export const bestPrice=(mids,mask)=>Math.min(...mids.map(m=>sharedPrice(m,mask)));
+export function roadPlans(l,source,mask){
+  return [0,1].flatMap(flap=>[0,1].map(route=>{
+    const mids=tailRoutes(l,source.tape[6],route,flap);
+    return {flap,route,price:bestPrice(mids,mask)};
+  })).sort((a,b)=>a.price-b.price);
+}
+export function midAt(l,source,route,board,flap=0){
   if(!validLayout(l,board))return null;
   const row=rowAt(l,board);
-  return tailRoutes(l,source.tape[6],route).find(m=>m.row===row);
+  return tailRoutes(l,source.tape[6],route,flap).find(m=>m.row===row);
 }
-export function prepOptions(l,source,route){
+export function prepOptions(l,source,route,flap=0,mask=0){
   const tape=source.tape.slice(0,6),frame=l.play.frames[6];
-  return tailRack(l,tape[5],frame.keeper).rows.filter(r=>takeScene(l,tape,r.slots)===6 && tailRoutes(l,r.slots,route).length);
+  return tailRack(l,tape[5],frame.keeper).rows.filter(r=>takeScene(l,tape,r.slots)===6 && Number.isFinite(bestPrice(tailRoutes(l,r.slots,route,flap),mask)));
 }
 export function tailCue(l,s){
-  const {source,route,end,mid,prep}=s,start=source.tape[6];
-  if(prep)return {rack:tailRack(l,source.tape[5],l.play.frames[6].keeper),goal:l.projection.scenes[6].exits,options:prepOptions(l,source,route)};
+  const {source,route,end,mid,prep,flap=0}=s,start=source.tape[6],mask=aimMask(s);
+  if(prep)return {rack:tailRack(l,source.tape[5],l.play.frames[6].keeper),goal:l.projection.scenes[6].exits,options:prepOptions(l,source,route,flap,mask)};
   if(mid){
-    const m=midAt(l,source,route,mid);
-    return {rack:tailRack(l,mid,end?1-route:route),goal:tailPorts(l,route,end),options:m.finals[end]};
+    const m=midAt(l,source,route,mid,flap);
+    return {rack:tailRack(l,mid,tailKeeper(l,route,end,flap)),goal:tailPorts(l,route,end,flap),options:m.finals[end]};
   }
-  const mids=tailRoutes(l,start,route);
-  return {rack:tailRack(l,start,route),goal:tailPorts(l,route),options:mids.filter(m=>m.finals[end].length && (!s.both || m.finals.every(a=>a.length))).map(m=>m.row)};
+  const mids=tailRoutes(l,start,route,flap);
+  return {rack:tailRack(l,start,tailKeeper(l,route,null,flap)),goal:tailPorts(l,route,null,flap),options:mids.filter(m=>Number.isFinite(sharedPrice(m,mask))).map(m=>m.row)};
 }
 export function cueMatch(l,cue,slots){
   if(!validLayout(l,slots))return null;
@@ -87,7 +103,7 @@ export function tailHint(l,s,cue){
   function price(row){
     if(s.prep)return distance(cue.rack.from.keys,row.keys);
     if(s.mid)return distance(rowAt(l,s.mid).keys,row.keys);
-    const m=tailRoutes(l,start,s.route).find(x=>x.row===row);return m.prices[s.end];
+    const m=tailRoutes(l,start,s.route,s.flap).find(x=>x.row===row);return sharedPrice(m,aimMask(s));
   }
   const best=options.sort((a,b)=>price(a)-price(b) || distance(current,a.keys)-distance(current,b.keys))[0];
   if(sameSequence(best.keys,current))return {ready:true};
@@ -135,50 +151,112 @@ export function retakeReturn(l,source,board){
   }
   return next;
 }
-const billPrefix=(l,route,end,signed)=>'slip:tail-bill:'+l.id+':'+route+end+':'+(signed?'signed:':'trial:');
+const billPrefix=(l,route,end,signed,flap)=>'slip:tail-bill:'+l.id+':'+setting(route,flap)+end+':'+(signed?'signed:':'trial:');
 function twinKey(l,r){
-  return 'slip:tail-branch:'+l.id+':'+anchor(l,r.source)+':'+r.route+':'+keys(l,r.mid).join(',')+':';
+  return 'slip:tail-branch:'+l.id+':'+anchor(l,r.source)+':'+setting(r.route,r.flap)+':'+keys(l,r.mid).join(',')+':';
 }
 export function validTail(l,r){
-  if(!r || !bit(r.route) || !bit(r.end) || !validSource(l,r.source) || !validLayout(l,r.last))return false;
-  return Boolean(midAt(l,r.source,r.route,r.mid)?.finals[r.end].includes(rowAt(l,r.last)));
+  if(!r || !bit(r.route) || !bit(r.flap??0) || !endId(r.end) || !validSource(l,r.source) || !validLayout(l,r.last))return false;
+  return Boolean(midAt(l,r.source,r.route,r.mid,r.flap)?.finals[r.end].includes(rowAt(l,r.last)));
 }
 export function tailCost(l,r){
   return differentPanes(l,r.source.tape[6],r.mid).length+differentPanes(l,r.mid,r.last).length;
 }
 export function recordTail(l,r){
   if(!validTail(l,r) || r.source.peer && !signedSource(l,r.source))return false;
-  const record={source:r.source,route:r.route,end:r.end,mid:r.mid,last:r.last};
-  write(billPrefix(l,r.route,r.end,Boolean(r.source.peer))+tailCost(l,r),record);
-  write(twinKey(l,r)+r.end,r.last);
-  if(twinTail(l,r))write('slip:tail-twin:'+l.id+':'+r.route+':'+Boolean(r.source.peer),record);
+  const record={source:r.source,flap:r.flap??0,route:r.route,end:r.end,mid:r.mid,last:r.last};
+  const signed=Boolean(r.source.peer),closeCost=differentPanes(l,r.mid,r.last).length;
+  write(billPrefix(l,r.route,r.end,signed,r.flap)+tailCost(l,r),record);
+  // File independent legs by price so two tabs (or a costlier encore) cannot
+  // replace the partner of an existing, quieter double or triple signature.
+  write(twinKey(l,r)+r.end+':'+closeCost,r.last);
+  const legs=recordedEnds(l,r);
+  for(const mask of tailGroups){
+    const ends=endsIn(mask);
+    if(!(mask & (1<<r.end)) || !ends.every(e=>legs[e]))continue;
+    const receipt={...record,end:ends[0],last:legs[ends[0]],stops:mask,both:true};
+    write(groupPrefix(l,r.route,r.flap,mask,signed)+actualPrice(l,r,legs,mask),receipt);
+  }
   return true;
 }
-export function twinTail(l,r){
-  const end=1-r.end,last=read(twinKey(l,r)+end);
-  return last && validTail(l,{...r,end,last})?last:null;
+function readLeg(l,r,e,mid,base){
+  const valid=board=>validLayout(l,board) && mid.finals[e].includes(rowAt(l,board));
+  const old=read(base+e);
+  const limit=valid(old)?differentPanes(l,r.mid,old).length:4;
+  for(let cost=0;cost<limit;cost++){
+    const leg=read(base+e+':'+cost);
+    if(valid(leg) && differentPanes(l,r.mid,leg).length===cost)return leg;
+    // A legacy encore replaced the branch pointer, but its quieter original
+    // can still be on the individual shelf. It must belong to this exact cast.
+    if(limit<4){
+      const bill=read(billPrefix(l,r.route,e,Boolean(r.source.peer),0)+(mid.cost+cost));
+      if(!bill || bill.flap!==undefined || bill.route!==r.route || bill.end!==e || !validLayout(l,bill.mid) || rowAt(l,bill.mid)!==mid.row)continue;
+      if(valid(bill.last) && differentPanes(l,r.mid,bill.last).length===cost && validSource(l,bill.source) && anchor(l,bill.source)===anchor(l,r.source))return bill.last;
+    }
+  }
+  return limit<4?old:null;
 }
-export function bestTail(l,route,end,signed){
+export function recordedEnds(l,r){
+  const mid=midAt(l,r.source,r.route,r.mid,r.flap);
+  if(!mid)return [null,null,null];
+  const base=twinKey(l,r);
+  return [0,1,2].map(e=>readLeg(l,r,e,mid,base));
+}
+export function actualPrice(l,r,legs,mask){
+  return endsIn(mask).reduce((n,e)=>n+differentPanes(l,r.mid,legs[e]).length,differentPanes(l,r.source.tape[6],r.mid).length);
+}
+export function twinTail(l,r,end=r.end===0?1:0){return recordedEnds(l,r)[end];}
+export function bestTail(l,route,end,signed,flap=0){
   for(let i=0;i<=6;i++){
-    const r=read(billPrefix(l,route,end,signed)+i);
-    if(r && r.route===route && r.end===end && Boolean(r.source?.peer)===signed && validTail(l,r) && tailCost(l,r)===i)return r;
+    const r=read(billPrefix(l,route,end,signed,flap)+i);
+    if(r && r.route===route && r.end===end && (r.flap??0)===flap && Boolean(r.source?.peer)===signed && validTail(l,r) && tailCost(l,r)===i)return r;
   }
   return null;
 }
-export function savedTwin(l,route,signed){
-  const r=read('slip:tail-twin:'+l.id+':'+route+':'+signed);
-  return r && r.route===route && Boolean(r.source?.peer)===signed && validTail(l,r) && twinTail(l,r)?r:null;
+const groupPrefix=(l,route,flap,mask,signed)=>'slip:tail-ensemble:'+l.id+':'+setting(route,flap)+':'+mask+':'+signed+':';
+export function savedGroup(l,route,flap,mask,signed){
+  if(!tailGroups.includes(mask))return null;
+  const group=groupPrefix(l,route,flap,mask,signed),ends=endsIn(mask);
+  function restore(r){
+    if(!r || (r.flap??0)!==flap || r.route!==route || Boolean(r.source?.peer)!==signed || !validTail(l,r))return null;
+    const legs=recordedEnds(l,r);
+    if(!ends.every(e=>legs[e]))return null;
+    return {...r,flap,end:ends[0],last:legs[ends[0]],stops:mask,both:true,total:actualPrice(l,r,legs,mask)};
+  }
+  let best=null;
+  if(!flap && mask===3){
+    // Edition eleven also kept individual cue-nine receipts at this anchor.
+    // Recover a quieter legacy pair even when its last displayed card was dearer.
+    best=restore(read('slip:tail-twin:'+l.id+':'+route+':'+signed));
+    for(const e of ends)for(let i=0;i<=6;i++){
+      const old=read(billPrefix(l,route,e,signed,0)+i);
+      if(!old || old.flap!==undefined)continue;
+      const candidate=restore(old);
+      if(candidate && (!best || candidate.total<best.total))best=candidate;
+    }
+  }
+  for(let n=0;n<=(best?.total??3*(ends.length+1));n++){
+    const r=restore(read(group+n));
+    if(r && (!best || r.total<best.total))best=r;
+  }
+  return best;
 }
+export const savedTwin=(l,route,signed)=>savedGroup(l,route,0,3,signed);
 export function newTail(l,source,route=0){
-  return {source,route,end:0,mid:null,last:null,prep:false,both:false,slots:source.tape[6],selected:-1};
+  return {source,route,flap:0,end:0,stops:3,mid:null,last:null,prep:false,both:false,slots:source.tape[6],selected:-1};
 }
 const draftKey=(l,signed)=>'slip:tail-desk:'+l.id+':'+signed;
 export function saveTailDesk(l,s){write(draftKey(l,Boolean(s.source.peer)),s);}
 export function readTailDesk(l,signed){
-  const s=read(draftKey(l,signed));
-  if(!s || !bit(s.route) || !bit(s.end) || typeof s.prep!=='boolean' || typeof s.both!=='boolean' || !validSource(l,s.source) || Boolean(s.source.peer)!==signed || signed && !signedSource(l,s.source))return null;
+  const raw=read(draftKey(l,signed));if(!raw)return null;
+  const s={flap:0,stops:3,...raw};
+  if(!bit(s.route) || !bit(s.flap) || !endId(s.end) || !tailGroups.includes(s.stops) || typeof s.prep!=='boolean' || typeof s.both!=='boolean' || !validSource(l,s.source) || Boolean(s.source.peer)!==signed || signed && !signedSource(l,s.source))return null;
+  if(s.both && !(s.stops & (1<<s.end)))return null;
   if(s.last)return validTail(l,s)?{...s,prep:false,slots:s.last}:null;
-  if(s.mid && (s.prep || !midAt(l,s.source,s.route,s.mid)?.finals[s.end].length))return null;
+  if(s.mid){
+    const m=midAt(l,s.source,s.route,s.mid,s.flap);
+    if(s.prep || !m || !Number.isFinite(sharedPrice(m,aimMask(s))))return null;
+  }
   const cue=tailCue(l,s),slots=s.slots;
   if(!Array.isArray(slots) || slots.length!==l.pieces.length || !slots.every((p,i)=>p===null || fits(l,slots,i,p)) || !allows(cue.rack.hold,keys(l,slots)))return {...s,slots:cue.rack.from.slots,selected:-1};
   return s;

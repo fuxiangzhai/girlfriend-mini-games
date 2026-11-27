@@ -9,14 +9,15 @@ import {readProjector} from './projection.mjs';
 import {foldLetter,readingNames} from './receipt-plays.mjs';
 import {read,write} from './save.mjs';
 import {differentPanes,handStatus} from './slip-path.mjs';
-import {tailMargin,tailPage} from './tail-plays.mjs';
-import {anchor,bestTail,cueMatch,insertPane,midAt,newTail,practiceSource,readTailDesk,recordTail,retakeReturn,saveTailDesk,savedTwin,signedSource,tailCost,tailCue,tailHint,tailPrices,tailRoutes,twinTail} from './tail-score.mjs';
+import {endingStory,endsIn,foldName,jointText,routeNames,stopNames,tailGroups as groups,tailKeeper,tailMargin,tailPage} from './tail-plays.mjs';
+import {actualPrice,aimMask,anchor,bestPrice,bestTail,cueMatch,insertPane,midAt,newTail,practiceSource,readTailDesk,recordedEnds,recordTail,retakeReturn,roadPlans,saveTailDesk,savedGroup,sharedPrice,signedSource,tailCost,tailCue,tailHint,tailPrices,tailRoutes,validTail} from './tail-score.mjs';
 import {tailPrint} from './tail-print.mjs';
 
 const $=id=>document.getElementById(id);
 const levels=insertCasts.flat(2);
 const ports=p=>p.map((v,i)=>lampNames[i]+' '+(v?portName(v):'未出光')).join(' ／ ');
 const price=n=>Number.isFinite(n)?n+' 响':'此路不通';
+const groupName=mask=>mask===7?'三处同笺':'同一拍双落款';
 const label=l=>orderName(l)+' · '+readingNames[l.play.coda.mode];
 const sourceOf=(l,pair)=>({tape:pair[l.play.coda.mode],peer:pair[1-l.play.coda.mode]});
 function chip(attr,id,name,note,pressed,disabled=false){
@@ -31,21 +32,22 @@ export function setupTailLook(){
   const look=$('tail-look'),select=$('tail-look-route');
   function render(){
     if(!look.open || !current)return;
-    const {l,takes,plan,slots}=current,page=tailPage(l),route=Number(select.value);
-    for(const [i,o] of [...select.options].entries())o.textContent=page.routes[i];
+    const {l,takes,plan,slots}=current,page=tailPage(l),code=Number(select.value),flap=code>>1,route=code%2;
+    for(const [i,o] of [...select.options].entries())o.textContent=foldName(i>>1)+' · '+routeNames(l,i>>1)[i%2];
     const options=foldOptions(l,takes,plan,false);
     const match=options.find(v=>!differentPanes(l,slots,v.o.slots).length);
-    $('tail-look-live').textContent=match?'照桌上的镜位落回签，'+page.routes.map((name,i)=>{
-      const p=tailPrices(tailRoutes(l,slots,i));return name+(p.some(Number.isFinite)?'可走，续场 '+Math.min(...p)+' 响起':'暂时走不了');
+    $('tail-look-live').textContent=match?'照桌上的镜位落回签，'+routeNames(l,flap).map((name,i)=>{
+      const p=tailPrices(tailRoutes(l,slots,i,flap));return name+(p.some(Number.isFinite)?'可走，续场 '+Math.min(...p)+' 响起':'暂时走不了');
     }).join('。')+'。':'回签落片前，可以先看哪套镜位能把灯留到第八拍。';
-    const candidates=options.map(v=>({...v,mids:tailRoutes(l,v.o.slots,route)})).filter(v=>v.mids.length);
+    const candidates=options.map(v=>({...v,mids:tailRoutes(l,v.o.slots,route,flap)})).filter(v=>v.mids.length);
     candidates.sort((a,b)=>Number(b.mids.some(m=>m.finals.every(f=>f.length)))-Number(a.mids.some(m=>m.finals.every(f=>f.length))) || a.total-b.total);
     const pick=candidates[0];$('tail-look-map').hidden=!pick;
     if(!pick){$('tail-look-note').textContent='从这一拍暂时接不到这条路线。';return;}
     drawTicketMap($('tail-look-map'),l,{slots:pick.o.slots,result:readProjector(l,pick.o.slots),mark:l.play.frames[6].mark},{selected:-1,goal:l.projection.scenes[6].exits});
     const prices=tailPrices(pick.mids);
     const diff=differentPanes(l,slots,pick.o.slots).map(id=>l.pieces[id].name);
-    $('tail-look-note').textContent='照图落片，两场合计 '+pick.total+' 响。第八拍走「'+page.routes[route]+'」后，'+prices.map((p,i)=>page.endings[i].action+' '+price(p)).join('，')+'。'+(diff.length?'桌上还要调整'+diff.join('、')+'。':'桌上的镜位已经对齐。');
+    const triple=bestPrice(pick.mids,7);
+    $('tail-look-note').textContent='照图落片，两场合计 '+pick.total+' 响。第八拍走「'+routeNames(l,flap)[route]+'」后，'+prices.map((p,i)=>page.endings[i].action+' '+price(p)).join('，')+'。'+(Number.isFinite(triple)?'三处合排最低 '+price(triple)+'。':'')+(diff.length?'桌上还要调整'+diff.join('、')+'。':'桌上的镜位已经对齐。');
   }
   look.ontoggle=render;select.onchange=render;
   return (l,takes,plan,slots)=>{
@@ -69,7 +71,16 @@ export function setupTails(art,formal,chime){
     const signed=options.resume?read('slip:tail-signed')===true:Boolean(source?.peer || pair);
     const saved=readTailDesk(level,signed);
     l=level;page=tailPage(l);
-    s=saved && (!source || anchor(l,source)===anchor(l,saved.source))?saved:freshAt(l,source || (pair?sourceOf(l,pair):practiceSource(l)));
+    if(saved && (!source || anchor(l,source)===anchor(l,saved.source)))s=saved;
+    else{
+      s=freshAt(l,source || (pair?sourceOf(l,pair):practiceSource(l)));
+      const request=options.program || (options.spotlight?{flap:1,end:1,stops:6,both:true}:null);
+      if(request){
+        const roads=roadPlans(l,s.source,aimMask(request)).filter(v=>Number.isFinite(v.price));
+        const road=roads.find(v=>v.flap===request.flap && v.route===request.route) || roads.find(v=>v.flap===request.flap) || roads[0];
+        if(road)Object.assign(s,request,{flap:road.flap,route:road.route});
+      }
+    }
     undo=[];hint=null;remember();write('slip:tail-open',true);
     $('tail-page').value=String(insertCasts.findIndex(f=>f.flat().includes(l)));
     $('tail-side').innerHTML=insertCasts[+$('tail-page').value].flat().map(v=>'<option value="'+v.id+'">'+label(v)+'</option>').join('');
@@ -80,7 +91,7 @@ export function setupTails(art,formal,chime){
     if(options.album){$('tail-album').querySelector('summary').focus();}else $('tail-title').focus({preventScroll:true});
   }
   function refresh(note=''){
-    const focus=document.activeElement,attr=['data-tail-route','data-tail-end','data-tail-pane','data-tail-pose'].find(a=>focus?.hasAttribute(a)),v=attr && focus.getAttribute(attr);
+    const focus=document.activeElement,attr=['data-tail-route','data-tail-plan','data-tail-view','data-tail-end','data-tail-pane','data-tail-pose'].find(a=>focus?.hasAttribute(a)),v=attr && focus.getAttribute(attr);
     remember();draw();
     if(attr)dialog.querySelector('['+attr+'="'+v+'"]:not(:disabled)')?.focus({preventScroll:true});
     if(note)tell(note);
@@ -93,23 +104,43 @@ export function setupTails(art,formal,chime){
     $('tail-finale').hidden=!s.last;$('tail-work').hidden=Boolean(s.last);
     $('tail-to-bench').hidden=Boolean(s.last);
     if(s.last)finale();else work();
-    if($('tail-album').open)album();
+  }
+  function drawPlan(mids,m){
+    $('tail-both-label').hidden=Boolean(s.mid || s.prep);
+    $('tail-both').checked=s.both;
+    $('tail-commission').hidden=!s.both || s.prep;
+    if(!s.both || s.prep)return;
+    const best=roadPlans(l,s.source,s.stops)[0],local=m?sharedPrice(m,s.stops):bestPrice(mids,s.stops);
+    $('tail-plans').innerHTML=groups.map(mask=>{
+      const n=m?sharedPrice(m,mask):bestPrice(mids,mask);
+      return chip('data-tail-plan',mask,stopNames(l,mask),Number.isFinite(n)?price(n):m?'此镜位到不了':'另路可排',s.stops===mask,Boolean(m));
+    }).join('');
+    $('tail-plan-price').textContent=(m?'留住这套镜位，': '从这张第七拍起，')+(Number.isFinite(local)?'「'+stopNames(l,s.stops)+'」合排最低 '+price(local)+'。':'本路暂时接不齐所点的落款。')+'第八拍算一次，各处的第九拍分别计响。'+(s.stops===7?'三处都演完，可收「三处同笺」。':'');
+    $('tail-plan-switch').hidden=Boolean(m) || !Number.isFinite(best.price) || best.price>=local;
+    $('tail-plan-switch').textContent='换走「'+routeNames(l,best.flap)[best.route]+'」 · '+price(best.price);
+  }
+  function showExits(m){
+    const strip=$('tail-exits');strip.hidden=!m;if(!m)return;
+    $('tail-exit-title').textContent=(s.mid?'已留下的':'桌上这套')+'第八拍 · '+price(m.cost);
+    strip.querySelector('ul').innerHTML=m.prices.map((n,i)=>{
+      const open=Number.isFinite(n);
+      return '<li class="'+(open?'lit':'closed')+'"><strong>'+page.shortStops[i]+'</strong><small>'+(open?'再 '+price(n-m.cost):'灯未接通')+'</small></li>';
+    }).join('');
   }
   function work(){
-    const startBoard=s.source.tape[6],mids=tailRoutes(l,startBoard,s.route),m=s.mid?midAt(l,s.source,s.route,s.mid):null;
+    const startBoard=s.source.tape[6],routes=routeNames(l,s.flap),mids=tailRoutes(l,startBoard,s.route,s.flap),m=s.mid?midAt(l,s.source,s.route,s.mid,s.flap):null;
     cue=tailCue(l,s);
-    const costs=m?m.prices:tailPrices(s.both?mids.filter(v=>v.finals.every(f=>f.length)):mids);
-    $('tail-routes').innerHTML=page.routes.map((name,i)=>{
-      const rows=tailRoutes(l,startBoard,i),prices=tailPrices(rows),options=prices.filter(Number.isFinite).length;
-      return chip('data-tail-route',i,name,options?'守'+lampNames[i]+' · '+(options===2?'两种去处':'一种去处')+' · '+Math.min(...prices)+' 响起':'需另排第七拍',s.route===i,Boolean(s.mid));
+    const costs=m?m.prices:tailPrices(mids);
+    for(const b of $('tail-flaps').children){b.setAttribute('aria-pressed',String(s.flap===+b.dataset.tailFlap));b.disabled=Boolean(m);}
+    $('tail-routes').innerHTML=routes.map((name,i)=>{
+      const rows=tailRoutes(l,startBoard,i,s.flap),prices=tailPrices(rows),options=prices.filter(Number.isFinite).length;
+      return chip('data-tail-route',i,name,options?'守'+lampNames[tailKeeper(l,i,null,s.flap)]+' · '+options+' 处 · '+Math.min(...prices)+' 响起':'需另排第七拍',s.route===i,Boolean(s.mid));
     }).join('');
-    $('tail-ends').innerHTML=page.endings.map((e,i)=>chip('data-tail-end',i,e.title,Number.isFinite(costs[i])?'两拍最低 '+price(costs[i]):m?'此镜位到不了':'此路不通',s.end===i,!Number.isFinite(costs[i]) || s.prep)).join('');
-    $('tail-passage').textContent=page.passages[s.route];
-    $('tail-both-label').hidden=Boolean(s.mid || s.prep || !mids.length);
-    $('tail-both').checked=s.both;$('tail-both').disabled=!mids.some(r=>r.finals.every(a=>a.length));
+    $('tail-ends').innerHTML=page.endings.map((e,i)=>chip('data-tail-end',i,e.title,Number.isFinite(costs[i])?(m?'第九拍最低 '+price(costs[i]-m.cost):'单演最低 '+price(costs[i])):m?'此镜位到不了':'此路不通',s.end===i,!Number.isFinite(costs[i]) || s.prep)).join('');
+    $('tail-passage').textContent=(s.flap?page.sidePassages:page.passages)[s.route];drawPlan(mids,m);
     $('tail-back').hidden=!s.mid;$('tail-prep').hidden=Boolean(s.mid);$('tail-prep').textContent=s.prep?'回到原第七拍':'另排第七拍';
     const beat=s.prep?7:s.mid?9:8,names=cue.rack.hold.held.map(i=>l.pieces[i].name).join('、');
-    $('tail-cue').textContent=s.prep?'第七拍 · 重排回签':s.mid?'第九拍 · '+page.endings[s.end].action:'第八拍 · '+page.routes[s.route];
+    $('tail-cue').textContent=s.prep?'第七拍 · 重排回签':s.mid?'第九拍 · '+page.endings[s.end].action:'第八拍 · '+routes[s.route];
     $('tail-task').textContent='守'+lampNames[cue.rack.hold.keeper]+'，夹住'+names+'。把光接到方框里的出口，'+ports(cue.goal)+'。';
     const result=readProjector(l,s.slots),status=handStatus(l,cue.rack.hold,s.slots);
     $('tail-rays').textContent=ports(result.rays.map(r=>r.exit))+' · 已动 '+status.changed.length+' / 3 片';
@@ -128,10 +159,12 @@ export function setupTails(art,formal,chime){
     $('tail-take').textContent=s.prep?'落片续第八拍':s.mid?'落片收戏笺':'落片，留住第八拍';
     $('tail-undo').disabled=!undo.length;$('tail-reset').disabled=!status.changed.length;
     $('tail-take').disabled=!cue.options.length;$('tail-hint').disabled=!cue.options.length;
-    const matched=cueMatch(l,cue,s.slots),currentMid=beat===8?midAt(l,s.source,s.route,s.slots):null;
-    if(!cue.options.length)tell('这套第七拍留不住这条灯路。点「另排第七拍」，可以带着原来前六拍再试。');
-    else if(matched)tell(s.prep?'双灯已在交接眼穿过，这套回签镜位可以接上所选路线。':s.mid?'两盏灯已抵达。落片就能读到结局。':'这套镜位可以落片。'+currentMid.prices.map((n,i)=>page.endings[i].action+' '+price(n)).join('，')+'。');
-    else if(currentMid)tell('出口已对。这套镜位只留得住「'+page.endings[currentMid.finals[0].length?0:1].title+'」。可以改点去处或再调一片。');
+    const matched=cueMatch(l,cue,s.slots),currentMid=beat===8?midAt(l,s.source,s.route,s.slots,s.flap):null;
+    showExits(m||currentMid);
+    const reachable=currentMid?.finals.flatMap((f,e)=>f.length?[page.shortStops[e]]:[]).join('、');
+    if(!cue.options.length)tell(s.prep?'保留前六拍也接不齐所点的去处。回到原第七拍，可换折痕或改点落款。':'这张第七拍接不齐所选去处。可以换线路，或点「另排第七拍」留着前六拍重来。');
+    else if(matched)tell(s.prep?'双灯已在交接眼穿过，这套回签镜位可以接上所选路线。':s.mid?'两盏灯已抵达。落片就能读到结局。':'这套镜位可以落片，留得住'+reachable+'。'+(s.both?'所点落款合排最低 '+price(sharedPrice(currentMid,s.stops))+'。':''));
+    else if(currentMid)tell('出口已对。这套镜位留得住'+reachable+'，还接不到所点的全部去处。可以改点落款或再调一片。');
     else if(s.prep && sameExits(result,cue.goal))tell(markReading(l,l.play.frames[6].mark,result.rays)+'。还要给所选的第八拍留路。');
     else tell('先点可调的玻璃，再点它的银镜插槽。被挪开的玻璃会回到片盒，落片前要全部插好。');
   }
@@ -142,22 +175,38 @@ export function setupTails(art,formal,chime){
   }
   function chooseEnd(end){
     if(s.end===end)return;
+    const solo=s.both && !(s.stops & (1<<end));
+    if(solo)s.both=false;
     s.end=end;if(s.mid)resetHand();else hint=null;
-    refresh();
+    refresh(solo?'改作单演「'+page.endings[end].title+'」。':'');
   }
-  $('tail-page').onchange=()=>start(insertCasts[+$('tail-page').value][l.play.coda.mode][l.play.delivery.version]);
-  $('tail-side').onchange=()=>start(levels.find(v=>v.id===$('tail-side').value));
-  $('tail-to-bench').onclick=()=>{$('tail-cue').focus();$('tail-cue').scrollIntoView({block:'start'});};
-  $('tail-routes').onclick=e=>{
-    const b=e.target.closest('[data-tail-route]');if(!b || b.disabled || s.route===+b.dataset.tailRoute)return;
-    s.route=+b.dataset.tailRoute;s.both=false;
-    const costs=tailPrices(tailRoutes(l,s.source.tape[6],s.route));
-    if(!Number.isFinite(costs[s.end]))s.end=Number.isFinite(costs[1])?1:0;
+  function setRoad(flap,route){
+    s.flap=flap;s.route=route;
+    const costs=tailPrices(tailRoutes(l,s.source.tape[6],route,flap));
+    if(!s.both && !Number.isFinite(costs[s.end]) && costs.some(Number.isFinite))s.end=costs.findIndex(Number.isFinite);
     resetHand();refresh();
-  };
+  }
+  function choosePlan(mask){
+    s.both=true;s.stops=mask;
+    if(!(mask & (1<<s.end)))s.end=endsIn(mask)[0];
+    hint=null;refresh();
+  }
+  function switchCast(level){
+    const {flap,route,end,stops,both}=s;start(level,null,{program:{flap,route,end,stops,both}});
+  }
+  $('tail-page').onchange=()=>switchCast(insertCasts[+$('tail-page').value][l.play.coda.mode][l.play.delivery.version]);
+  $('tail-side').onchange=()=>switchCast(levels.find(v=>v.id===$('tail-side').value));
+  $('tail-to-bench').onclick=()=>{$('tail-cue').focus();$('tail-cue').scrollIntoView({block:'start'});};
+  $('tail-flaps').onclick=e=>{const b=e.target.closest('[data-tail-flap]');if(b && !b.disabled && s.flap!==+b.dataset.tailFlap)setRoad(+b.dataset.tailFlap,s.route);};
+  $('tail-routes').onclick=e=>{const b=e.target.closest('[data-tail-route]');if(b && !b.disabled && s.route!==+b.dataset.tailRoute)setRoad(s.flap,+b.dataset.tailRoute);};
   $('tail-ends').onclick=e=>{const b=e.target.closest('[data-tail-end]');if(b && !b.disabled)chooseEnd(+b.dataset.tailEnd);};
-  $('tail-both').onchange=()=>{s.both=$('tail-both').checked;hint=null;refresh();};
-  $('tail-prep').onclick=()=>{s.prep=!s.prep;s.both=false;resetHand();refresh(s.prep?'前六拍已夹好。从第六拍的镜位接回第七拍，双灯还要在原交接眼相遇。':'已接回原第七拍。');};
+  $('tail-both').onchange=()=>{
+    if($('tail-both').checked)choosePlan(s.stops & (1<<s.end)?s.stops:s.end===2?5:3);
+    else{s.both=false;hint=null;refresh();}
+  };
+  $('tail-plans').onclick=e=>{const b=e.target.closest('[data-tail-plan]');if(b && !b.disabled)choosePlan(+b.dataset.tailPlan);};
+  $('tail-plan-switch').onclick=()=>{const best=roadPlans(l,s.source,s.stops)[0];if(Number.isFinite(best.price)){setRoad(best.flap,best.route);$('tail-routes').querySelector('[aria-pressed=true]').focus();}};
+  $('tail-prep').onclick=()=>{s.prep=!s.prep;resetHand();refresh(s.prep?'前六拍已夹好。从第六拍的镜位接回第七拍，双灯还要在原交接眼相遇。':'已接回原第七拍。');};
   $('tail-rack').onclick=e=>{const b=e.target.closest('[data-tail-pane]');if(b && !b.disabled){s.selected=+b.dataset.tailPane;refresh();}};
   $('tail-sockets').onclick=e=>{
     const b=e.target.closest('[data-tail-pose]');if(!b || b.getAttribute('aria-pressed')==='true')return;
@@ -170,7 +219,7 @@ export function setupTails(art,formal,chime){
   $('tail-hint').onclick=()=>{
     const next=tailHint(l,s,cue);hint=null;
     if(!next)return;
-    if(next.ready){tell('已到所选去处的省响镜位，可以落片。');return;}
+    if(next.ready){tell(s.both && !s.prep && !s.mid?'已为「'+stopNames(l,s.stops)+'」留下合排最省的镜位，可以落片。':'已到所选去处的省响镜位，可以落片。');return;}
     if(next.reset){tell('先点「还原本拍」，可以腾出换片名额。');return;}
     hint=next;s.selected=next.id;refresh('把'+l.pieces[next.id].name+'的银镜拨到 '+socket(l,next.id,next.place)+'。选中带虚线的插槽。');
   };
@@ -191,39 +240,76 @@ export function setupTails(art,formal,chime){
     }else if(!s.mid)s.mid=s.slots;
     else {
       if(!recordTail(l,{...s,last:s.slots})){tell('这张原谱的实演记录未能对上，请从戏本里的骑缝联重新接演。');return;}
-      s.last=s.slots;album();
+      s.last=s.slots;s.view=null;s.openingLeg=null;album();
     }
     clearHand();refresh();
     const next=s.last?'tail-ending':'tail-cue';$(next).focus();$(next).scrollIntoView({block:'nearest'});
   };
-  function returnToEight(){
-    s.mid=null;s.last=null;s.prep=false;s.both=false;resetHand();refresh();$('tail-cue').focus();
+  function returnToEight(flap){
+    s.mid=null;s.last=null;s.prep=false;s.view=null;s.openingLeg=null;s.both=false;
+    setRoad(flap,s.route);$('tail-cue').focus();
   }
-  $('tail-back').onclick=$('tail-again').onclick=returnToEight;
-  $('tail-sibling').onclick=()=>{
-    const other=1-s.end,m=midAt(l,s.source,s.route,s.mid);
-    if(!m?.finals[other].length){returnToEight();return;}
-    s.last=null;s.end=other;resetHand();refresh('第八拍的镜位已留下。把灯接到另一处，再落一次第九拍。');$('tail-cue').focus();
-  };
+  $('tail-back').onclick=$('tail-again').onclick=()=>returnToEight(s.flap);
+  $('tail-change-flap').onclick=()=>returnToEight(1-s.flap);
+  function receipt(){
+    const legs=recordedEnds(l,s),first=s.openingLeg;
+    // Turning the paper keeps the take the reader opened, including a louder
+    // encore. The collection can independently keep its quieter performance.
+    if(first && legs[first.end] && validTail(l,{...s,end:first.end,last:first.last}))legs[first.end]=first.last;
+    legs[s.end]=s.last;
+    const earned=legs.reduce((mask,b,e)=>b?mask|(1<<e):mask,0);
+    const view=[s.view,s.both?s.stops:null].find(mask=>groups.includes(mask) && (mask & earned)===mask && (mask & (1<<s.end)))??earned;
+    return {legs,earned,view};
+  }
+  function buttons(ids,others,text){
+    for(const [i,id] of ids.entries()){
+      const b=$(id),end=others[i];b.hidden=end===undefined;
+      if(end!==undefined){b.dataset.end=String(end);b.textContent=text(end);}
+    }
+  }
+  function performOther(end){
+    const {earned}=receipt();
+    if(!midAt(l,s.source,s.route,s.mid,s.flap).finals[end]?.length)return;
+    if(!s.both || !(s.stops & (1<<end))){s.stops=earned|(1<<end);s.both=groups.includes(s.stops);if(!s.both)s.stops=3;}
+    s.last=null;s.view=null;s.openingLeg=null;s.end=end;resetHand();
+    refresh('已留下第八拍。从同一套镜位起手，演「'+page.endings[end].title+'」的第九拍。');$('tail-cue').focus();
+  }
+  for(const id of ['tail-sibling','tail-sibling-alt'])$(id).onclick=()=>performOther(+$(id).dataset.end);
   function finale(){
-    const end=page.endings[s.end],m=midAt(l,s.source,s.route,s.mid),total=tailCost(l,s),joint=twinTail(l,s);
+    const end=page.endings[s.end],m=midAt(l,s.source,s.route,s.mid,s.flap),total=tailCost(l,s);
+    const {legs,earned,view}=receipt(),members=endsIn(view),others=members.filter(e=>e!==s.end),routes=routeNames(l,s.flap);
     const img=$('tail-image');img.src=art(l.play.artId,end.layer);img.alt=end.title;
-    $('tail-stamp').textContent=(s.source.peer?'骑缝续演':'借谱试排')+' ／ '+page.routes[s.route];
-    $('tail-ending').textContent=end.title;$('tail-story').textContent=end.lines[s.route];$('tail-margin').textContent=tailMargin(l,s.end);
-    $('tail-joint').hidden=!joint;
-    if(joint){$('tail-joint').querySelector('strong').textContent='同一拍双落款 · '+page.joint[0];$('tail-joint').querySelector('p').textContent=page.joint[1];$('tail-turn').textContent='翻读《'+page.endings[1-s.end].title+'》';}
-    const a=differentPanes(l,s.source.tape[6],s.mid).length;
-    $('tail-tally').textContent='第八拍 '+a+' 响 ＋ 第九拍 '+(total-a)+' 响 ＝ 续场 '+total+' 响。这张第七拍走此路最低 '+tailPrices(tailRoutes(l,s.source.tape[6],s.route))[s.end]+' 响。';
-    $('tail-sibling').hidden=!m.finals[1-s.end].length;
-    $('tail-sibling').textContent='留住第八拍，去「'+page.endings[1-s.end].action+'」';
-    if(!joint && m.finals[1-s.end].length)$('tail-tally').textContent+='留下这套第八拍，再演另一个结局，可收同一拍双落款。';
+    $('tail-stamp').textContent=(s.source.peer?'骑缝续演':'借谱试排')+' ／ '+foldName(s.flap)+' · '+routes[s.route];
+    $('tail-ending').textContent=end.title;$('tail-story').textContent=endingStory(l,s);$('tail-margin').textContent=tailMargin(l,s.end);
+    const mids=tailRoutes(l,s.source.tape[6],s.route,s.flap);
+    $('tail-joint').hidden=!others.length;
+    if(others.length){
+      const [title,story]=jointText(l,view);
+      $('tail-joint-title').textContent=groupName(view)+' · '+title;$('tail-joint-story').textContent=story;
+      $('tail-pair-tabs').hidden=earned!==7;
+      if(earned===7)$('tail-pair-tabs').innerHTML=groups.map(mask=>chip('data-tail-view',mask,stopNames(l,mask),mask===7?'三处同笺':'双落款',mask===view)).join('');
+      const costs=members.map(e=>page.shortStops[e]+' '+differentPanes(l,s.mid,legs[e]).length);
+      const actual=actualPrice(l,s,legs,view),local=bestPrice(mids,view),best=roadPlans(l,s.source,view)[0];
+      $('tail-joint-price').textContent='第八拍 '+m.cost+' ＋ '+costs.join(' ＋ ')+' ＝ 合排 '+price(actual)+'。这张第七拍走此路最低 '+price(local)+'。';
+      $('tail-quieter').hidden=actual<=best.price;
+      $('tail-quieter').textContent=local===best.price?'重排这组 · 挑战 '+price(local):'走「'+routeNames(l,best.flap)[best.route]+'」挑战 '+price(best.price);
+      buttons(['tail-turn','tail-turn-alt'],others,e=>'翻读《'+page.endings[e].title+'》');
+    }
+    $('tail-tally').textContent='第八拍 '+m.cost+' 响 ＋ 第九拍 '+(total-m.cost)+' 响 ＝ 续场 '+total+' 响。这张第七拍走此路最低 '+price(tailPrices(mids)[s.end])+'。';
+    const reachable=m.finals.flatMap((f,e)=>e!==s.end && f.length?[e]:[]);
+    const priority=e=>(legs[e]?2:0)+(s.both && !(s.stops & (1<<e))?1:0);
+    reachable.sort((a,b)=>priority(a)-priority(b));
+    buttons(['tail-sibling','tail-sibling-alt'],reachable,e=>(legs[e]?'同拍再演':'留住第八拍，去')+'「'+page.endings[e].action+'」');
+    const missing=s.both?s.stops & ~earned:0;
+    if(missing)$('tail-tally').textContent+='这张点戏笺还等「'+stopNames(l,missing)+'」。留住第八拍，可以接着演。';
+    else if(!others.length && reachable.length)$('tail-tally').textContent+='留下这套第八拍，再演一个去处，可收同一拍双落款。';
+    $('tail-change-flap').textContent=s.flap?'回原折另排':'把纸角侧折另排';
     $('tail-print-status').textContent='';$('tail-print').disabled=false;
-    proofs();
+    proofs(legs,others);
   }
-  function proofs(){
-    const twin=twinTail(l,s),start=s.source.tape[6];
-    const boards=[[s.mid,start,'第八拍 · '+page.routes[s.route]],[s.last,s.mid,'第九拍 · '+page.endings[s.end].action]];
-    if(twin)boards.push([twin,s.mid,'另一处落款 · '+page.endings[1-s.end].action]);
+  function proofs(legs,others){
+    const boards=[[s.mid,s.source.tape[6],'第八拍 · '+routeNames(l,s.flap)[s.route]],[s.last,s.mid,'第九拍 · '+page.endings[s.end].action]];
+    for(const e of others)boards.push([legs[e],s.mid,'另一处落款 · '+page.endings[e].action]);
     const nodes=boards.map(([board,prior,name])=>{
       const fig=document.createElement('figure'),cap=document.createElement('figcaption'),canvas=document.createElement('canvas');
       canvas.width=340;canvas.height=205;canvas.setAttribute('role','img');canvas.setAttribute('aria-label',name+'镜位');
@@ -234,50 +320,69 @@ export function setupTails(art,formal,chime){
     });
     $('tail-maps').replaceChildren(...nodes);
   }
-  $('tail-proofs').ontoggle=()=>{if(dialog.open && s?.last && $('tail-proofs').open)proofs();};
-  $('tail-turn').onclick=()=>{
-    const last=twinTail(l,s);if(!last)return;
-    s.end=1-s.end;s.last=s.slots=last;refresh();$('tail-ending').focus();
+  function turn(end,view){
+    const {legs}=receipt();if(!legs[end])return;
+    s.openingLeg??={end:s.end,last:s.last};
+    s.view=view;s.stops=view;s.both=true;s.end=end;s.last=s.slots=legs[end];refresh();$('tail-ending').focus({preventScroll:true});
+  }
+  for(const id of ['tail-turn','tail-turn-alt'])$(id).onclick=()=>turn(+$(id).dataset.end,receipt().view);
+  $('tail-pair-tabs').onclick=e=>{
+    const b=e.target.closest('[data-tail-view]');if(!b)return;
+    const view=+b.dataset.tailView;turn(view & (1<<s.end)?s.end:endsIn(view)[0],view);
+  };
+  $('tail-quieter').onclick=()=>{
+    const {view}=receipt(),best=roadPlans(l,s.source,view)[0],local=bestPrice(tailRoutes(l,s.source.tape[6],s.route,s.flap),view);
+    s.mid=null;s.last=null;s.view=null;s.openingLeg=null;s.both=true;s.stops=view;
+    setRoad(local===best.price?s.flap:best.flap,local===best.price?s.route:best.route);
+    $('tail-cue').focus();
   };
   function album(){
     let signed=0,trial=0;
     const cards=[];
-    for(const [route,path] of page.routes.entries()){
-      const choices=page.endings.map((end,i)=>{
-        const own=bestTail(l,route,i,true),borrowed=bestTail(l,route,i,false),r=own||borrowed;
-        if(own)signed++;if(borrowed)trial++;
-        return '<button type="button" data-tail-card="'+route+i+'" '+(r?'':'disabled')+'>'+end.title+'<small>'+(r?(own?'骑缝续演':'借谱试排')+' · '+tailCost(l,r)+' 响':'待落款')+'</small></button>';
-      });
-      const twin=savedTwin(l,route,true)||savedTwin(l,route,false);
-      if(twin)choices.push('<button type="button" data-tail-twin="'+route+'">同一拍双落款<small>'+page.joint[0]+'</small></button>');
-      cards.push('<div><strong>'+path+'</strong>'+choices.join('')+'</div>');
+    for(const flap of [0,1])for(const [route,path] of routeNames(l,flap).entries()){
+      const choices=[],attr=' data-flap="'+flap+'" data-route="'+route+'"';
+      for(const [i,end] of page.endings.entries()){
+        if(tailKeeper(l,route,i,flap)==null)continue;
+        let found=false;
+        for(const own of [true,false]){
+          const r=bestTail(l,route,i,own,flap);if(!r)continue;
+          found=true;if(own)signed++;else trial++;
+          choices.push('<button type="button" data-tail-card="'+route+i+'"'+attr+' data-own="'+own+'">'+end.title+'<small>'+(own?'骑缝续演':'借谱试排')+' · '+price(tailCost(l,r))+'</small></button>');
+        }
+        if(!found)choices.push('<button type="button" disabled>'+end.title+'<small>待落款</small></button>');
+      }
+      for(const mask of groups)for(const own of [true,false]){
+        const r=savedGroup(l,route,flap,mask,own);if(!r)continue;
+        choices.push('<button type="button" data-tail-group="'+mask+'"'+attr+' data-own="'+own+'">'+groupName(mask)+' · '+jointText(l,mask)[0]+'<small>'+(own?'骑缝续演':'借谱试排')+' · '+price(r.total)+'</small></button>');
+      }
+      cards.push('<div><strong>'+foldName(flap)+' · '+path+'</strong>'+choices.join('')+'</div>');
     }
     $('tail-count').textContent='实演 '+signed+' · 试排 '+trial;$('tail-collection').innerHTML=cards.join('');
   }
   $('tail-album').ontoggle=()=>{if(dialog.open && $('tail-album').open)album();};
   $('tail-collection').onclick=e=>{
     const b=e.target.closest('button');if(!b || b.disabled)return;
-    const twin=b.dataset.tailTwin,code=b.dataset.tailCard;
-    const r=twin!=null?savedTwin(l,+twin,true)||savedTwin(l,+twin,false):bestTail(l,+code[0],+code[1],true)||bestTail(l,+code[0],+code[1],false);
+    const {flap,route,tailGroup,tailCard,own}=b.dataset;
+    const r=tailGroup?savedGroup(l,+route,+flap,+tailGroup,own==='true'):bestTail(l,+route,+tailCard[1],own==='true',+flap);
     if(!r)return;
-    s={...newTail(l,r.source,r.route),...r,slots:r.last};clearHand();refresh();$('tail-ending').focus();
+    s={...newTail(l,r.source,r.route),...r,view:tailGroup?+tailGroup:null,slots:r.last};clearHand();refresh();$('tail-ending').focus();
   };
   $('tail-print').onclick=async()=>{
     const token=renderId;$('tail-print').disabled=true;
     try{
-      const blob=await tailPrint(l,s,art,twinTail(l,s));if(token!==renderId || !dialog.open)return;
+      const {legs,view}=receipt(),blob=await tailPrint(l,s,art,legs,view);if(token!==renderId || !dialog.open)return;
       const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;
-      a.download='留灯换景-'+l.play.coda.paper+'-'+page.endings[s.end].title+'-'+(s.source.peer?'骑缝续演':'借谱试排')+'.png';
+      a.download='留灯换景-'+l.play.coda.paper+'-'+(groups.includes(view)?jointText(l,view)[0]:page.endings[s.end].title)+'-'+(s.source.peer?'骑缝续演':'借谱试排')+'.png';
       document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
-      $('tail-print-status').textContent='戏笺已冲印，笺上留有这两拍的镜位。';
+      $('tail-print-status').textContent='戏笺已冲印，收有共同的第八拍和所演落款的实景、镜位与响数。';
     }catch{if(token===renderId)$('tail-print-status').textContent='这次未能冲印，请重试。';}
     finally{if(token===renderId)$('tail-print').disabled=false;}
   };
   $('tail-rehearse').onclick=()=>{dialog.close();formal(l);};
   dialog.addEventListener('close',()=>{if(!dialog.open){write('slip:tail-open',false);renderId++;}});
-  function openLast(album=false){
+  function openLast(album=false,spotlight=false){
     const last=levels.find(v=>v.id===read('slip:tail-last'));
-    start(last||insertCasts[0][1][1],null,{album,resume:Boolean(last)});
+    start(last||(spotlight?insertCasts[0][0][0]:insertCasts[0][1][1]),null,{album,spotlight,resume:Boolean(last)});
   }
   return {start,openLast,shouldResume:()=>read('slip:tail-open')===true};
 }

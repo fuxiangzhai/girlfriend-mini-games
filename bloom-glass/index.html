@@ -65,7 +65,7 @@
             <button type="button" class="secondary" id="open-tail" hidden>折后两拍 · 续演夹页</button>
           </section>
           <section id="fold-panel" aria-labelledby="fold-phase" hidden><div><strong id="fold-phase"></strong><button type="button" class="subtle" id="leave-fold">退出骑缝排演</button></div><p id="fold-instruction"></p><label><input type="checkbox" id="fold-low">按两场最低合计排演</label><span id="fold-cost"></span>
-            <details id="tail-look" hidden><summary>落回签前，看看第八拍</summary><p id="tail-look-live"></p><label for="tail-look-route">给哪条路留灯</label><select id="tail-look-route"><option value="0"></option><option value="1"></option></select><canvas id="tail-look-map" width="440" height="245" role="img" aria-label="能从本场第六拍接上的回签参考镜位"></canvas><p id="tail-look-note"></p></details>
+            <details id="tail-look" hidden><summary>落回签前，看看第八拍</summary><p id="tail-look-live"></p><label for="tail-look-route">给哪条路留灯</label><select id="tail-look-route"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option></select><canvas id="tail-look-map" width="440" height="245" role="img" aria-label="能从本场第六拍接上的回签参考镜位"></canvas><p id="tail-look-note"></p></details>
           </section>
           <section id="trace-panel" aria-label="同谱合签" hidden><div><strong>照底谱实演</strong><span id="trace-count"></span><button type="button" class="subtle" id="leave-trace">退出跟谱</button></div><details id="trace-template"><summary>翻看本拍底稿</summary><canvas id="trace-map" width="480" height="300" role="img" aria-label="底稿中本拍的玻璃位置、镜面与双灯光路"></canvas><p id="trace-panes"></p></details></section>
           <div id="slip-hold" hidden></div>
@@ -320,18 +320,20 @@
     <div class="tail-source"><label for="tail-page">夹页</label><select id="tail-page"><option value="0">饭桌夹页</option><option value="1">雪路夹页</option></select><label for="tail-side">第二场</label><select id="tail-side"></select></div>
     <p class="tail-credit" id="tail-credit"></p><button type="button" id="tail-to-bench" class="subtle">去调镜 ↓</button>
     <div id="tail-work"><div class="tail-program">
-      <h3>第八拍 · 留哪盏灯</h3><div id="tail-routes" class="tail-choices" role="group" aria-label="第八拍路线"></div>
+      <h3>第八拍 · 折纸留路</h3><div id="tail-flaps" class="tail-folds" role="group" aria-label="选择第八拍用哪条折痕"><button type="button" data-tail-flap="0">沿原折</button><button type="button" data-tail-flap="1">侧折纸角</button></div><div id="tail-routes" class="tail-choices" role="group" aria-label="第八拍路线"></div>
       <h3>第九拍 · 灯往哪里去</h3><div id="tail-ends" class="tail-choices" role="group" aria-label="第九拍去处"></div>
-      <p id="tail-passage"></p><label id="tail-both-label"><input type="checkbox" id="tail-both">第八拍给两个结局都留路</label>
+      <p id="tail-passage"></p><label id="tail-both-label"><input type="checkbox" id="tail-both">点一组落款，共用第八拍</label>
+      <div id="tail-commission" hidden><div id="tail-plans" class="tail-plan-buttons" role="group" aria-label="要合演的去处"></div><p id="tail-plan-price"></p><button type="button" class="subtle" id="tail-plan-switch" hidden></button></div>
       <div class="tail-tools"><button type="button" class="subtle" id="tail-back" hidden>回第八拍另排</button><button type="button" class="subtle" id="tail-prep">另排第七拍</button></div>
     </div><section class="tail-bench" aria-labelledby="tail-cue"><h3 id="tail-cue" tabindex="-1"></h3><p id="tail-task"></p>
       <canvas id="tail-map" width="510" height="286" role="img" aria-label="当前镜位、所选玻璃的银镜与双灯出口，列 A 至 E，行 1 至 4"></canvas><p id="tail-rays"></p>
+      <div id="tail-exits" hidden><p id="tail-exit-title"></p><ul aria-labelledby="tail-exit-title"></ul></div>
       <div id="tail-rack" role="group" aria-label="选择一片玻璃"></div><div id="tail-sockets" role="group" aria-label="选择插槽"></div>
       <p id="tail-message" role="status" aria-live="polite"></p><div class="tail-tools"><button type="button" class="primary" id="tail-take">落片</button><button type="button" class="secondary" id="tail-hint">看一步提示</button><button type="button" class="subtle" id="tail-undo">撤销</button><button type="button" class="subtle" id="tail-reset">还原本拍</button></div>
     </section></div>
-    <section id="tail-finale" hidden><img id="tail-image" alt=""><div><p class="overline" id="tail-stamp"></p><h3 id="tail-ending" tabindex="-1"></h3><p id="tail-story"></p><p id="tail-margin"></p><div id="tail-joint" hidden><strong></strong><p></p><button type="button" class="subtle" id="tail-turn">翻读另一张落款</button></div><p id="tail-tally"></p>
+    <section id="tail-finale" hidden><img id="tail-image" alt=""><div><p class="overline" id="tail-stamp"></p><h3 id="tail-ending" tabindex="-1"></h3><p id="tail-story"></p><p id="tail-margin"></p><div id="tail-joint" hidden><div id="tail-pair-tabs" class="tail-plan-buttons" role="group" aria-label="翻读已演成的合笺"></div><strong id="tail-joint-title"></strong><p id="tail-joint-story"></p><p id="tail-joint-price"></p><button type="button" class="subtle" id="tail-turn">翻读另一张落款</button><button type="button" class="subtle" id="tail-turn-alt" hidden></button><button type="button" class="subtle" id="tail-quieter" hidden></button></div><p id="tail-tally"></p>
       <details id="tail-proofs"><summary>看续场实演镜位</summary><div id="tail-maps"></div></details>
-      <div class="tail-tools"><button type="button" class="primary" id="tail-sibling">留住第八拍，换个结局</button><button type="button" class="secondary" id="tail-again">换第八拍路线</button><button type="button" class="subtle" id="tail-print">保存折后戏笺 PNG</button></div><p id="tail-print-status" role="status"></p></div></section>
+      <div class="tail-tools"><button type="button" class="primary" id="tail-sibling">留住第八拍，换个结局</button><button type="button" class="secondary" id="tail-sibling-alt" hidden></button><button type="button" class="secondary" id="tail-again">换第八拍路线</button><button type="button" class="subtle" id="tail-change-flap"></button><button type="button" class="subtle" id="tail-print">保存折后戏笺 PNG</button></div><p id="tail-print-status" role="status"></p></div></section>
     <details id="tail-album"><summary>这面夹页的折后戏笺 <span id="tail-count"></span></summary><div id="tail-collection"></div></details>
     <button type="button" class="subtle" id="tail-rehearse">回工作台排正式骑缝联</button>
   </div></dialog>

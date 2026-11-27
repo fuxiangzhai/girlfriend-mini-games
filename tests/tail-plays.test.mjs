@@ -6,8 +6,8 @@ import {poseKey,solve} from '../bloom-glass/puzzle.mjs';
 import {readProjector} from '../bloom-glass/projection.mjs';
 import {write} from '../bloom-glass/save.mjs';
 import {differentPanes,storePlaybill} from '../bloom-glass/slip-path.mjs';
-import {tailPorts} from '../bloom-glass/tail-plays.mjs';
-import {bestTail,cueMatch,insertPane,newTail,practiceSource,prepOptions,readTailDesk,recordTail,retakeReturn,saveTailDesk,savedTwin,signedSource,tailCost,tailCue,tailHint,tailPrices,tailRoutes,twinTail,validTail} from '../bloom-glass/tail-score.mjs';
+import {endsIn,tailKeeper,tailPorts} from '../bloom-glass/tail-plays.mjs';
+import {actualPrice,anchor,bestPrice,bestTail,cueMatch,insertPane,newTail,practiceSource,prepOptions,readTailDesk,recordedEnds,recordTail,retakeReturn,roadPlans,saveTailDesk,savedGroup,savedTwin,sharedPrice,signedSource,tailCost,tailCue,tailHint,tailPrices,tailRoutes,twinTail,validTail} from '../bloom-glass/tail-score.mjs';
 
 const storage=new Map();
 globalThis.localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)};
@@ -38,34 +38,47 @@ function oracle(l){
   }
   return {rows,step};
 }
-test('every signed seventh board can stage both destinations and the independent optical search gives the same eighth and ninth boards and costs',()=>{
+const groups=[3,5,6,7];
+test('every signed seventh can leave three destinations on a side fold; an independent optical search matches all boards, prices and shared bills',()=>{
   for(const family of insertCasts){
     const {rows,step}=oracle(family[0][0]);
     for(const l of family.flat())for(const tape of signedSevens(l)){
-      const base=tape[6],start=rows.find(r=>r.id===signature(l,base));let flexible=false;
-      for(const route of [0,1]){
-        const actual=tailRoutes(l,base,route),expected=[];
-        for(const {r,cost} of step(start,route,tailPorts(l,route))){
-          const finals=[0,1].map(e=>step(r,e?1-route:route,tailPorts(l,route,e)));
+      const base=tape[6],start=rows.find(r=>r.id===signature(l,base));let oldPair=false,sideTriple=false;
+      for(const flap of [0,1])for(const route of [0,1]){
+        const actual=tailRoutes(l,base,route,flap),expected=[],minima=groups.map(()=>Infinity);
+        const lead=tailKeeper(l,route,null,flap);
+        for(const {r,cost} of step(start,lead,tailPorts(l,route,null,flap))){
+          const finals=[0,1,2].map(e=>{
+            const exits=tailPorts(l,route,e,flap);if(!exits)return [];
+            const keeper=r.exits.findIndex((p,k)=>p===exits[k]);
+            assert.equal(tailKeeper(l,route,e,flap),keeper);
+            return step(r,keeper,exits);
+          });
           if(!finals.some(f=>f.length))continue;
           expected.push(r.id);
           const m=actual.find(x=>x.row.keys.join('/')===r.id);assert.ok(m);
           assert.deepEqual(m.prices,finals.map(f=>Math.min(...f.map(k=>cost+k.cost))));
           assert.deepEqual(m.finals.map(f=>f.map(k=>k.keys.join('/')).sort()),finals.map(f=>f.map(k=>k.r.id).sort()));
-          flexible ||= finals.every(f=>f.length);
+          for(const [i,mask] of groups.entries()){
+            const combined=endsIn(mask).reduce((n,e)=>n+Math.min(...finals[e].map(k=>k.cost)),cost);
+            assert.equal(sharedPrice(m,mask),combined);minima[i]=Math.min(minima[i],combined);
+          }
+          oldPair ||= !flap && finals.slice(0,2).every(f=>f.length);
+          sideTriple ||= Boolean(flap) && finals.every(f=>f.length);
         }
         assert.deepEqual(actual.map(m=>m.row.keys.join('/')).sort(),expected.sort());
+        assert.deepEqual(groups.map(mask=>bestPrice(actual,mask)),minima);
       }
-      assert.ok(flexible,l.id);
+      assert.ok(oldPair,l.id);assert.ok(sideTriple,l.id);
     }
   }
 });
 test('the short owl return and the costly two-way snow fork have real counterexamples at identical eighth-cue exits',()=>{
   const l=insertCasts[1][1][1],s=practiceSource(l),base=s.tape[6];
-  assert.deepEqual(tailPrices(tailRoutes(l,base,1)),[2,Infinity]);
-  const mids=tailRoutes(l,base,0),both=mids.filter(m=>m.finals.every(f=>f.length));
+  assert.deepEqual(tailPrices(tailRoutes(l,base,1)),[2,Infinity,Infinity]);
+  const mids=tailRoutes(l,base,0),both=mids.filter(m=>m.finals.slice(0,2).every(f=>f.length));
   assert.equal(both.length,1);assert.ok(mids.length>both.length);
-  assert.deepEqual(both[0].prices,[6,4]);
+  assert.deepEqual(both[0].prices.slice(0,2),[6,4]);
   const desk={...newTail(l,s),both:true,end:1},cue=tailCue(l,desk);
   const single=mids.find(m=>!m.finals[1].length);
   assert.deepEqual(single.row.ports,both[0].row.ports);assert.equal(cueMatch(l,cue,single.row.slots),null);
@@ -79,36 +92,41 @@ test('a blocked table route can reopen by restaging only cue seven under the ori
       assert.ok(options.length);const desk={...newTail(l,source),prep:true};
       assert.ok(!cueMatch(l,tailCue(l,desk),tape[6]));
       for(const r of options)assert.ok(tailRoutes(l,r.slots,0).length);
-      const cheap=tailPrices(tailRoutes(l,tape[6],1)),both=tailPrices(tailRoutes(l,tape[6],1).filter(m=>m.finals.every(f=>f.length)));
-      assert.deepEqual(cheap,[2,4]);assert.deepEqual(both,[3,4]);
+      const cheap=tailPrices(tailRoutes(l,tape[6],1)),both=tailPrices(tailRoutes(l,tape[6],1).filter(m=>m.finals.slice(0,2).every(f=>f.length)));
+      assert.deepEqual(cheap,[2,4,Infinity]);assert.deepEqual(both,[3,4,Infinity]);
     }
   }
 });
-test('manual socket changes and one-step hints respect all locked panes and reach the chosen lowest cost including a two-way midpoint',()=>{
+function cueWithHints(l,s){
+  const cue=tailCue(l,s);
+  for(const id of cue.rack.hold.held)assert.equal(insertPane(l,cue.rack,s.slots,id,s.slots[id]),null);
+  for(let k=0;k<12;k++){
+    const h=tailHint(l,s,cue);
+    if(h.ready){assert.ok(cueMatch(l,cue,s.slots));return s.slots;}
+    assert.ok(!h.reset);s.slots=insertPane(l,cue.rack,s.slots,h.id,h.place);assert.ok(s.slots);
+    assert.ok(differentPanes(l,cue.rack.from.slots,s.slots).length<=3);
+  }
+  assert.fail('socket hints did not reach the selected target');
+}
+test('manual socket hints keep the live panes and attain all single, double and triple minima from each practice source',()=>{
   for(const l of insertCasts.flat(2)){
     const source=practiceSource(l);
-    for(const route of [0,1])for(const end of [0,1])for(const both of [false,true]){
-      const s={...newTail(l,source,route),end,both},mids=tailRoutes(l,source.tape[6],route).filter(m=>!both||m.finals.every(f=>f.length));
-      const expected=tailPrices(mids)[end];if(!Number.isFinite(expected))continue;
-      for(const stage of [8,9]){
-        const cue=tailCue(l,s);
-        for(const id of cue.rack.hold.held)assert.equal(insertPane(l,cue.rack,s.slots,id,s.slots[id]),null);
-        for(let k=0;k<11;k++){
-          const h=tailHint(l,s,cue);if(h.ready)break;
-          assert.ok(!h.reset);
-          s.slots=insertPane(l,cue.rack,s.slots,h.id,h.place);assert.ok(s.slots);
-          assert.ok(differentPanes(l,cue.rack.from.slots,s.slots).length<=3);
-        }
-        assert.ok(cueMatch(l,cue,s.slots));if(stage===8)s.mid=s.slots;else s.last=s.slots;
+    for(const flap of [0,1])for(const route of [0,1])for(const mask of [1,2,4,...groups]){
+      const members=endsIn(mask),mids=tailRoutes(l,source.tape[6],route,flap),expected=bestPrice(mids,mask);
+      if(!Number.isFinite(expected))continue;
+      const s={...newTail(l,source,route),flap,end:members[0],stops:mask,both:members.length>1},legs=[];
+      s.mid=cueWithHints(l,s);
+      for(const end of members){
+        s.end=end;s.slots=s.mid;legs[end]=cueWithHints(l,s);
       }
-      assert.equal(tailCost(l,s),expected);
+      assert.equal(actualPrice(l,s,legs,mask),expected);
     }
   }
 });
 test('signed tickets, rehearsals and a double ending require their own actual midpoint, source and valid final glasses',()=>{
   storage.clear();const l=insertCasts[0][1][0],s=practiceSource(l),other=foldPartner(l),peer=[];
   while(peer.length<7)peer.push(foldOptions(other,peer,{leg:'reply',low:false,tape:s.tape})[0].o.slots);
-  const official={tape:s.tape,peer},mids=tailRoutes(l,s.tape[6],0),both=mids.filter(m=>m.finals.every(f=>f.length));
+  const official={tape:s.tape,peer},mids=tailRoutes(l,s.tape[6],0),both=mids.filter(m=>m.finals.slice(0,2).every(f=>f.length));
   assert.ok(both.length>1);
   const ticket=(source,m,end)=>({source,route:0,end,mid:m.row.slots,last:m.finals[end][0].slots});
   const a=ticket(official,both[0],0),b=ticket(official,both[0],1);
@@ -140,4 +158,76 @@ test('restaging the return preserves the authenticated partner even after the or
   assert.equal(retakeReturn(l,source,tape[5]),null);
   const revised=retakeReturn(l,source,replacement);assert.deepEqual(revised.peer,peer);assert.deepEqual(revised.tape.slice(0,6),tape.slice(0,6));
   assert.ok(signedSource(l,revised));assert.ok(tailRoutes(l,revised.tape[6],0).length);
+});
+
+test('on the south river steps the four-sound school visit cannot also set the table; a shared stage costs two plus one plus three',()=>{
+  const l=insertCasts[0][0][0],source=practiceSource(l),mids=tailRoutes(l,source.tape[6],0,1);
+  const solo=tailPrices(mids)[2],paired=bestPrice(mids,6);
+  assert.equal(solo,4);assert.equal(paired,6);
+  assert.ok(mids.filter(m=>m.prices[2]===solo).every(m=>!m.finals[1].length));
+  const joint=mids.find(m=>sharedPrice(m,6)===paired);
+  assert.deepEqual([joint.cost,...[1,2].map(e=>joint.prices[e]-joint.cost)],[2,1,3]);
+  assert.deepEqual(roadPlans(l,source,6)[0],{flap:1,route:1,price:5});
+  const snow=insertCasts[1][1][1],snowSource=practiceSource(snow),forest=tailRoutes(snow,snowSource.tape[6],1,1);
+  assert.deepEqual(tailPrices(forest).slice(1),[4,4]);assert.equal(bestPrice(forest,6),6);
+  const shared=forest.find(m=>sharedPrice(m,6)===6);
+  assert.deepEqual([shared.cost,...[1,2].map(e=>shared.prices[e]-shared.cost)],[3,1,2]);
+  assert.ok(forest.some(m=>sharedPrice(m,6)===6 && m.prices[1]-m.cost===2 && m.prices[2]-m.cost===1));
+});
+
+test('single shelves, each of the three double bills and the triple use only their own eighth cue and keep the cheapest real leg on an encore',()=>{
+  storage.clear();const l=insertCasts[0][0][0],source=practiceSource(l);
+  const rows=tailRoutes(l,source.tape[6],0,1),mid=rows.find(m=>m.finals.every(f=>f.length));
+  const ticket=(m,flap,end,last=m.finals[end][0].slots)=>({source,flap,route:0,end,mid:m.row.slots,last});
+  const early=mid.finals[0].map(r=>r.slots).sort((a,b)=>differentPanes(l,mid.row.slots,a).length-differentPanes(l,mid.row.slots,b).length);
+  assert.notEqual(differentPanes(l,mid.row.slots,early[0]).length,differentPanes(l,mid.row.slots,early.at(-1)).length);
+  const first=ticket(mid,1,0,early[0]);
+  assert.ok(recordTail(l,first));assert.ok(recordTail(l,ticket(mid,1,1)));
+  assert.ok(recordTail(l,ticket(rows.find(m=>m!==mid && m.finals[2].length),1,2)));
+  assert.ok(recordTail(l,ticket(tailRoutes(l,source.tape[6],0).find(m=>m.finals[2].length),0,2)));
+  assert.ok(savedGroup(l,0,1,3,false));assert.equal(savedGroup(l,0,1,7,false),null);
+  assert.equal(savedGroup(l,0,1,6,false),null);assert.equal(recordedEnds(l,first)[2],null);
+  assert.ok(recordTail(l,ticket(mid,1,2)));
+  const legs=recordedEnds(l,first);
+  for(const mask of groups){
+    const sheet=savedGroup(l,0,1,mask,false);assert.equal(sheet.total,actualPrice(l,first,legs,mask));
+    assert.deepEqual(sheet.mid,first.mid);assert.equal(savedGroup(l,0,1,mask,true),null);
+  }
+  const total=savedGroup(l,0,1,7,false).total;
+  assert.ok(recordTail(l,ticket(mid,1,0,early.at(-1))));
+  assert.equal(savedGroup(l,0,1,7,false).total,total);assert.deepEqual(recordedEnds(l,first)[0],early[0]);
+  assert.deepEqual(bestTail(l,0,0,false,1).last,early[0]);
+});
+
+test('edition eleven double bills, a costlier encore and an unfinished ninth reload on their original crease and can earn a third signature',()=>{
+  storage.clear();const l=insertCasts[0][0][0],source=practiceSource(l);
+  const m=tailRoutes(l,source.tape[6],0).find(m=>m.finals.every(f=>f.length));
+  const legs=m.finals.map(f=>f.map(r=>r.slots).sort((a,b)=>differentPanes(l,m.row.slots,a).length-differentPanes(l,m.row.slots,b).length));
+  const base='slip:tail-branch:'+l.id+':'+anchor(l,source)+':0:'+m.row.keys.join(',')+':';
+  const old=(end,last)=>({source,route:0,end,mid:m.row.slots,last});
+  const quiet=old(0,legs[0][0]),encore=old(0,legs[0].at(-1)),sibling=old(1,legs[1][0]);
+  for(const r of [quiet,encore,sibling]){
+    write('slip:tail-bill:'+l.id+':0'+r.end+':trial:'+tailCost(l,r),r);
+    write(base+r.end,r.last);
+  }
+  write('slip:tail-twin:'+l.id+':0:false',encore);
+  write('slip:tail-desk:'+l.id+':false',{...encore,last:null,slots:m.row.slots,both:true,prep:false,selected:-1});
+  const restored=readTailDesk(l,false);assert.equal(restored.flap,0);assert.equal(restored.stops,3);assert.deepEqual(restored.mid,quiet.mid);
+  assert.deepEqual(recordedEnds(l,encore),[quiet.last,sibling.last,null]);
+  assert.deepEqual(savedGroup(l,0,0,3,false).last,quiet.last);
+  assert.ok(recordTail(l,old(2,legs[2][0])));
+  assert.equal(savedGroup(l,0,0,7,false).total,actualPrice(l,quiet,legs.map(f=>f[0]),7));
+  assert.equal(savedGroup(l,0,1,7,false),null);
+});
+
+test('resuming a side fold restores partial sockets and its whole commission, and rejects a draft that promises unreachable signatures',()=>{
+  storage.clear();const l=insertCasts[0][0][0],source=practiceSource(l);
+  const s={...newTail(l,source),flap:1,both:true,stops:6,end:2},cue=tailCue(l,s);
+  const h=tailHint(l,s,cue);s.slots=insertPane(l,cue.rack,s.slots,h.id,h.place);
+  saveTailDesk(l,s);assert.deepEqual(readTailDesk(l,false),s);
+  const wrong=tailRoutes(l,source.tape[6],0,1).find(m=>m.finals[2].length && !m.finals[1].length);
+  saveTailDesk(l,{...s,mid:wrong.row.slots,slots:wrong.row.slots});assert.equal(readTailDesk(l,false),null);
+  saveTailDesk(l,{...s,end:0});assert.equal(readTailDesk(l,false),null);
+  const revised=prepOptions(l,source,0,1,7);assert.ok(revised.length);
+  for(const row of revised)assert.ok(Number.isFinite(bestPrice(tailRoutes(l,row.slots,0,1),7)));
 });
