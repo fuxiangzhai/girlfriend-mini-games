@@ -29,6 +29,9 @@ import { sunProof, printSummary } from "./sunprint-art.js";
 import { chairStudio, chairKey, portraitStyle } from "./chair-portraits.mjs";
 import { createChairStudio, rollToken } from "./chair-studio.js";
 import { contactPrint, chairSummary } from "./chair-photo.js";
+import { rainDesk, foldKey, shadeAt } from "./rain-folds.mjs";
+import { createRainDesk } from "./rain-desk.js";
+import { rainProof, foldSummary } from "./rain-paper.js";
 
 const byId = id => document.getElementById(id);
 const pad = value => String(value).padStart(2, "0");
@@ -36,6 +39,7 @@ const memory = new Map();
 const memoryOnly = new Set();
 const prefix = "moon-mail:v1:";
 const services = {
+  fold: {station:"rain", hash:"rain-folds", access:"foldAccess", map:"foldMap", icon:"#i-rainfold"},
   chair: {station:"windowprint", hash:"windowprint-three-frames", access:"chairAccess", map:"chairMap", icon:"#i-chair"},
   sun: {station:"kelpprint", hash:"kelpprint-diptych", access:"sunAccess", map:"sunMap", icon:"#i-frond"},
   glow: {station:"lighthouse", hash:"lighthouse-afterglow", access:"glowAccess", map:"glowMap", icon:"#i-afterglow"},
@@ -113,6 +117,8 @@ const bridge = letters.findIndex(letter => letter.id === "bridge");
 const lighthouse = letters.findIndex(letter => letter.id === "lighthouse");
 const terrace = letters.findIndex(letter => letter.id === "kelpprint");
 const seawall = letters.findIndex(letter => letter.id === "windowprint");
+const lane = letters.findIndex(letter => letter.id === "rain");
+const folds = createRainDesk({letter:letters[lane], read, write, cue, delivered:updateCount, receipt:code=>showReceipt(lane,false,code)});
 const chairs = createChairStudio({letter:letters[seawall], read, write, cue, delivered:updateCount, receipt:token => showReceipt(seawall,false,token)});
 const sun = createSunprints({letter:letters[terrace], read, write, cue, delivered:updateCount, receipt:id => showReceipt(terrace,false,id)});
 const glow = createAfterglow({letter:letters[lighthouse], read, write, cue, delivered:updateCount, receipt:code => showReceipt(lighthouse,false,code)});
@@ -126,6 +132,7 @@ const fog = createFogWatch({ letter: letters[pier], read, write, cue, delivered:
 let activeService, receiptDuet, receiptAtlas, receiptTea, receiptReel, receiptGraft, receiptBike, receiptGlow;
 let receiptSun, receiptMate;
 let receiptChairs;
+let receiptFold, foldMate, foldSpread=true;
 let sunSpread = true;
 let active, board, chart, mask, path, history, sent, hint;
 let frames = [], reading;
@@ -148,6 +155,7 @@ function delivered(index) {
     || (index === lighthouse && Boolean(glow.record(difficulty)))
     || (index === terrace && Boolean(sun.record(difficulty)))
     || (index === seawall && Boolean(chairs.record(difficulty)))
+    || (index === lane && Boolean(folds.record(difficulty)))
     || (index === dome && Boolean(atlas.record(difficulty)))
     || (index === strait && Boolean(reel.record(difficulty)))
     || (index === greenhouse && Boolean(graft.record(difficulty)))
@@ -290,10 +298,11 @@ function render() {
     });
     byId("joint-count").textContent = t("sealCount", {n: path.jointCount});
   }
-  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter", "hill-enter", "hill-normal", "duet-enter", "atlas-enter", "sash-enter", "reel-enter", "graft-enter", "bike-enter", "glow-enter", "sun-enter", "chair-enter"]) byId(id).disabled = sending;
+  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter", "hill-enter", "hill-normal", "duet-enter", "atlas-enter", "sash-enter", "reel-enter", "graft-enter", "bike-enter", "glow-enter", "sun-enter", "chair-enter", "fold-enter"]) byId(id).disabled = sending;
 }
 
 function openRoute(index, fresh = false, requestedGoal, service) {
+  if (activeService === "fold") folds.leave();
   if (activeService === "chair") chairs.leave();
   if (activeService === "reel") reel.stop();
   if (activeService === "sashes") sashes.leave();
@@ -352,6 +361,12 @@ function presentRoute() {
   byId("time").textContent = letter.time;
   byId("brief").textContent = service ? t(activeService + "Brief") : difficulty === "expert" ? letter.expertNote : letter.brief;
   const chartPanel = document.querySelector(".chart-panel");
+  const onFold = activeService==="fold";
+  chartPanel.classList.toggle("on-fold",onFold);
+  byId("fold-service").hidden=active!==lane;
+  byId("fold-normal").setAttribute("aria-pressed",String(!onFold));
+  byId("fold-enter").setAttribute("aria-pressed",String(onFold));
+  for (const id of ["fold-head","fold-controls","fold-book","fold-paper"]) byId(id).hidden=!onFold;
   const onChairs = activeService === "chair";
   chartPanel.classList.toggle("on-chairs",onChairs);
   byId("chair-service").hidden = active !== seawall;
@@ -436,7 +451,8 @@ function presentRoute() {
   for (const key of document.querySelectorAll(".single-symbol")) key.hidden = paired || film;
   for (const key of document.querySelectorAll(".film-symbol")) key.hidden = !film;
   byId("guide-instructions").textContent = t(film ? "filmGuide" : paired ? "pairInstructions" : "instructions");
-  if (onChairs) chairs.mount(difficulty,t);
+  if (onFold) folds.mount(difficulty,t);
+  else if (onChairs) chairs.mount(difficulty,t);
   else if (onSun) sun.mount(difficulty, t);
   else if (onGlow) glow.mount(difficulty, t);
   else if (onBike) bikes.mount(difficulty, t);
@@ -603,10 +619,11 @@ byId("send").addEventListener("click", async () => {
     }
     if (!document.hidden) sound.play(board.hill ? "punchTicket" : "sent");
   }
-  showReceipt(active, !firstDelivery, board.hill ? hillTrip(board, path).id : [slope,huts,dome,sill,strait,greenhouse,bridge,lighthouse,terrace,seawall].includes(active) ? null : undefined);
+  showReceipt(active, !firstDelivery, board.hill ? hillTrip(board, path).id : [slope,huts,dome,sill,strait,greenhouse,bridge,lighthouse,terrace,seawall,lane].includes(active) ? null : undefined);
 });
 
 function fillAlbum() {
+  byId("album-fold").hidden = chapter !== letters[lane].chapter;
   byId("album-chairs").hidden = chapter !== letters[seawall].chapter;
   byId("album-sun").hidden = chapter !== letters[terrace].chapter;
   byId("album-glow").hidden = chapter !== letters[lighthouse].chapter;
@@ -647,6 +664,7 @@ function fillAlbum() {
     if (index === lighthouse && wasDelivered && best === null) status.textContent = t("glowFiled");
     if (index === terrace && wasDelivered && best === null) status.textContent = t("sunFiled");
     if (index === seawall && wasDelivered && best === null) status.textContent = t("chairFiled");
+    if (index === lane && wasDelivered && best === null) status.textContent=t("foldFiled");
     if (index === slope && wasDelivered && best === null) status.textContent = t("hillFiled", {n: hillTickets(station, difficulty, read).size, total: 4});
     button.append(image, title, status);
     if (station.chapter === "together") {
@@ -708,6 +726,17 @@ function openChairs(token) {
   if (token) chairs.branch(token);
   else { cue("paper"); byId("chair-intro").focus({preventScroll:true}); byId("chair-head").scrollIntoView({block:"nearest"}); }
 }
+function openFolds(code) {
+  if (album.open) album.close();
+  if (receipt.open) receipt.close();
+  openRoute(lane,false,undefined,"fold");
+  if (code) folds.branch(code);
+  else {cue("paper");byId("fold-intro").focus({preventScroll:true});byId("fold-head").scrollIntoView({block:"nearest"});}
+}
+byId("fold-enter").addEventListener("click",()=>{if(!sending && activeService!=="fold") openFolds();});
+byId("fold-normal").addEventListener("click",()=>{if(activeService==="fold") {cue("paper");openRoute(lane);}});
+byId("album-fold").addEventListener("click",()=>openFolds());
+byId("receipt-fold").addEventListener("click",()=>openFolds(receiptFold?.code));
 byId("chair-enter").addEventListener("click", () => { if (!sending && activeService!=="chair") openChairs(); });
 byId("chair-normal").addEventListener("click", () => { if (activeService==="chair") { cue("paper"); openRoute(seawall); } });
 byId("album-chairs").addEventListener("click", () => openChairs());
@@ -895,6 +924,9 @@ function clearExport() {
 }
 
 function setEditing(value) {
+  byId("fold-story").hidden=value || !receiptFold;
+  byId("fold-pair").hidden=value || !foldMate;
+  byId("receipt-fold").hidden=value || viewed!==lane;
   byId("chair-story").hidden = value || !receiptChairs;
   byId("receipt-chairs").hidden = value || viewed !== seawall;
   byId("sun-story").hidden = value || !receiptSun;
@@ -935,8 +967,20 @@ function setEditing(value) {
 }
 
 function proofTitle() {
+  if (receiptFold) return "foldProof";
   return receiptChairs ? "chairProof" : receiptSun ? "sunProof" : receiptGlow ? "glowProof" : receiptBike ? "bikeProof" : receiptGraft ? "graftProof" : receiptReel ? "reelProof" : receiptTea ? "sashProof" : receiptAtlas ? "atlasProof" : "contactTitle";
 }
+
+function drawFoldReceipt() {
+  const desk=rainDesk(letters[lane],difficulty);
+  byId("fold-story").textContent=t("foldStory"+shadeAt(receiptFold,desk.watch));
+  byId("fold-pair").textContent=t(foldSpread ? "foldSeparate" : "foldTogether");
+  byId("contact-sheet").replaceChildren(rainProof(desk,receiptFold,foldSpread ? foldMate : null,t));
+}
+byId("fold-pair").addEventListener("click",()=>{
+  if (!foldMate) return;
+  foldSpread=!foldSpread;clearExport();drawFoldReceipt();cue("paper");
+});
 
 function drawSunReceipt() {
   const mate = sunSpread ? receiptMate : null;
@@ -951,6 +995,10 @@ byId("sun-spread").addEventListener("click", () => {
 
 function showReceipt(index, rustle = true, record) {
   viewed = index;
+  const previousFold=receiptFold;
+  receiptFold=index===lane && record!==null && (record!==undefined || bestFor(lane)===null) ? folds.record(difficulty,record) : null;
+  foldMate=receiptFold ? folds.mate(difficulty,receiptFold) : null;
+  if (!receipt.open || receiptFold!==previousFold) foldSpread=true;
   receiptChairs = index===seawall && record!==null && (record!==undefined || bestFor(seawall)===null) ? chairs.record(difficulty,record) : null;
   const previousSun = receiptSun;
   receiptSun = index === terrace && record !== null && (record !== undefined || bestFor(terrace) === null) ? sun.record(difficulty,record) : null;
@@ -981,6 +1029,7 @@ function showReceipt(index, rustle = true, record) {
   byId("receipt-image").alt = letter.artAlt;
   byId("receipt-title").textContent = letter.title;
   byId("letter-text").textContent = messageFor(index);
+  if (index===lane) byId("receipt-fold").querySelector("span").textContent=t(receiptFold ? "foldBranch" : "foldTitle");
   if (index===seawall) {
     byId("receipt-chairs").querySelector("span").textContent=t(receiptChairs ? "chairBranch" : "chairTitle");
     if (receiptChairs) byId("chair-story").textContent=t("chairStory_"+portraitStyle(receiptChairs));
@@ -1031,6 +1080,7 @@ function showReceipt(index, rustle = true, record) {
   const proof = byId("contact-sheet");
   proof.replaceChildren();
   byId("film-proof").querySelector("figcaption").textContent = t(proofTitle());
+  if (receiptFold) drawFoldReceipt();
   if (receiptChairs) proof.append(contactPrint(chairStudio(letters[seawall],difficulty),receiptChairs,letters[seawall].image,t));
   if (receiptSun) drawSunReceipt();
   if (receiptGlow) proof.append(glowPrint(lightStation(letters[lighthouse],difficulty),receiptGlow,t));
@@ -1056,8 +1106,8 @@ function updateReceiptRoutes() {
   const paired = station.chapter === "together";
   const goal = paired && read(routeKey(viewed, "goal")) === "joint" ? "joint" : "direct";
   const draft = read(routeKey(viewed, "route", goal));
-  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty)) || [slope,dome,sill,strait,greenhouse,lighthouse].includes(viewed)) && draft?.sent === false && draft.history?.length > 0;
-  byId("replay").textContent = t(receiptTea || receiptReel || receiptGraft || receiptBike || receiptGlow || receiptSun || receiptChairs ? (resume ? "sashRegularResume" : "sashRegularOpen") : (resume ? "continueRoute" : "replay"));
+  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty)) || [slope,dome,sill,strait,greenhouse,lighthouse,lane].includes(viewed)) && draft?.sent === false && draft.history?.length > 0;
+  byId("replay").textContent = t(receiptTea || receiptReel || receiptGraft || receiptBike || receiptGlow || receiptSun || receiptChairs || receiptFold ? (resume ? "sashRegularResume" : "sashRegularOpen") : (resume ? "continueRoute" : "replay"));
   byId("replay").dataset.resume = String(resume);
   if (!paired) return;
   const collected = hasImprint(viewed);
@@ -1100,7 +1150,9 @@ byId("save-image").addEventListener("click", async () => {
     const last = receiptWatch;
     const trip = receiptHill?.trip;
     const sunPages = receiptMate && sunSpread ? [receiptSun,receiptMate].sort((a,b)=>a.page.localeCompare(b.page)) : [receiptSun];
-    const back = receiptChairs ? [t("chairStory_"+portraitStyle(receiptChairs)),chairSummary(chairStudio(letters[seawall],difficulty),receiptChairs,t)].join("\n")
+    const foldSheets=foldSpread && foldMate ? [foldMate,receiptFold] : [receiptFold];
+    const back = receiptFold ? [byId("fold-story").textContent,...foldSheets.map(s=>foldSummary(rainDesk(letters[lane],difficulty),s,t))].join("\n")
+      : receiptChairs ? [t("chairStory_"+portraitStyle(receiptChairs)),chairSummary(chairStudio(letters[seawall],difficulty),receiptChairs,t)].join("\n")
       : receiptSun ? [byId("sun-story").textContent,...sunPages.map(page => t("sunPage_"+page.page)+" · "+printSummary(dryingRack(letters[terrace],difficulty),page,t))].join("\n")
       : receiptGlow ? [t("glowStory_"+receiptGlow.style),glowSummary(lightStation(letters[lighthouse],difficulty),receiptGlow,t)].join("\n")
       : receiptBike ? [t("bikeStory_" + receiptBike.style), rideSummary(receiptBike, t)].join("\n")
@@ -1109,7 +1161,7 @@ byId("save-image").addEventListener("click", async () => {
       : receiptTea ? [teaStory(receiptTea,t),teaSummary(receiptTea,t)].join("\n") : receiptAtlas ? [atlasStory(receiptAtlas, t), atlasSummary(receiptAtlas, t)].join("\n") : receiptDuet ? [t("duetName_" + receiptDuet.id), duetSummary(receiptDuet.score, t), t("duetStory_" + receiptDuet.id)].join("\n")
       : trip ? t("hillName_" + trip.id) + "\n" + hillSummary(prepareHill(letters[slope], difficulty), trip, t) + "\n" + t("hillStory_" + trip.id)
       : last ? t("watchStory") + "\n" + watchSlip(t, last.shift, last) : hasImprint(index) ? letter.postscript : undefined;
-    const backTitle = receiptChairs ? "chairBook" : receiptSun ? "sunBook" : receiptGlow ? "glowBook" : receiptBike ? "bikeBook" : receiptGraft ? "graftBook" : receiptReel ? "reelBook" : receiptTea ? "sashTable" : receiptAtlas ? "atlasLog" : receiptDuet ? "duetSlip" : trip ? "hillStub" : last ? "watchSlipTitle" : "onTheBack";
+    const backTitle = receiptFold ? "foldBook" : receiptChairs ? "chairBook" : receiptSun ? "sunBook" : receiptGlow ? "glowBook" : receiptBike ? "bikeBook" : receiptGraft ? "graftBook" : receiptReel ? "reelBook" : receiptTea ? "sashTable" : receiptAtlas ? "atlasLog" : receiptDuet ? "duetSlip" : trip ? "hillStub" : last ? "watchSlipTitle" : "onTheBack";
     const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, back, byId("contact-sheet").firstElementChild, backTitle, proofTitle());
     if (version !== exportVersion || !receipt.open) return;
     exportURL = URL.createObjectURL(blob);
@@ -1157,7 +1209,7 @@ function switchLanguage() {
   applyLanguage();
   presentRoute();
   if (album.open) fillAlbum();
-  if (receipt.open) showReceipt(viewed, false, viewed === seawall ? (receiptChairs ? rollToken(receiptChairs) : null) : viewed === terrace ? receiptSun?.id ?? null : viewed === lighthouse ? receiptGlow?.code ?? null : viewed === bridge ? receiptBike?.code ?? null : viewed === greenhouse ? receiptGraft?.id ?? null : viewed === strait ? receiptReel?.id ?? null : viewed === sill ? receiptTea?.trip.id ?? null : viewed === dome ? receiptAtlas?.sketch.ink ?? null : viewed === huts ? receiptDuet?.id ?? null : viewed === slope ? receiptHill?.trip.id ?? null : receiptWatch);
+  if (receipt.open) showReceipt(viewed, false, viewed === lane ? receiptFold?.code ?? null : viewed === seawall ? (receiptChairs ? rollToken(receiptChairs) : null) : viewed === terrace ? receiptSun?.id ?? null : viewed === lighthouse ? receiptGlow?.code ?? null : viewed === bridge ? receiptBike?.code ?? null : viewed === greenhouse ? receiptGraft?.id ?? null : viewed === strait ? receiptReel?.id ?? null : viewed === sill ? receiptTea?.trip.id ?? null : viewed === dome ? receiptAtlas?.sketch.ink ?? null : viewed === huts ? receiptDuet?.id ?? null : viewed === slope ? receiptHill?.trip.id ?? null : receiptWatch);
   dispatchDesk.refresh();
 }
 byId("language-switch").addEventListener("click", switchLanguage);
@@ -1206,6 +1258,13 @@ setVolume(Number.isInteger(savedVolume) && savedVolume >= 0 && savedVolume <= 10
 applyLanguage();
 window.addEventListener("pageshow", updateCount);
 window.addEventListener("storage", event => {
+  if (event.key?.startsWith(prefix+foldKey(difficulty,"")) && !event.key.endsWith(".draft")) {
+    if (activeService==="fold") folds.refresh();
+    updateCount();
+    if (album.open) fillAlbum();
+    if (receipt.open && receiptFold && !foldMate && byId("editor").hidden && folds.mate(difficulty,receiptFold)) showReceipt(viewed,false,receiptFold.code);
+    return;
+  }
   if (event.key?.startsWith(prefix + chairKey(difficulty,"")) && !event.key.endsWith(".draft")) {
     if (activeService==="chair") chairs.refresh();
     updateCount();

@@ -13,6 +13,7 @@
   <body>
     <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
+        <symbol id="i-rainfold" viewBox="0 0 24 24"><path d="M3 5.5 10 3l5 3 6-2v15l-6 2-5-3-7 2Zm7-2v14m5-11v7m-14 1 6-2"/><path d="M18 9c0 1.6-2 3.1-2 4.5a2 2 0 0 0 4 0C20 12 18 10.7 18 9Z"/></symbol>
         <symbol id="i-chair" viewBox="0 0 24 24"><path d="m5 13-1-8q3-5 8-2l1 9m-7 0 11-1 4 4-13 2-4-4Zm2 4-1 5m12-7 1 6M8 4l1 7"/></symbol>
         <symbol id="g-wicker" viewBox="0 0 64 64"><g stroke="#453429" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m16 36-2 16m26-19 2 17m-17-9-2 17m27-20 2 17" fill="none"/><path d="m13 34 24-4 17 8-27 6z" fill="#d49b54"/><path d="M16 35C12 23 6 9 17 7c15-5 19-4 21 5l1 19Z" fill="#a8733f" stroke="#f2c787"/><path d="m17 12 4 20m3-21 3 20m3-21 3 20" stroke="#ffde9d" stroke-width="2.1"/><path d="m15 16 19-4m-18 10 19-4m-18 10 18-4" stroke="#574732" stroke-width="1.2"/></g></symbol>
         <symbol id="g-slat" viewBox="0 0 64 64"><g stroke="#2f4647" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 34-2 18m27-20 2 17m-15-8-2 17m25-20 2 16" fill="none"/><path d="m12 34 26-4 16 9-28 5Z" fill="#92aaa1"/><path d="m15 34-3-25 4-1 3 25m17-2-3-25 4-1 3 25" fill="#a8b9aa"/><path d="m15 10 20-4 1 6-20 4Zm1 12 20-4 1 5-20 4Z" fill="#a5c5ba"/></g></symbol>
@@ -119,6 +120,10 @@
           <div id="glow-service" class="goal-strip" role="group" data-aria="glowService" hidden><span data-t="glowService"></span><div class="goal-options"><button id="glow-normal" type="button" data-t="hillOrdinary"></button><button id="glow-enter" type="button" data-t="glowTitle"></button></div></div>
           <div id="sun-service" class="goal-strip" role="group" data-aria="sunService" hidden><span data-t="sunService"></span><div class="goal-options"><button id="sun-normal" type="button" data-t="sunOrdinary"></button><button id="sun-enter" type="button" data-t="sunTitle"></button></div></div>
           <div id="chair-service" class="goal-strip" role="group" data-aria="chairService" hidden><span data-t="chairService"></span><div class="goal-options"><button id="chair-normal" type="button" data-t="sunOrdinary"></button><button id="chair-enter" type="button" data-t="chairTitle"></button></div></div>
+          <div id="fold-service" class="goal-strip" role="group" data-aria="foldService" hidden><span data-t="foldService"></span><div class="goal-options"><button id="fold-normal" type="button" data-t="hillOrdinary"></button><button id="fold-enter" type="button" data-t="foldTitle"></button></div></div>
+          <section id="fold-head" data-aria="foldTitle" hidden>
+            <div class="fold-meter"><strong id="fold-budget"></strong><span id="fold-clip"></span></div><p id="fold-intro" tabindex="-1" data-t="foldIntro"></p>
+          </section>
           <div id="chair-head" hidden>
             <div class="chair-meter"><strong id="chair-stage"></strong><span id="chair-budget"></span></div>
             <div class="chair-positions"><span><svg aria-hidden="true"><use href="#g-wicker"/></svg><b id="chair-wicker-at"></b></span><span><svg aria-hidden="true"><use href="#g-slat"/></svg><b id="chair-slat-at"></b></span><small id="chair-offsets"></small></div>
@@ -182,7 +187,9 @@
               <svg id="graft-stems" preserveAspectRatio="none" aria-hidden="true" hidden></svg>
               <canvas id="sun-paper" aria-hidden="true" hidden></canvas>
               <svg id="chair-floor" preserveAspectRatio="none" aria-hidden="true" hidden></svg>
+              <canvas id="fold-paper" aria-hidden="true" hidden></canvas>
               <div id="tiles" class="tiles"></div>
+              <canvas id="fold-motion" aria-hidden="true" hidden></canvas>
               <svg id="chair-motion" preserveAspectRatio="none" aria-hidden="true" hidden></svg>
               <svg id="glow-overlay" preserveAspectRatio="none" aria-hidden="true" hidden><g id="glow-beams"></g><g id="glow-wake"></g><use id="glow-boat" href="#g-glowboat" width="66" height="66"/></svg>
               <div id="bike-layer" hidden>
@@ -199,6 +206,12 @@
             </div>
           </div>
           <p id="route-description" class="sr-only"></p>
+          <section id="fold-controls" data-aria="foldTitle" hidden>
+            <div class="fold-creases"><span data-t="foldV"></span><div id="fold-cols" role="group" data-aria="foldV"></div><span data-t="foldH"></span><div id="fold-rows" role="group" data-aria="foldH"></div></div>
+            <p id="fold-status" role="status"></p><div class="fold-probe"><p id="fold-inspect"></p><button id="fold-trace" type="button" aria-controls="fold-lineage"></button></div><p id="fold-lineage" hidden></p><p id="fold-advice" role="status" hidden></p>
+            <div class="actions"><div class="chart-tools"><button id="fold-undo" type="button" data-t="undo"></button><button id="fold-hint" type="button" data-t="hint"></button><button id="fold-rewind" type="button" data-t="foldRewind" hidden></button></div><button id="fold-main" class="dispatch" type="button"></button></div>
+            <div class="fold-foot"><details><summary data-t="foldRulesTitle"></summary><p data-t="foldRules"></p><button id="fold-reset" type="button" data-t="foldReset"></button></details><span data-t="foldLegend"></span></div>
+          </section>
           <section id="chair-controls" data-aria="chairTitle" hidden>
             <div id="chair-dirs" role="group" data-aria="chairChoose"></div>
             <p id="chair-status" role="status"></p><p id="chair-advice" role="status" hidden></p><button id="chair-hint-back" type="button" data-t="chairHintBack" hidden></button>
@@ -310,6 +323,12 @@
             </div>
           </article>
           <section class="brief" aria-labelledby="brief-title"><h3 id="brief-title" data-t="fieldNotes">投递手记</h3><p id="brief">今晚的第一封信从这里出发。点一下海面上的圆镜，让月光拐向信箱。</p></section>
+          <section id="fold-book" aria-labelledby="fold-book-title" hidden>
+            <header><svg class="icon" aria-hidden="true"><use href="#i-rainfold"/></svg><h3 id="fold-book-title" data-t="foldBook"></h3><small id="fold-count"></small></header>
+            <label id="fold-goal-label" for="fold-goal"></label><select id="fold-goal"></select><p id="fold-quest" hidden></p>
+            <p id="fold-trail-label" data-t="foldTrail"></p><div id="fold-steps" role="group" aria-labelledby="fold-trail-label"></div><div class="fold-buttons"><button id="fold-back" type="button" data-t="foldContinue" hidden></button><button id="fold-now" type="button" data-t="foldReturn" hidden></button></div>
+            <div id="fold-shelf" hidden><label for="fold-file" data-t="foldShelf"></label><select id="fold-file"></select><div class="fold-buttons"><button id="fold-compare" type="button" data-t="foldOld"></button><button id="fold-branch" type="button" data-t="foldBranch"></button><button id="fold-read" type="button" data-t="foldRead"></button></div><p id="fold-diff" hidden></p></div>
+          </section>
           <section id="chair-book" aria-labelledby="chair-book-title" hidden>
             <header><svg class="icon" aria-hidden="true"><use href="#i-camera"/></svg><h3 id="chair-book-title" data-t="chairBook"></h3><span id="chair-count"></span></header>
             <div id="chair-strip" role="group" data-aria="chairStrip"></div>
@@ -411,6 +430,7 @@
       <div class="dialog-head"><div><h2 id="album-title" data-t="album">明信片夹</h2><p id="album-summary"></p></div><button class="close" type="button" data-aria="close" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
       <div id="chapters" class="chapters" role="group" data-aria="chapters"><button type="button" data-chapter="coast"><span data-t="coast">沿海夜邮</span> <small>6</small></button><button type="button" data-chapter="replies"><span data-t="replies">回信篇</span> <small>3</small></button><button type="button" data-chapter="together"><span data-t="together">两岸合邮</span> <small>3</small></button><button type="button" data-chapter="darkroom"><span data-t="darkroom">潮汐暗房</span> <small>3</small></button></div>
       <div id="album-grid" class="album-grid"></div>
+      <button id="album-fold" class="desk-entry fold-entry" type="button" hidden><svg class="icon"><use href="#i-rainfold"/></svg><span><strong data-t="foldTitle"></strong><small data-t="foldAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-chairs" class="desk-entry chair-entry" type="button" hidden><svg class="icon"><use href="#i-chair"/></svg><span><strong data-t="chairTitle"></strong><small data-t="chairAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-sun" class="desk-entry sun-entry" type="button" hidden><svg class="icon"><use href="#i-frond"/></svg><span><strong data-t="sunTitle"></strong><small data-t="sunAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-glow" class="desk-entry glow-entry" type="button" hidden><svg class="icon"><use href="#i-afterglow"/></svg><span><strong data-t="glowTitle"></strong><small data-t="glowAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
@@ -446,6 +466,7 @@
         <p id="bike-story" hidden></p>
         <p id="sun-story" hidden></p>
         <p id="chair-story" hidden></p>
+        <p id="fold-story" hidden></p><button id="fold-pair" type="button" hidden></button>
         <button id="sun-spread" type="button" aria-controls="contact-sheet" hidden></button>
         <p id="glow-story" hidden></p>
         <div id="editor" hidden><label for="message" data-t="writeLabel">写给收信人的话</label><textarea id="message" rows="3" maxlength="200"></textarea>
@@ -457,6 +478,7 @@
         <button id="receipt-hill" class="desk-entry hill-entry" type="button" hidden><svg class="icon"><use href="#i-switchback"/></svg><span></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <p class="export-status"><span id="export-status" role="status"></span> <a id="export-link" data-t="openImage" hidden>打开图片</a></p>
         <button id="receipt-chairs" class="desk-entry chair-entry" type="button" hidden><svg class="icon"><use href="#i-chair"/></svg><span data-t="chairTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
+        <button id="receipt-fold" class="desk-entry fold-entry" type="button" hidden><svg class="icon"><use href="#i-rainfold"/></svg><span data-t="foldTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-sun" class="desk-entry sun-entry" type="button" hidden><svg class="icon"><use href="#i-frond"/></svg><span data-t="sunTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-glow" class="desk-entry glow-entry" type="button" hidden><svg class="icon"><use href="#i-afterglow"/></svg><span data-t="glowTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-bike" class="desk-entry bike-entry" type="button" hidden><svg class="icon"><use href="#i-bike"/></svg><span data-t="bikeTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>

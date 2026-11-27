@@ -8,6 +8,10 @@
 
 从首页顶部点「月光邮局」，或打开 [月光邮局](./moon-mail/index.html)。转动海上的圆镜，让月光经过沿途的邮戳、照到收信箱，再点「寄出月光」拆信。「沿海夜邮」的六封信从白沙灯塔一路寄到晨光窗台。「回信篇」从海角温室出发，经过风铃栈桥，抵达望海天文台。回信的编号邮戳要按数字顺序首次经过。
 
+雨巷街角的**雨巷折笺**从屋檐下的一滴雨开始。沿两列或两行之间的直线把纸巾对折、轻压、摊开。相贴的纸格会互相转印。清雨碰到星戳会洇出朱墨，下一折才能把新墨带走。点任一水印，可以沿它经过的折痕追到最初的屋檐。[试玩雨巷折笺](./moon-mail/index.html#rain-folds)
+
+日班有一对折笺共用前五折。最后先压 D│E 再压 3─4，信箱旁的 E3 会留清雨。交换这两折，全张纸只有 E3 换成朱印。夜班的六道痕每道只能用一次，可以让 B5、F5 两格都沾雨，也可以让 B5 收朱、F5 留白。从旧信能回到分岔处续印。同一组折痕确实印出两种窗色时，可以并排摊开两张，细看每一处差异。[看实机印出的日班对页](./docs/rain-lane-pair.webp)
+
 堤岸暗房的**窗边三连照**让你亲手摆出信里的三张照片。先推藤椅拍一张远景，再推青木椅，在两把椅子之间留一格窗光。第三张要让它们挨在一起。选个方向，地板上的虚线会画出摄影人走到椅背的路。人能穿过帘门，每次按快门还得走得回相机。[试玩窗边三连照](./moon-mail/index.html#windowprint-three-frames)
 
 日班第二张若拍在 D3 和 B3，最后可以把藤椅推一格填进空位，也可以绕到青木椅侧面，甚至换到它另一边。夜班的晾片架挡住了直接推近的站位，两种六推解直到最后一推才分开。点开旧底片就能从那一张续拍，拖动分界线还能对照两次取景。[看实际洗出的三连照](./docs/seawall-chair-portraits.webp)
@@ -82,6 +86,8 @@ At **Orange Hill Station**, choose **Hillside Switchbacks**. Fit, flip or lift t
 
 At **Star Bay**, open **Bridge Bells**. Ring each bike’s bell on the swing bridge, then post at its matching box. A waiting bike can give the other rider a new place to stop. Two eight-move rides share their first five moves. At B4, turn the deck and ride straight into B5, or keep it facing east, coast through the gate and borrow a stop at C5. Each page keeps your best ride. Reopen a posted slip at the last fork on a shortest route to another page. [Play Bridge Bells](./moon-mail/index.html#bridge-bells)
 
+At **Rain Lane**, make **Rain Prints** with the spare napkin from the letter. Press a crease, reopen the paper, and see which squares touched. Bring the first drop to the star to wake its red ink, then print the envelope. Tap a mark to trace its journey. Two daylight letters share their first five presses and use the same last two creases in reverse order. Only E3 changes, from blue rain to red ink. Reopen a posted letter at the fork. Once both prints are filed, hold them side by side or export the pair. [Play Rain Prints](./moon-mail/index.html#rain-folds)
+
 At **Seawall Darkroom**, take **Three Frames by the Window**. Move the wicker chair for the wide shot, then the slatted chair to leave one patch of light between them. For the last frame, close that gap, turn the corner or take the long way round to trade places. Each shutter requires a walk back to the camera. On the night floor a drying rack blocks the obvious push, and two six-push solutions share every move until the last. Reopen a negative to pick up from that exposure and slide the divider to compare your two photographs. [Play Three Frames by the Window](./moon-mail/index.html#windowprint-three-frames)
 
 At the **Net-Drying Terrace**, make **Seaweed Diptychs** with a ribbon and a forked frond. Pin both on the original chart for a first exposure, then move or turn one specimen. Shade twice for paper white, once for pale blue. Match the four registration marks to post a print. Reuse its first exposure to make a companion with the margin tones reversed. The album binds the two pages and lets you inspect or export either one on its own. [Play Seaweed Diptychs](./moon-mail/index.html#kelpprint-diptych)
@@ -98,7 +104,7 @@ At **Twin Signal Huts**, choose **Signal Duet**. Gather both letters at the diam
 
 At **The Morning Window**, choose **Tea at the Window**. Slide a frame one square along its track, or tap a mirror to tilt the panes sharing its frame. Warm both cups and reach the same mailbox. Keep a tracing before experimenting and swap the two settings to compare their paths. A filed coaster prints the actual route and the order in which the cups warmed.
 
-在仓库根目录运行 `node --test` 可验证各关光路、曝光组合、调度委托、雾班线索、橘坡走法、两岸同拍的双信时序、一笔星图的岔口、推窗早茶的窗位、回潮航带的逐格航迹、月光标本的接枝与对页、双铃过桥的借停与最短分路、余晖引航的逐闪照明与靠岸航迹、海藻双联晒印的全纸晒色与共同首晒、窗边三连照的摄影站位与最短推数，以及存档恢复与提示（Node.js 18 及以上）。
+在仓库根目录运行 `node --test` 可验证各关光路、曝光组合、调度委托、雾班线索、橘坡走法、两岸同拍的双信时序、一笔星图的岔口、推窗早茶的窗位、回潮航带的逐格航迹、月光标本的接枝与对页、双铃过桥的借停与最短分路、余晖引航的逐闪照明与靠岸航迹、海藻双联晒印的全纸晒色与共同首晒、窗边三连照的摄影站位与最短推数、雨巷折笺的逐格转印与墨迹来路，以及存档恢复与提示（Node.js 18 及以上）。
 
 ## GitHub Pages
 
