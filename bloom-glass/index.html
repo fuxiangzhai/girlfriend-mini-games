@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183e35">
+  <meta name="description" content="拼合花窗，调两盏灯演街坊的故事。《留灯换景》里可以在桥洞递信，在雪山送铃，翻过回签透读双孔，再用同一套镜位演出两枚印。">
+  <title>借一束光 · 花窗工坊</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./studio.css">
+  <link rel="stylesheet" href="./night.css">
+  <link rel="stylesheet" href="./lantern.css">
+  <link rel="stylesheet" href="./slips.css">
+  <script type="module" src="./studio.mjs"></script>
+</head>
+<body>
+  <header class="mast">
+    <div class="mast-in">
+      <a class="brand" href="#bench" id="brand"><span class="brand-seal" data-icon="window"></span>花窗工坊</a>
+      <nav class="tabs" aria-label="工坊导航">
+        <button type="button" id="nav-bench" aria-current="page">工作台</button>
+        <button type="button" id="nav-book">花窗册</button>
+        <button type="button" id="nav-night" hidden>对窗夜班</button>
+      </nav>
+      <div class="mast-end">
+        <a href="../index.html" class="home" id="home" aria-label="返回小游戏首页"><span data-icon="back"></span><span>小游戏首页</span></a>
+        <button type="button" class="sound round" id="sound" aria-label="工坊音效" aria-pressed="true"></button>
+      </div>
+    </div>
+  </header>
+  <main class="shell">
+    <header class="hero" id="hero">
+      <img id="jacket" alt="" hidden>
+      <div class="hero-copy">
+        <div class="hero-name" id="volume-name" lang="en">Petal Panes</div>
+        <h1 id="page-title">借一束光</h1>
+        <p id="hero-line">把彩色玻璃拼成花窗，留一束光给喜欢的人。</p>
+        <button class="sequel-link" id="sequel" type="button" hidden>翻开续篇《花窗背面的信》<span data-icon="next"></span></button>
+      </div>
+    </header>
+
+    <section id="bench" aria-label="花窗工作台">
+      <div class="desk-selector" role="group" aria-label="选择工作台"><button type="button" id="day-desk">拼窗工作台</button><button type="button" id="lantern-desk">巷口幻灯会</button><button type="button" id="slip-desk">留灯换景</button></div>
+      <div id="program-bar" hidden><label for="program-select">今晚的节目</label><select id="program-select"></select><button type="button" class="subtle" id="to-tickets">看戏票夹</button></div>
+      <div id="slip-bar" hidden><label for="slip-select">连台节目</label><select id="slip-select"></select><button type="button" class="secondary" id="to-duets">双片合演</button><button type="button" class="secondary" id="to-relay" hidden>演递物返场</button><button type="button" class="secondary" id="to-receipts" hidden>续演回执</button><button type="button" class="subtle" id="to-plays">翻活动戏本</button></div>
+      <div class="workbench">
+        <section class="work-card">
+          <div class="work-heading">
+            <div class="heading-group">
+              <p class="overline" id="chapter-label"></p>
+              <h2 id="level-title"></h2>
+            </div>
+            <div class="work-switches">
+              <button type="button" class="secondary" id="audition" aria-pressed="false" hidden><span data-icon="sun"></span>透光试摆</button>
+              <button type="button" class="subtle" id="guide"><span data-icon="guide"></span>玩法</button>
+            </div>
+          </div>
+          <div id="projection-score" hidden></div>
+          <div id="duet-order" hidden><div class="duet-order-line"><strong id="duet-choice-label">谁先动</strong><div id="duet-buttons" role="group" aria-labelledby="duet-choice-label"></div></div><p id="duet-order-note"></p></div>
+          <section id="reading-panel" aria-labelledby="paper-title" hidden><img id="receipt-art" alt=""><div><h3 id="paper-title"></h3>
+            <div class="paper-line"><span id="paper-label">纸页</span><div id="paper-buttons" role="group" aria-labelledby="paper-label"><button type="button" data-insert="0">回签正文</button><button type="button" data-insert="1">展开夹页</button></div></div>
+            <div class="paper-line"><span id="reading-label">读法</span><div id="reading-buttons" role="group" aria-labelledby="reading-label"><button type="button" data-reading="0">原灯顺读</button><button type="button" data-reading="1">翻面倒读</button></div></div><p id="paper-instruction"></p></div>
+            <details id="paper-loupe" hidden><summary>沿光逐格验纸</summary><div class="loupe-tools"><button type="button" class="subtle" id="peek-mark" aria-pressed="false">看另一印</button><span id="loupe-lamp"></span></div><canvas width="440" height="236" id="loupe-map" role="img" aria-label="实际灯路与读纸游标"></canvas><label for="ray-walk">沿光移动</label><input type="range" min="0" value="0" step="1" id="ray-walk"><button type="button" class="subtle" id="seek-hole">走到第二孔</button><p id="ray-word" role="status"></p></details>
+            <div id="fold-lobby"><button type="button" class="secondary" id="start-fold">排骑缝合签</button><span id="fold-offer"></span></div>
+            <button type="button" class="secondary" id="open-tail" hidden>折后两拍 · 续演夹页</button>
+          </section>
+          <section id="fold-panel" aria-labelledby="fold-phase" hidden><div><strong id="fold-phase"></strong><button type="button" class="subtle" id="leave-fold">退出骑缝排演</button></div><p id="fold-instruction"></p><label><input type="checkbox" id="fold-low">按两场最低合计排演</label><span id="fold-cost"></span>
+            <details id="tail-look" hidden><summary>落回签前，看看第八拍</summary><p id="tail-look-live"></p><label for="tail-look-route">给哪条路留灯</label><select id="tail-look-route"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option></select><canvas id="tail-look-map" width="440" height="245" role="img" aria-label="能从本场第六拍接上的回签参考镜位"></canvas><p id="tail-look-note"></p></details>
+          </section>
+          <section id="trace-panel" aria-label="同谱合签" hidden><div><strong>照底谱实演</strong><span id="trace-count"></span><button type="button" class="subtle" id="leave-trace">退出跟谱</button></div><details id="trace-template"><summary>翻看本拍底稿</summary><canvas id="trace-map" width="480" height="300" role="img" aria-label="底稿中本拍的玻璃位置、镜面与双灯光路"></canvas><p id="trace-panes"></p></details></section>
+          <div id="slip-hold" hidden></div>
+          <div id="relay-cue" hidden><strong id="relay-owner"></strong><span id="relay-task"></span><small id="relay-reading"></small></div>
+          <div id="slip-overlay-tools" hidden><button type="button" id="overlay-slip" aria-pressed="false">叠看上拍</button><button type="button" id="reseat-slip" hidden></button><span id="stencil-key" hidden>虚线是上拍的位置和镜面</span></div>
+          <div class="mat" id="mat">
+            <span class="screw nw" aria-hidden="true"></span><span class="screw ne" aria-hidden="true"></span>
+            <span class="screw sw" aria-hidden="true"></span><span class="screw se" aria-hidden="true"></span>
+            <div class="board" id="board">
+              <div id="col-labels" class="coordinates horizontal" aria-hidden="true"></div>
+              <div id="row-labels" class="coordinates vertical" aria-hidden="true"></div>
+              <svg id="drawing" aria-hidden="true" focusable="false"></svg>
+              <svg id="optics" aria-hidden="true" focusable="false" hidden></svg>
+              <div class="hit-grid" id="hit-grid" role="group" aria-label="花窗格，方向键移动，空格或回车嵌入"></div>
+            </div>
+          </div>
+          <div id="lamp-bench" hidden>
+            <div class="rehearse-controls"><button type="button" class="secondary" id="test-beam" aria-pressed="true">试灯</button><div id="beam-solo" role="group" aria-label="单看一束光"></div><button type="button" class="primary" id="project-slide">开场放映</button></div>
+            <div id="projection-report"></div>
+          </div>
+          <p class="live-message" id="message" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div class="trialbar" id="trialbar" hidden><span>试摆中 · 可选格、旋转、翻面</span><button type="button" class="primary" id="seat-trial">嵌入此处</button></div>
+          <div class="board-tools">
+            <div class="board-actions">
+              <button type="button" class="subtle" id="undo"><span data-icon="undo"></span>撤销</button>
+              <button type="button" class="subtle" id="reset"><span data-icon="reset"></span>重拼</button>
+              <button type="button" class="subtle mobile-project-jump" id="jump-tray">去托盘 ↓</button>
+            </div>
+            <button type="button" class="hint-btn" id="hint"><span data-icon="hint"></span><span id="hint-label">看一步提示</span></button>
+          </div>
+          <section id="slip-run-sheet" hidden aria-label="全剧排演">
+            <div class="slip-buttons"><button type="button" class="secondary" id="predict-slip">探后场</button><button type="button" class="subtle" id="retake-slip">倒回上一拍</button></div><p id="slip-forecast" role="status"></p>
+            <div id="slip-endings" role="group" aria-label="选择要排演的结尾"></div>
+            <label id="encore-order" hidden><input type="checkbox" id="keep-both">按观众点戏排演 · 把两个结尾都留到中场</label>
+            <div id="quiet-score" hidden><label><input type="checkbox" id="quiet-aim">按静场目标排演</label><span id="quiet-count"></span><p>开场免计。每次落片时，每片换了镜位的玻璃记一响。</p></div>
+            <div id="relay-goal" hidden><label><input type="checkbox" id="both-marks">排一谱两印</label><p id="both-goal-copy">让同样五拍兼演早递和晚递。两处交接眼都要接通，第三拍各自的印位都要单独见光。</p></div>
+            <details id="slip-program"><summary>整出戏的灯位</summary><ol id="slip-cues"></ol></details>
+          </section>
+        </section>
+
+        <aside class="tools-column">
+          <section class="tray-card">
+            <div class="tray-title"><h2><span data-icon="tray"></span>玻璃托盘</h2><span id="counter"></span></div>
+            <p class="instruction" id="instruction"></p>
+            <div class="pieces" id="pieces" role="group" aria-label="选择玻璃"></div>
+            <div class="shape-actions">
+              <button type="button" id="turn"><span data-icon="rotate"></span>旋转</button>
+              <button type="button" id="flip" hidden><span data-icon="flip"></span>翻面</button>
+              <button type="button" class="mobile-project-jump" id="jump-frame">回窗框 ↑</button>
+            </div>
+            <div class="objective" id="objective" hidden></div>
+          </section>
+          <section id="cue-sheet" aria-labelledby="cue-title" hidden>
+            <h3 id="cue-title">放映师的场记</h3>
+            <div id="scene-choice" role="group" aria-label="为提示选择幕景"></div>
+            <label id="star-label"><input id="seek-star" type="checkbox"><span id="star-copy"></span></label>
+            <details id="show-cue"><summary>翻看外公的调灯笔记</summary><p id="show-cue-text"></p></details>
+          </section>
+          <section id="slip-scorecard" aria-labelledby="slip-heading" hidden>
+            <div class="slip-card-head"><h3 id="slip-heading">幕上的活动片</h3><span id="slip-count"></span></div>
+            <div id="slip-small-screen" class="slip-screen" role="img"></div>
+            <p id="duet-live" hidden></p>
+            <p id="slip-letter"></p>
+            <details id="slip-notes"><summary>读换景笔记</summary><p id="slip-tip"></p></details>
+          </section>
+          <section class="order-card" id="order-card" hidden aria-labelledby="order-heading">
+            <h3 id="order-heading">图纸上的约定</h3>
+            <ul id="order-lines"></ul>
+            <div id="route-picker" hidden>
+              <p>想找哪封回信？提示会按所选落点推演。</p>
+              <div id="routes" role="group" aria-label="回信提示优先寻找的落点"></div>
+            </div>
+            <details id="strategy"><summary>看一点解题思路</summary><p id="strategy-text"></p></details>
+          </section>
+          <section class="note-card">
+            <div class="note-illustration"><img src="./art/daisy.webp" alt="" id="note-art"></div>
+            <div><h3>窗边来信</h3><p id="request"></p></div>
+          </section>
+        </aside>
+      </div>
+      <details id="ticket-album" hidden><summary><span>我的戏票夹</span><span id="ticket-count"></span></summary><div id="ticket-grid"></div></details>
+      <details id="slip-archive" hidden><summary>我的活动戏本 <span id="playbill-count"></span></summary><div id="playbill-grid"></div>
+        <div id="audience-note"><div><h3>阁楼点戏签</h3><p id="audience-copy"></p></div><button type="button" class="secondary" id="read-encore" hidden>请观众点一幕</button></div>
+        <section id="duet-archive" aria-labelledby="duet-archive-title"><h3 id="duet-archive-title">双片合演</h3><p>同一出戏的两种先手都演完后，可以并排重映。每种顺序留存换片最少的一次。</p><div id="duet-tickets"></div></section>
+        <section id="relay-archive" aria-labelledby="relay-archive-title"><h3 id="relay-archive-title">递物返场</h3><p>每一站分别收录实演。能兼演两种递法的镜位另存为两印底谱，可随时并排试映。</p><div id="relay-tickets"></div></section>
+        <section id="receipt-archive" aria-labelledby="receipt-archive-title"><h3 id="receipt-archive-title">回执与合签</h3><p>正文与夹页分别收录。用同一套七拍镜位演完早递和晚递，可以收同谱双签联。</p><div id="receipt-tickets" class="paper-tickets"></div>
+          <details><summary>翻夹页戏本</summary><div id="insert-tickets" class="paper-tickets"></div></details>
+          <details id="fold-album"><summary>翻骑缝联 <span id="fold-count"></span></summary><div id="fold-tickets" class="paper-tickets"></div><button type="button" class="secondary" id="tail-book">翻折后戏笺</button></details>
+        </section>
+      </details>
+    </section>
+
+    <section id="book" hidden aria-labelledby="book-heading">
+      <div class="book-heading">
+        <div><h2 id="book-heading">我的花窗册</h2><p id="collection-count"></p></div>
+        <button type="button" class="secondary" id="daily"><span data-icon="calendar"></span>今日图纸</button>
+      </div>
+      <div class="volume-tabs" id="volumes" role="group" aria-label="选择花窗册">
+        <button type="button" data-volume="0">上册 · 四时同窗</button>
+        <button type="button" data-volume="1">续篇 · 花窗背面的信</button>
+      </div>
+      <div class="chapter-tabs" id="chapter-tabs" role="group" aria-label="按花选择章节"></div>
+      <div class="folio">
+        <figure class="folio-art">
+          <div class="print" id="folio-print"></div>
+          <figcaption><strong id="flower-name"></strong><i lang="la" id="latin"></i></figcaption>
+        </figure>
+        <div class="folio-list">
+          <div class="folio-head"><h3 id="chapter-title"></h3><span id="chapter-count"></span></div>
+          <p id="chapter-note"></p>
+          <div id="level-list"></div>
+          <details id="letters" hidden><summary id="letters-title">重读回信</summary><div id="letter-pages"></div></details>
+        </div>
+      </div>
+    </section>
+    <section id="night" hidden aria-labelledby="night-title">
+      <div class="night-editions volume-tabs" id="night-editions" role="group" aria-label="选择夜班玩法">
+        <button type="button" data-edition="night">单张 · 对窗夜班</button>
+        <button type="button" data-edition="roll">连拍 · 快门之间</button>
+      </div>
+      <header class="shift-heading">
+        <div><p class="overline" id="night-place"></p><h2 id="night-title"></h2></div>
+        <label for="night-list" id="night-select-label">换一份委托<select id="night-list"></select></label>
+        <label for="roll-list" id="roll-select-label" hidden>换一卷胶片<select id="roll-list"></select></label>
+      </header>
+      <section id="contact-bar" class="contact-bar" hidden aria-label="本卷分镜">
+        <div class="contact-head"><h3>拍摄顺序</h3><span id="take-count"></span></div>
+        <div id="take-strip" role="group" aria-label="选一帧翻看灯笺与镜位"></div>
+        <p id="take-rule"></p>
+      </section>
+      <div class="night-layout">
+        <section class="lamp-desk" aria-labelledby="mirrors-heading">
+          <div class="lamp-heading"><h3 id="mirrors-heading">调光镜台</h3><div class="lamp-help"><button type="button" class="subtle mobile-jump" id="read-slips"><span data-icon="book"></span>看灯笺</button><button type="button" class="subtle" id="lamp-guide"><span data-icon="guide"></span>调灯手册</button></div></div>
+          <div class="lamp-mat"><div id="optical-board" role="group" aria-label="可转动的镜片">
+            <svg id="optics" aria-hidden="true" focusable="false"></svg>
+            <div id="mirror-controls"></div>
+          </div></div>
+          <div class="lamp-actions">
+            <button type="button" class="primary" id="expose"><span data-icon="sun"></span>试照</button>
+            <button type="button" class="primary shutter" id="take-shot" hidden>按下快门</button>
+            <button type="button" class="subtle" id="lamp-undo"><span data-icon="undo"></span>撤销</button>
+            <button type="button" class="secondary" id="lamp-hint"><span data-icon="hint"></span><span id="lamp-hint-name">看一步提示</span></button>
+          </div>
+          <p class="lamp-status" id="lamp-status" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div id="take-tools" hidden>
+            <button type="button" class="secondary" id="try-next" hidden>在草稿里试调</button>
+            <button type="button" class="secondary" id="keep-plan" hidden>记下这组镜位</button>
+            <button type="button" class="secondary" id="apply-plan" hidden>照草稿调镜</button>
+            <button type="button" class="subtle" id="look-ahead">预演后续</button>
+            <button type="button" class="subtle" id="review-shot" hidden>放大这张照片</button>
+            <button type="button" class="subtle" id="rewind-shot" hidden>回到这一帧重拍</button>
+            <button type="button" class="secondary" id="live-shot" hidden>回到正在拍的一帧</button>
+            <label id="economy-label" hidden><input type="checkbox" id="economy">提示按最省调镜推演</label>
+          </div>
+          <div id="light-report" hidden>
+            <div id="ray-filter" role="group" aria-label="查看灯光轨迹" hidden></div>
+            <div id="ray-report" aria-label="实际灯路"></div>
+            <details id="ray-study"><summary>逐格看灯路</summary>
+              <p id="study-detail" role="status"></p>
+              <div class="study-controls"><button type="button" class="secondary" id="study-prev" aria-label="灯路上一步">上一步</button><input type="range" min="0" step="1" value="0" id="study-step" aria-label="灯路位置"><button type="button" class="secondary" id="study-next" aria-label="灯路下一步">下一步</button></div>
+            </details>
+          </div>
+        </section>
+        <aside class="lamp-orders" aria-labelledby="slips-heading">
+          <div class="slips-heading"><h3 id="slips-heading">值夜灯笺</h3><div id="lamp-modes" role="group" aria-label="读笺方式"><button type="button" data-mode="solo">独自读笺</button><button type="button" data-mode="pair">双人传笺</button></div></div>
+          <p class="handoff-note" id="handoff-note" hidden>一人管花纹，一人管出口。轮流拿手机拆笺，合上后一起调镜。</p>
+          <div id="lamp-slips"></div>
+          <div id="film-order" hidden></div>
+          <details id="shift-tip"><summary>读师傅的手记</summary><p id="shift-tip-text"></p></details>
+          <button type="button" class="secondary mobile-jump" id="return-mirrors">回镜台调灯</button>
+        </aside>
+      </div>
+      <section class="shift-receipt" id="shift-receipt" aria-labelledby="receipt-title" hidden>
+        <div><p class="overline" id="receipt-place"></p><h3 id="receipt-title">灯已送到</h3><p id="receipt-story"></p><p id="receipt-print" hidden></p></div>
+        <div class="receipt-actions"><button type="button" class="secondary" id="seek-film" hidden>再晒底片</button><button type="button" class="secondary" id="start-roll" hidden>翻开《快门之间》</button><button type="button" class="primary" id="next-night"></button></div>
+      </section>
+      <details class="night-album" id="night-album">
+        <summary><span>值夜相册</span><span id="album-count"></span></summary>
+        <div class="album-inner"><figure><div class="contact-print" role="img" aria-label="旧茶亭、紫藤桥与桂花巷相连的夜景，完成委托可逐段显影"><div id="film-strips"></div></div><figcaption id="panorama-caption"></figcaption></figure>
+        <div id="album-notes"></div></div>
+      </details>
+      <details class="night-album roll-album" id="roll-album" hidden>
+        <summary><span>连拍底片册</span><span id="roll-count"></span></summary>
+        <div class="album-inner" id="roll-prints"></div>
+      </details>
+    </section>
+    <noscript>请开启 JavaScript，进入花窗工作台。</noscript>
+  </main>
+
+  <dialog id="guide-dialog" class="dialog">
+    <div class="dialog-inner">
+      <button type="button" class="round close" data-close aria-label="关闭玩法"><span data-icon="close"></span></button>
+      <p class="overline">工坊手册</p><h2>怎样拼一扇窗</h2>
+      <div class="guide-list">
+        <div><span data-icon="pin"></span><p><strong>让圆钉落在选中的格子</strong>先点托盘里的一片玻璃，再点窗格。也可以直接拖进去。</p></div>
+        <div><span data-icon="rotate"></span><p><strong>转个角度再试试</strong>玻璃要填满浅色窗格。点已嵌的玻璃可取回，随时都能撤销。</p></div>
+        <div><span data-icon="star"></span><p><strong>给作品加一枚金印</strong>遇见四角星时，让任意玻璃的圆钉正好落在星上。金印是额外挑战。</p></div>
+        <div><span data-icon="leaf"></span><p><strong>认花纹，巧翻面</strong>第二章要让玻璃对上刻纹。第三章可把玻璃翻到背面。第四章的金边铅条会隔开窗格，整片玻璃不能跨过它。</p></div>
+        <div id="afterlight-guide" hidden><span data-icon="flower"></span><p><strong>透光读背花</strong>实心小花刻在玻璃背面，会随玻璃移动。把它对准图纸的空心花，或让指定的两朵隔一条格边相邻。桂花巷的两个信位各藏着一封回信。</p></div>
+      </div>
+      <p class="keys">键盘操作：数字键选片，方向键选格，空格嵌入。R 旋转，F 翻面，Z 撤销。</p>
+      <button type="button" class="primary" data-close>回到工作台</button>
+    </div>
+  </dialog>
+  <dialog id="result-dialog" class="dialog result-dialog">
+    <div class="result-art print" id="result-print"></div>
+    <div class="dialog-inner">
+      <button type="button" class="round close" data-close aria-label="关闭完成页"><span data-icon="close"></span></button>
+      <p class="overline" id="result-kicker"></p><h2 id="result-title"></h2>
+      <p class="result-story" id="result-story"></p>
+      <p class="result-progress" id="result-progress"></p>
+      <div class="result-actions"><button type="button" class="primary" id="next"></button><button type="button" class="secondary" id="alternate" hidden></button><button type="button" class="secondary" id="result-book">看花窗册</button><button type="button" class="subtle" id="retry-gold" hidden>重拼金印</button></div>
+    </div>
+  </dialog>
+  <dialog id="lantern-guide" class="dialog" aria-labelledby="lantern-guide-title">
+    <div class="dialog-inner"><button type="button" class="round close" data-close aria-label="合上放映手册"><span data-icon="close"></span></button>
+      <p class="overline">放映棚手册</p><h2 id="lantern-guide-title">怎样点亮一幕戏</h2>
+      <div class="guide-list">
+        <div><span data-icon="pin"></span><p><strong>拼好一张玻璃片</strong>先选玻璃，再点窗格落下圆钉。有纹样的格子要配同纹玻璃。点已嵌的玻璃可以取回。</p></div>
+        <div><span data-icon="sun"></span><p><strong>让灯光照到方框出口</strong>圆牌是入口，方牌是节目需要的出口。边号从左到右或从上到下数。光遇银镜转直角，玻璃转动或翻面时，银镜也会跟着动。试灯会在第一格空处停住。</p></div>
+        <div><span data-icon="window"></span><p><strong>合像与暗星</strong>遇到合像圈，两束光要在圈心一横一竖直穿。让场记指定的灯经过玻璃上的暗星，还能在戏票背面多读一句。</p></div>
+      </div><p class="keys">数字键选片，方向键选格，空格嵌入。R 旋转，F 翻面，Z 撤销。</p>
+      <button type="button" class="primary" data-close>回到放映台</button>
+    </div>
+  </dialog>
+  <dialog id="slip-guide" class="dialog" aria-labelledby="slip-guide-title"><div class="dialog-inner">
+    <button type="button" class="round close" data-close aria-label="合上手册"><span data-icon="close"></span></button><p class="overline">活动片手册</p><h2 id="slip-guide-title">怎样留一盏灯换景</h2>
+    <div class="guide-list">
+      <div><span data-icon="pin"></span><p><strong>先拼出开场</strong>点托盘选片，点窗格放下圆钉。银镜使光转直角。让两束光分别走到场记的出口，再点「落下这一拍」。</p></div>
+      <div><span data-icon="sun"></span><p><strong>守住上一拍的光</strong>换景时有一盏灯要一直照着原处。它经过的整片玻璃都会夹住，标有「守」。可以取回其余玻璃，旋转、翻面或交换位置。</p></div>
+      <div><span data-icon="rotate"></span><p><strong>把名额用在需要换的片上</strong>暂时取回也占一个名额。把玻璃按上一拍的原样放回就能腾出名额。要交换两片，可先把两片都拿到托盘。</p></div>
+      <div><span data-icon="book"></span><p><strong>先看看下一拍</strong>场记列着整出戏的灯位。拼满时用「探后场」检查能否接到所选结尾。活动戏本里的拉杆可以重演你实际留下的镜位。</p></div>
+      <div id="duet-guide" hidden><span data-icon="sun"></span><p><strong>双片合演</strong>琥珀和青瓷各照一个角色。选谁先动，就先守另一盏灯。开场落片前「探后场」可查两种先手。每拍只在落片时记换片数，整场达到最少的响数就能读到收班笺。</p></div>
+    </div><p class="keys">数字键选片，方向键选格，空格嵌入。R 旋转，F 翻面，Z 撤销。</p><button type="button" class="primary" data-close>回到放映台</button>
+  </div></dialog>
+  <dialog id="slip-dialog" class="dialog" aria-labelledby="slip-title"><div class="dialog-inner">
+    <button type="button" class="round close" data-close aria-label="合上活动片"><span data-icon="close"></span></button>
+    <p class="overline" id="slip-kicker"></p><h2 id="slip-title"></h2>
+    <div id="audience-choice" role="group" aria-label="用同一套中场镜位现场点戏" hidden></div>
+    <div id="duet-stage-pair"><div><strong id="duet-main-label" hidden></strong><div id="slip-large-screen" class="slip-screen" role="img"></div><small id="duet-main-tally" hidden></small></div><div id="duet-alt-pane" hidden><strong id="duet-alt-label"></strong><div id="duet-alt-screen" class="slip-screen" role="img"></div><small id="duet-alt-tally"></small></div></div>
+    <div id="slip-proof-pair" hidden><div><strong id="duet-proof-main" hidden></strong><canvas id="slip-map" width="640" height="360" role="img" aria-label="这一拍落片时的双灯镜位" hidden></canvas></div><div id="duet-proof-other" hidden><strong id="duet-proof-label"></strong><canvas id="duet-alt-map" width="640" height="360" role="img" aria-label="另一种先手在这一拍的双灯镜位"></canvas></div></div>
+    <div id="slip-lever"><button type="button" class="secondary" id="run-slip">连放</button><label for="slide-lever">推片拉杆</label><input type="range" min="0" step="1" value="0" id="slide-lever" aria-label="推片拉杆，回看已演的各拍"></div>
+    <p id="slip-caption"></p><p id="duet-alt-caption" hidden></p><p id="duet-receipt" hidden></p><p id="slip-encore-note" hidden></p><button type="button" class="subtle" id="slip-proof" aria-expanded="false" aria-controls="slip-proof-pair slip-proof-text">看当场镜位</button><p id="slip-proof-text" hidden></p><p id="duet-alt-proof-text" hidden></p>
+    <section id="fold-result" hidden><p id="fold-result-note"></p><button type="button" class="secondary" id="fold-action"></button><button type="button" class="subtle" id="trim-fold" hidden></button><div id="fold-jumps" hidden><button type="button" class="subtle" data-fold-jump="0">看最后一拍共谱</button><button type="button" class="subtle" data-fold-jump="1">看分谱第一拍</button><button type="button" class="subtle" data-fold-jump="2">看两面验纸</button></div><div id="fold-letter" hidden><strong></strong><p></p></div></section>
+    <div id="tail-invite" hidden><strong>夹页还有两拍</strong><p id="tail-invite-text"></p><div class="tail-tools"><button type="button" id="tail-from-show" class="primary">从这张骑缝联续演</button><button type="button" id="tail-from-other" class="secondary" hidden></button></div></div>
+    <div id="revise-receipt" class="slip-buttons" hidden><button type="button" class="secondary" id="repair-double" hidden></button><button type="button" class="secondary" id="other-reading" hidden></button><button type="button" class="secondary" id="other-paper" hidden></button></div>
+    <div class="slip-buttons"><button type="button" class="primary" id="slip-continue"></button><button type="button" class="secondary" id="extend-show" hidden>沿这五拍续演回执</button><button type="button" class="secondary" id="sign-score" hidden>照底谱实演另一印</button><button type="button" class="secondary" id="slip-other" hidden></button><button type="button" class="secondary" id="retry-quiet" hidden>按静场目标改排</button><button type="button" class="secondary" id="compare-duet" aria-pressed="false" hidden>并排看两种先手</button><button type="button" class="secondary" id="compare-score" aria-pressed="false" hidden>同谱换手试映</button><button type="button" class="subtle" id="print-play" hidden>保存连景长票 PNG</button></div><p id="slip-print-status" role="status"></p>
+  </div></dialog>
+  <dialog id="tail-dialog" class="dialog" aria-labelledby="tail-title"><div class="dialog-inner">
+    <button type="button" class="round close" data-close aria-label="合上折后两拍"><span data-icon="close"></span></button>
+    <header class="tail-head"><div><p class="overline">留灯换景 · 夹页续场</p><h2 id="tail-title" tabindex="-1">折后两拍</h2><p id="tail-intro"></p></div><img id="tail-paper" alt=""></header>
+    <div class="tail-source"><label for="tail-page">夹页</label><select id="tail-page"><option value="0">饭桌夹页</option><option value="1">雪路夹页</option></select><label for="tail-side">第二场</label><select id="tail-side"></select></div>
+    <p class="tail-credit" id="tail-credit"></p><div class="tail-tools tail-entry"><button type="button" id="courier-open" class="secondary">三处同笺 · 排三站走笺</button><button type="button" id="courier-leave" class="subtle" hidden>回折后两拍</button><button type="button" id="tail-to-bench" class="subtle">去调镜 ↓</button></div>
+    <section id="courier-book" hidden aria-labelledby="courier-book-title">
+      <div class="courier-cover"><img id="courier-book-art" alt=""><div><h3 id="courier-book-title" tabindex="-1">点一趟三站戏</h3><p id="courier-book-note"></p></div></div>
+      <details id="counter-book" class="counter-panel"><summary>从同一个首站排两路对笺</summary>
+        <p id="counter-premise"></p><div id="counter-programs" class="tail-plan-buttons" role="group" aria-label="选择两封的递法"></div>
+        <div class="tail-tools"><button type="button" class="subtle" id="counter-single" hidden>改排单封</button></div>
+        <p id="counter-target" aria-live="polite"></p>
+      </details>
+      <div class="courier-book-grid"><div><label class="courier-label" for="courier-road">从哪一道折痕出发</label><select id="courier-road"></select><p id="courier-pin"></p><button type="button" class="subtle" id="courier-release" hidden>从这张第七拍另排</button>
+      <h4 id="courier-way-title">两站之间怎么递</h4><div id="courier-ways" class="tail-plan-buttons" role="group" aria-label="递送方式"></div><p id="courier-rule"></p></div>
+      <div><h4 id="courier-order-title">三站次序</h4><div id="courier-orders" class="tail-plan-buttons" role="group" aria-label="选择三站次序"></div><p id="courier-fare" aria-live="polite"></p><div class="tail-tools"><button class="primary" id="courier-begin" type="button">照这张笺开演</button><button type="button" class="subtle" id="courier-cheaper" hidden></button></div></div></div>
+      <details id="courier-forecast"><summary id="courier-forecast-title">看逐步排法</summary><div id="courier-paces" class="tail-plan-buttons" role="group" aria-label="选择希望优先省响的一程"></div><ol id="courier-forecast-steps"></ol><p id="counter-partner-steps" hidden></p><p id="courier-forecast-note"></p></details>
+    </section>
+    <div id="tail-work"><div class="tail-program" id="tail-program">
+      <h3>第八拍 · 折纸留路</h3><div id="tail-flaps" class="tail-folds" role="group" aria-label="选择第八拍用哪条折痕"><button type="button" data-tail-flap="0">沿原折</button><button type="button" data-tail-flap="1">侧折纸角</button></div><div id="tail-routes" class="tail-choices" role="group" aria-label="第八拍路线"></div>
+      <h3>第九拍 · 灯往哪里去</h3><div id="tail-ends" class="tail-choices" role="group" aria-label="第九拍去处"></div>
+      <p id="tail-passage"></p><label id="tail-both-label"><input type="checkbox" id="tail-both">点一组落款，共用第八拍</label>
+      <div id="tail-commission" hidden><div id="tail-plans" class="tail-plan-buttons" role="group" aria-label="要合演的去处"></div><p id="tail-plan-price"></p><button type="button" class="subtle" id="tail-plan-switch" hidden></button></div>
+      <div class="tail-tools"><button type="button" class="subtle" id="tail-back" hidden>回第八拍另排</button><button type="button" class="subtle" id="tail-prep">另排第七拍</button></div>
+    </div><section id="courier-run" class="tail-program" hidden aria-labelledby="courier-run-title"><h3 id="courier-run-title"></h3><ol id="courier-stations" class="courier-stations"></ol><p class="courier-prose" id="courier-line"></p><p id="courier-ledger"></p><details id="counter-station" hidden open><summary>临站改投</summary><p id="counter-course-note"></p><div id="counter-courses" class="tail-plan-buttons" role="group" aria-label="余程的去向与递法"></div></details><details id="courier-reference"><summary>对照共同的第八拍</summary><canvas id="courier-reference-map" width="340" height="205" role="img" aria-label="此趟走笺共同的第八拍镜位"></canvas><p id="courier-reference-note"></p></details><div class="tail-tools"><button type="button" id="courier-rewind" class="secondary">重排上一步</button><button type="button" id="courier-rebook" class="subtle">重选这趟戏</button></div></section>
+    <section class="tail-bench" aria-labelledby="tail-cue"><h3 id="tail-cue" tabindex="-1"></h3><p id="tail-task"></p>
+      <canvas id="tail-map" width="510" height="286" role="img" aria-label="当前镜位、所选玻璃的银镜与双灯出口，列 A 至 E，行 1 至 4"></canvas><p id="tail-rays"></p>
+      <div id="tail-exits" hidden><p id="tail-exit-title"></p><ul aria-labelledby="tail-exit-title"></ul></div>
+      <div id="tail-rack" role="group" aria-label="选择一片玻璃"></div><div id="tail-sockets" role="group" aria-label="选择插槽"></div>
+      <p id="tail-message" role="status" aria-live="polite"></p><div class="tail-tools"><button type="button" class="primary" id="tail-take">落片</button><button type="button" class="secondary" id="tail-hint">看一步提示</button><button type="button" class="subtle" id="tail-undo">撤销</button><button type="button" class="subtle" id="tail-reset">还原本拍</button></div>
+    </section></div>
+    <section id="tail-finale" hidden><img id="tail-image" alt=""><div><p class="overline" id="tail-stamp"></p><h3 id="tail-ending" tabindex="-1"></h3><p id="tail-story"></p><p id="tail-margin"></p><div id="tail-joint" hidden><div id="tail-pair-tabs" class="tail-plan-buttons" role="group" aria-label="翻读已演成的合笺"></div><strong id="tail-joint-title"></strong><p id="tail-joint-story"></p><p id="tail-joint-price"></p><button type="button" class="subtle" id="tail-turn">翻读另一张落款</button><button type="button" class="subtle" id="tail-turn-alt" hidden></button><button type="button" class="subtle" id="tail-quieter" hidden></button><button type="button" class="secondary" id="courier-this" hidden>沿这张三处同笺走一趟</button></div><p id="tail-tally"></p>
+      <details id="tail-proofs"><summary>看续场实演镜位</summary><div id="tail-maps"></div></details>
+      <div class="tail-tools"><button type="button" class="primary" id="tail-sibling">留住第八拍，换个结局</button><button type="button" class="secondary" id="tail-sibling-alt" hidden></button><button type="button" class="secondary" id="tail-again">换第八拍路线</button><button type="button" class="subtle" id="tail-change-flap"></button><button type="button" class="subtle" id="tail-print">保存折后戏笺 PNG</button></div><p id="tail-print-status" role="status"></p></div></section>
+    <section id="counter-ending" hidden aria-labelledby="counter-title">
+      <img id="counter-art" alt=""><div class="counter-letter-text"><p id="counter-seal" class="overline"></p><h3 id="counter-title" tabindex="-1"></h3><p id="counter-story"></p><p id="counter-bill"></p>
+      <div id="counter-arms"></div><section id="counter-versions" hidden><h4 id="counter-margin-title" tabindex="-1"></h4><p id="counter-margin"></p><div id="counter-splits" class="tail-plan-buttons" role="group" aria-label="翻读同响异谱"></div></section>
+      <details id="counter-proof"><summary>看共用的镜位和两路实演</summary><div id="counter-proof-maps"></div></details>
+      <div class="tail-tools"><button type="button" class="primary" id="counter-print">保存两路对笺 PNG</button><button type="button" class="secondary" id="counter-again">从第七拍另排对笺</button></div><p id="counter-print-note" role="status"></p></div></section>
+    <section id="courier-letter" hidden aria-labelledby="courier-title"><img id="courier-letter-art" alt=""><div class="courier-letter-text"><p id="courier-stamp" class="overline"></p><h3 id="courier-title" tabindex="-1"></h3><p id="courier-story"></p><div id="courier-scenes" class="courier-scenes"></div><p id="courier-after"></p><p id="courier-total"></p><div id="counter-follow" class="counter-panel"><h4>留住首站，换序寄另一封</h4><p id="counter-follow-note"></p><div id="counter-replies" class="tail-plan-buttons" role="group" aria-label="另一封的递法"></div></div><details id="courier-notes"><summary>翻看两程捎来的话</summary><div id="courier-keeps"></div></details><details id="courier-proofs"><summary>逐步看守灯、响数与实演镜位</summary><div id="courier-maps"></div></details><div class="tail-tools"><button type="button" class="primary" id="courier-next-order">留住第八拍，换个次序</button><button type="button" id="courier-challenge" class="secondary" hidden></button><button type="button" class="secondary" id="courier-print">保存走笺 PNG</button></div><p id="courier-print-status" role="status"></p></div></section>
+    <details id="courier-shelf" hidden><summary>这面夹页的走笺 <span id="courier-count"></span></summary><div id="courier-files"></div><h4>两路对笺 <span id="counter-count"></span></h4><div id="counter-files" class="counter-files"></div><div id="counter-margins" hidden><h4>同响异谱</h4><div id="counter-margin-files" class="counter-files"></div></div></details>
+    <details id="tail-album"><summary>这面夹页的折后戏笺 <span id="tail-count"></span></summary><div id="tail-collection"></div></details>
+    <button type="button" class="subtle" id="tail-rehearse">回工作台排正式骑缝联</button>
+  </div></dialog>
+  <dialog id="ticket-dialog" class="dialog" aria-labelledby="ticket-title">
+    <div class="ticket-image-mat"><img id="ticket-image" alt=""><canvas id="ticket-map" width="620" height="360" role="img" aria-label="这张戏票实际使用的镜位和灯路" hidden></canvas></div>
+    <div class="dialog-inner"><button type="button" class="round close" data-close aria-label="合上戏票"><span data-icon="close"></span></button>
+      <p class="overline" id="ticket-number"></p><h2 id="ticket-title"></h2><p id="ticket-story"></p>
+      <p id="ticket-secret" hidden></p><p id="ticket-path"></p>
+      <button type="button" class="subtle" id="turn-ticket" aria-expanded="false" aria-controls="ticket-replay">翻面看镜位</button>
+      <div id="ticket-replay" hidden><p id="ticket-mirrors"></p><p id="ticket-compare"></p></div>
+      <div class="ticket-actions"><button type="button" class="primary" id="next-show"></button><button type="button" class="secondary" id="other-show" hidden></button><button type="button" class="subtle" id="print-ticket">保存戏票 PNG</button></div><p id="print-status" role="status"></p>
+    </div>
+  </dialog>
+  <dialog id="lamp-dialog" class="dialog" aria-labelledby="lamp-dialog-title"><div class="dialog-inner">
+    <button type="button" class="round close" data-close aria-label="合上"><span data-icon="close"></span></button>
+    <p class="overline" id="lamp-dialog-index"></p><h2 id="lamp-dialog-title"></h2>
+    <div id="lamp-dialog-copy"></div>
+    <button type="button" class="primary" id="lamp-dialog-action"></button>
+  </div></dialog>
+  <dialog id="photo-dialog" class="dialog" aria-labelledby="photo-title">
+    <div class="dialog-inner">
+      <button type="button" class="round close" data-close aria-label="合上照片"><span data-icon="close"></span></button>
+      <p class="overline" id="photo-roll"></p><h2 id="photo-title"></h2>
+      <div id="photo-views" role="group" aria-label="查看照片或拍照时的灯路"><button type="button" data-proof="image">照片</button><button type="button" data-proof="rays">拍摄灯路</button></div>
+      <div class="developed-frame" id="photo-image" role="img"></div>
+      <div id="proof-view" hidden><svg id="proof-board" aria-hidden="true"></svg><div id="proof-changes"></div><div id="proof-lamps"></div><details id="proof-orientation"><summary>读出各面镜的朝向</summary><p id="proof-angles"></p></details></div>
+      <p id="photo-caption"></p><div class="photo-actions"><div id="photo-paging"><button type="button" class="subtle" id="photo-prev">上一帧</button><button type="button" class="subtle" id="photo-next">下一帧</button></div><button type="button" class="primary" id="photo-return" data-close>收好照片</button></div>
+    </div>
+  </dialog>
+</body>
+</html>
