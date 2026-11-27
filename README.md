@@ -8,6 +8,10 @@
 
 从首页顶部点「月光邮局」，或打开 [月光邮局](./moon-mail/index.html)。转动海上的圆镜，让月光经过沿途的邮戳、照到收信箱，再点「寄出月光」拆信。「沿海夜邮」的六封信从白沙灯塔一路寄到晨光窗台。「回信篇」从海角温室出发，经过风铃栈桥，抵达望海天文台。回信的编号邮戳要按数字顺序首次经过。
 
+星湾转桥的**双铃过桥**让明信片里那两辆自行车上了原来的航图。两辆车都要到桥心按铃，再把信送进各自的信箱。选车和方向就能预览它会沿哪些镜面拐弯、穿哪扇潮门、最后停在哪一格。车停在桥上时可以转桥，也可以让同伴等在下一处弯道，借它多停一站。[试玩双铃过桥](./moon-mail/index.html#bridge-bells)
+
+日班有两条同为 8 步的解法，前 5 步完全相同。月铃车到 B4 后，可以转桥往南直接进 B5，也可以从桥上往东穿门，借等在 D5 的星铃车停在 C5，再从侧面投信。点「如果星铃车先走呢？」就能看到这段路原本会滑到哪里。路书分别记录三种骑法的个人最佳，还能保留通往另一种最短骑法的共同路段，从岔口接着试。挑战档沿用星湾夜图，独立停靠、单向借停、轮流借停各自最少需要 10、10、11 步。[查看星湾转桥实机画面](./docs/star-bay-bridge-bells.webp)
+
 海角温室的**月光标本**把原来的两枚顺序花戳变成了接枝点。先让橙花开，再把它压到纸上。已经照过的镜子会被压住，你可以从花心、旧镜或枝条中段另抽一枝，照到风铃草，最后再把光接进信箱。两枝可以十字交叉，每条边只能用一次。[试玩月光标本](./moon-mail/index.html#glasshouse-herbarium)
 
 日班的七种花样共用一组镜向。窗顶的两朵花压好后，从 C4 往北一格就能寄信，也可以从 D1 花心往东，沿东窗绕九格回来。夜图的对页观察则收两份总长同为八格的标本。标本夹能保留一朵或两朵接着试，寄出的明信片会印上自己种出的三段枝。轻松档会标出下一步，标准档按需提示，挑战档在夜图独立接枝。[查看海角温室实机画面](./docs/glasshouse-herbarium.webp)
@@ -64,6 +68,8 @@ At **Wind Chime Pier**, select **Fog Watch**. Call from a shore lamp, compare th
 
 At **Orange Hill Station**, choose **Hillside Switchbacks**. Fit, flip or lift two switch mirrors across four square sockets. Each difficulty has four distinct ways to collect both stamps and reach the same box from the same start. Select an unissued ticket for a clue or an issued ticket to overlay its actual route. Each ticket comes with a note from the journey.
 
+At **Star Bay**, open **Bridge Bells**. Ring each bike’s bell on the swing bridge, then post at its matching box. A waiting bike can give the other rider a new place to stop. Two eight-move rides share their first five moves. At B4, turn the deck and ride straight into B5, or keep it facing east, coast through the gate and borrow a stop at C5. Each page keeps your best ride. Reopen a posted slip at the last fork on a shortest route to another page. [Play Bridge Bells](./moon-mail/index.html#bridge-bells)
+
 At **Cape Glasshouse**, open **Moonlit Herbarium**. Press the orange blossom to keep its stem and the mirrors it touched. Grow a second shoot to the bellflower, then take a cutting from either stem to reach the mailbox. The two daytime study pages keep the very same flowers but send the final shoot one or nine squares. The night pages make two different eight-square impressions. Keep one or both flowers from a filed specimen to try another ending.
 
 At **Twin Arch Strait**, choose **The Tide Reel**. Write helm orders for a clockwork paper boat. Water and the stamp advance the reel, fixed mirrors turn the bow, and each arch reverses the reading direction. Tap a square to find the beat that sent the boat there, then tap again to inspect a later visit. Two different eleven-step deliveries part at the stamp on F4. Borrow a filed reel to explore that fork. The seven-beat night chart has landings after one, two or three crossings.
@@ -74,7 +80,7 @@ At **Twin Signal Huts**, choose **Signal Duet**. Gather both letters at the diam
 
 At **The Morning Window**, choose **Tea at the Window**. Slide a frame one square along its track, or tap a mirror to tilt the panes sharing its frame. Warm both cups and reach the same mailbox. Keep a tracing before experimenting and swap the two settings to compare their paths. A filed coaster prints the actual route and the order in which the cups warmed.
 
-在仓库根目录运行 `node --test` 可验证各关光路、曝光组合、调度委托、雾班线索、橘坡走法、两岸同拍的双信时序、一笔星图的岔口、推窗早茶的窗位、回潮航带的逐格航迹、月光标本的接枝与对页，以及存档恢复与提示（Node.js 18 及以上）。
+在仓库根目录运行 `node --test` 可验证各关光路、曝光组合、调度委托、雾班线索、橘坡走法、两岸同拍的双信时序、一笔星图的岔口、推窗早茶的窗位、回潮航带的逐格航迹、月光标本的接枝与对页、双铃过桥的借停与最短分路，以及存档恢复与提示（Node.js 18 及以上）。
 
 ## GitHub Pages
 

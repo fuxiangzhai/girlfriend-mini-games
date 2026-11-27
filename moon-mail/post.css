@@ -488,11 +488,98 @@ html:lang(en) .legend span { white-space: normal; }
 }
 
 .on-watch .counters, .on-watch > .transit, .on-watch > .actions,
+.on-bike .counters, .on-bike > .transit, .on-bike > .actions,
 .on-graft .counters, .on-graft > .transit, .on-graft > .actions,
 .on-reel .counters, .on-reel > .transit, .on-reel > .actions,
 .on-sashes .counters, .on-sashes > .transit, .on-sashes > .actions,
 .on-atlas .counters, .on-atlas > .transit, .on-atlas > .actions { display: none; }
 .on-graft { border-color: #394d42; background: radial-gradient(ellipse at 90% 4%,#495e47,transparent 60%),#253f39; }
+.on-bike { border-color: #424b51; background: radial-gradient(ellipse at 90% 6%,#4c5c60,transparent 62%),#293e46; }
+.on-bike .chart { background-color:#263f4b; border-color:#91a5a0; background-image:linear-gradient(to right,transparent calc(100% - 1px),#9aaca952 1px),linear-gradient(to bottom,transparent calc(100% - 1px),#9aaca952 1px),radial-gradient(ellipse at 38% 72%,#335861,transparent 76%); }
+.on-bike .tile:is(.lamp,.starLamp) > *, .on-bike .tile.water svg { visibility:hidden; }
+.on-bike .tile.mirror { pointer-events:none; }
+.on-bike .tile.mirror svg { width:67%; height:67%; }
+.on-bike .tile.jointSeal svg { width:94%; height:94%; transition:transform .24s ease-out; }
+.on-bike .tile.jointSeal.vertical svg { transform:rotate(90deg); }
+#bike-riders, #bike-dirs { display:grid; gap:6px; }
+#bike-riders { grid-template-columns:repeat(2,minmax(0,1fr)); }
+#bike-riders button { display:flex; align-items:center; gap:8px; padding:5px 10px; border:1px solid #70847f; border-radius:6px; text-align:start; background:#213740; }
+[data-rider="0"], .rider-0 { --rider:#ffcf86; --rider-ink:#5b432d; }
+[data-rider="1"], .rider-1 { --rider:#b4eddd; --rider-ink:#244e50; }
+#bike-riders button[aria-pressed=true] { border-color:var(--rider); box-shadow:inset 3px 0 var(--rider); }
+#bike-riders i { display:grid; place-items:center; width:27px; height:27px; flex:none; border-radius:50%; color:var(--rider-ink); background:var(--rider); font:700 1.18rem/1 Georgia,serif; }
+#bike-riders strong, #bike-riders small { display:block; }
+#bike-riders strong { color:var(--rider); font-size:.84rem; }
+#bike-riders small, .bike-gear { color:#d4e1dd; font-size:.75rem; }
+#bike-intro, #bike-status, #bike-advice { margin:6px 0; line-height:1.45; font-size:.82rem; }
+#bike-layer, #bike-tracks { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.bike-line { fill:none; stroke:var(--rider); stroke-width:4; opacity:.52; stroke-linecap:round; stroke-linejoin:round; }
+.bike-line.rider-1 { stroke-dasharray:10 6; }
+.bike-line.planned { stroke-width:7; opacity:1; stroke-dasharray:2 10; }
+.bike-landing { stroke:var(--rider); fill:#1f3840; stroke-width:4; }
+.bike-if-line, .bike-if-stop { fill:none; stroke:#f8f5e5; stroke-width:3.5; stroke-dasharray:4 7; }
+#bike-whatif { display:inline-block; min-height:32px; padding:2px 9px; margin-bottom:5px; border:1px dashed #b8b8a1; border-radius:4px; color:#f2e7c5; font-size:.78rem; }
+#bike-whatif[aria-pressed=true] { background:#46585a; }
+#bike-difference { color:#e6ebdd; line-height:1.45; font-size:.8rem; margin:0 0 7px; }
+.bike-piece { position:absolute; width:calc(75% / var(--cols)); height:calc(65% / var(--rows)); max-width:69px; max-height:52px; transform:translate(-50%,-50%); display:grid; place-items:center; pointer-events:auto; color:var(--rider-ink); background:var(--rider); border:2px solid #24383e; border-radius:40% 43% 28% 28%; box-shadow:0 2px 3px #15272c88; }
+.bike-piece svg { width:83%; height:84%; }
+.bike-piece i { position:absolute; top:-17%; right:-9%; width:1.3em; height:1.3em; border-radius:50%; background:var(--rider-ink); border:1px solid var(--rider); color:var(--rider); font:700 clamp(.58rem,1.3vw,.78rem)/1.2 Georgia,serif; }
+.bike-piece[aria-pressed=true] { outline:2px dashed var(--rider); outline-offset:2px; }
+.bike-piece:focus-visible { outline:3px solid #fff4cc; outline-offset:3px; }
+.bike-piece.on-deck, .bike-piece:disabled { transform:translate(-31%,-27%) scale(.78); }
+.bike-piece:disabled { opacity:1; }
+.bike-gear { display:flex; align-items:center; gap:7px; margin:4px 0; }
+#bike-moves { font-weight:700; color:#ffdc9a; }
+#bike-crank { min-height:34px; margin-left:auto; padding-inline:9px; color:#ffe1ae; border:1px solid #988a70; border-radius:5px; background:#3f4b4c; }
+#bike-crank b { font-size:1.15rem; }
+#bike-dirs { grid-template-columns:repeat(4,minmax(0,1fr)); }
+#bike-dirs button { display:grid; grid-template-columns:auto auto; align-content:center; justify-content:center; align-items:center; column-gap:5px; min-height:44px; background:#203943; border:1px solid #79918e; color:#edf1df; border-radius:5px; font-size:.76rem; line-height:1.2; }
+#bike-dirs b { grid-row:span 2; font:700 1.35rem/1 system-ui,sans-serif; }
+#bike-dirs small { font:700 .74rem/1.2 var(--mono); color:#ffdfab; }
+#bike-dirs button[aria-pressed=true] { color:#243f43; background:#f5ddb2; border-color:#f9e3bd; }
+#bike-dirs button[aria-pressed=true] small { color:#4f4d3e; }
+#bike-dirs button:disabled { background:transparent; opacity:.59; }
+#bike-status { color:#f6e8c8; min-height:1.45em; }
+#bike-advice { color:#ffe29b; }
+.on-bike .bike-guided { outline:2px dashed #ffdb8d; outline-offset:-3px; }
+.bike-foot { display:flex; gap:8px; justify-content:space-between; align-items:start; padding-top:4px; font-size:.78rem; color:#d2e3dc; }
+.bike-foot details { flex:1; }
+.bike-foot summary, #bike-to-book { padding-block:7px; cursor:pointer; }
+.bike-foot details p { line-height:1.6; max-width:48ch; }
+#bike-reset, #bike-to-book, #bike-slip { text-decoration:underline; text-underline-offset:3px; }
+#bike-book { padding-block:10px; border-block:1px solid #b9b1a0; }
+#bike-book header { display:flex; align-items:center; gap:8px; color:#374b4e; }
+#bike-book h3 { font:700 1.12rem var(--serif); }
+#bike-count { margin-left:auto; font:.77rem var(--mono); }
+#bike-book > p { margin-block:5px 9px; color:#535d58; font-size:.8rem; }
+#bike-pages { display:grid; gap:5px; }
+#bike-pages button { display:grid; grid-template-columns:29px 1fr auto; align-items:center; text-align:start; gap:7px; min-height:51px; padding:5px 9px; color:#384c4d; border:1px solid #bfb298; border-radius:5px; background:linear-gradient(105deg,#ebdfc5,#faf1dd 48%,#f1e7d3); }
+#bike-pages button[aria-pressed=true] { border-color:#4b6564; box-shadow:inset 3px 0 #4b6564; }
+#bike-pages i { font:1.4rem Georgia,serif; color:#785338; text-align:center; }
+#bike-pages strong, #bike-pages small { display:block; }
+#bike-pages strong { font:700 .94rem var(--serif); }
+#bike-pages small, #bike-pages b { font-size:.73rem; } #bike-pages b { color:#755638; }
+#bike-fork, #bike-slip { min-height:36px; margin:5px 7px 0 0; color:#375456; font-size:.8rem; text-align:start; }
+#bike-fork { padding:5px 9px; border:1px solid #82958a; border-radius:4px; background:#e6ebde; }
+.bike-entry { color:#354e4d; background:#ebe4ce; }
+#receipt-bike:hover, #album-bike:hover { color:#5b412b; background:#e7dac4; }
+#bike-story { font:1rem/1.65 var(--serif); color:#495449; }
+@media(max-width:680px) {
+  .desk:has(.on-bike) { grid-template-areas:"card" "board" "guide" "brief"; }
+  #bike-book { grid-area:guide; }
+  #bike-crank, #bike-fork, #bike-slip, #bike-to-book, #bike-reset, #bike-whatif, .bike-foot summary { min-height:44px; }
+  #bike-riders button { min-height:44px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .bike-piece, .on-bike .tile.jointSeal svg { transition:none; }
+}
+@media(max-width:380px) {
+  #bike-dirs b { grid-row:auto; font-size:1.06rem; }
+  #bike-dirs small { grid-column:1 / -1; text-align:center; margin-top:2px; }
+  #bike-moves, #bike-crank { white-space:nowrap; }
+  .bike-gear { gap:5px; }
+  #bike-crank { padding-inline:6px; }
+}
 .on-graft .chart { border-color: #98a792; background-color: #274d40; background-image: linear-gradient(to right,transparent calc(100% - 1px),#c0c89c40 1px),linear-gradient(to bottom,transparent calc(100% - 1px),#c0c89c40 1px),radial-gradient(ellipse at 25% 85%,#345d4a,transparent 75%); }
 .on-graft .soundings { opacity: .04; }
 .on-graft .tile.water svg { opacity: .13; }
