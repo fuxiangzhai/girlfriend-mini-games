@@ -13,6 +13,7 @@
   <body>
     <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
+        <symbol id="i-frond" viewBox="0 0 24 24"><path d="M7 21c0-7 5-11 8-17M10 13c-4-.5-5-4-4-7 3 1 5 4 4 7Zm2-4c0-3.5 1.5-6 4-7 1 3-1 6-4 7Zm-3 8c4 0 7-2 8-5-4 0-7 1-8 5Zm5-8c3.5 0 5.5-2 6-4-3-.5-5 1-6 4Z"/></symbol>
         <symbol id="i-afterglow" viewBox="0 0 24 24"><path d="M5 20h14m-11 0 2-9h4l2 9M9 11h6M9 9V6l3-2 3 2v3ZM2 5l4 1m12 0 4-1M2 10l4-1m12 0 4 1"/></symbol>
         <symbol id="g-watchtower" viewBox="0 0 64 64"><path d="M17 54h31l-6-6-5-24H27l-5 24Z" fill="#ece6cc" stroke="#273d4b" stroke-width="2"/><path d="M25 34h14l2 8H23z" fill="#bb705a"/><path d="M24 24h16v-9l-8-6-8 6z" fill="#ffda8f" stroke="#495361" stroke-width="2.3"/><path d="M22 15h20l-10-8Zm1 11h18" fill="#b9715a" stroke="#e9c198" stroke-width="2"/><path d="M30 54v-7h5v7" fill="#54616a"/></symbol>
         <symbol id="g-sweepbuoy" viewBox="0 0 64 64"><path d="M13 46q19 14 38 0l-5 8H19z" fill="#9dc7c3" stroke="#254955" stroke-width="2"/><path d="m18 46 7-8 4-15h6l4 15 7 8Z" fill="#d39c60" stroke="#f2d8a3" stroke-width="2"/><rect x="26" y="15" width="12" height="11" rx="3" fill="#ffe7a1" stroke="#926d4a" stroke-width="2"/><path d="M25 16l7-7 7 7m-14 24h14" fill="none" stroke="#edcf97" stroke-width="2.4"/></symbol>
@@ -111,6 +112,14 @@
           <div id="graft-service" class="goal-strip" role="group" data-aria="graftService" hidden><span data-t="graftService"></span><div class="goal-options"><button type="button" id="graft-normal" data-t="hillOrdinary"></button><button type="button" id="graft-enter" data-t="graftTitle"></button></div></div>
           <div id="bike-service" class="goal-strip" role="group" data-aria="bikeService" hidden><span data-t="bikeService"></span><div class="goal-options"><button type="button" id="bike-normal" data-t="duetOrdinary"></button><button type="button" id="bike-enter" data-t="bikeTitle"></button></div></div>
           <div id="glow-service" class="goal-strip" role="group" data-aria="glowService" hidden><span data-t="glowService"></span><div class="goal-options"><button id="glow-normal" type="button" data-t="hillOrdinary"></button><button id="glow-enter" type="button" data-t="glowTitle"></button></div></div>
+          <div id="sun-service" class="goal-strip" role="group" data-aria="sunService" hidden><span data-t="sunService"></span><div class="goal-options"><button id="sun-normal" type="button" data-t="sunOrdinary"></button><button id="sun-enter" type="button" data-t="sunTitle"></button></div></div>
+          <div id="sun-head" hidden>
+            <p id="sun-intro" tabindex="-1"></p>
+            <div class="sun-workbench"><div id="sun-fronds" role="group" data-aria="sunChoose">
+              <button type="button" data-frond="0"><i aria-hidden="true">Ⅰ</i><span data-t="sunFrond0"></span><b></b></button>
+              <button type="button" data-frond="1"><i aria-hidden="true">Ⅱ</i><span data-t="sunFrond1"></span><b></b></button>
+            </div><button id="sun-turn" type="button" data-t="sunTurn"></button></div>
+          </div>
           <div id="glow-head" hidden>
             <p id="glow-intro" tabindex="-1"></p>
             <div class="glow-meter"><strong id="glow-beat"></strong><span id="glow-boat-at"></span><span id="glow-bottle"></span></div>
@@ -160,6 +169,7 @@
               <svg id="beam" aria-hidden="true"><g id="film-overlay"></g><g class="beam-lines"><g data-ray="moon"></g><g data-ray="star"></g></g><g id="courier" class="courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g><g id="star-courier" class="courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g></svg>
               <svg id="sash-rails" aria-hidden="true" hidden></svg>
               <svg id="graft-stems" preserveAspectRatio="none" aria-hidden="true" hidden></svg>
+              <canvas id="sun-paper" aria-hidden="true" hidden></canvas>
               <div id="tiles" class="tiles"></div>
               <svg id="glow-overlay" preserveAspectRatio="none" aria-hidden="true" hidden><g id="glow-beams"></g><g id="glow-wake"></g><use id="glow-boat" href="#g-glowboat" width="66" height="66"/></svg>
               <div id="bike-layer" hidden>
@@ -176,6 +186,13 @@
             </div>
           </div>
           <p id="route-description" class="sr-only"></p>
+          <section id="sun-controls" data-aria="sunTitle" hidden>
+            <div class="sun-line"><strong id="sun-stage"></strong><button id="sun-view" type="button" data-t="sunLoupe" aria-pressed="false"></button></div>
+            <div id="sun-readings" role="group" data-aria="sunReadings"></div>
+            <p id="sun-status" role="status"></p><p id="sun-advice" role="status" hidden></p>
+            <div class="actions"><div class="chart-tools"><button id="sun-undo" type="button" data-t="undo"></button><button id="sun-hint" type="button" data-t="hint"></button><button id="sun-rewind" type="button" data-t="sunRewind" hidden></button></div><button id="sun-main" type="button" class="dispatch"></button></div>
+            <div class="sun-foot"><details><summary data-t="sunGuide"></summary><p data-t="sunRules"></p></details><button id="sun-to-book" type="button" aria-controls="sun-book" data-t="sunBook"></button></div>
+          </section>
           <section id="glow-controls" data-aria="glowTitle" hidden>
             <p id="glow-status" role="status"></p><p id="glow-hint-text" role="status" hidden></p>
             <div id="glow-comparison" hidden><button id="glow-compare" type="button" data-t="glowCompare" aria-controls="glow-echo"></button><span id="glow-echo" role="status" hidden></span></div>
@@ -274,6 +291,13 @@
             </div>
           </article>
           <section class="brief" aria-labelledby="brief-title"><h3 id="brief-title" data-t="fieldNotes">投递手记</h3><p id="brief">今晚的第一封信从这里出发。点一下海面上的圆镜，让月光拐向信箱。</p></section>
+          <section id="sun-book" aria-labelledby="sun-book-title" hidden>
+            <header><svg class="icon" aria-hidden="true"><use href="#i-frond"/></svg><h3 id="sun-book-title" data-t="sunBook"></h3><span id="sun-count"></span></header>
+            <p id="sun-invitation"></p>
+            <div id="sun-pages" role="group" data-aria="sunChoosePage"><button type="button" data-page="left"><canvas aria-hidden="true"></canvas><strong data-t="sunPage_left"></strong><small></small></button><button type="button" data-page="right"><canvas aria-hidden="true"></canvas><strong data-t="sunPage_right"></strong><small></small></button></div>
+            <p id="sun-pair" role="status"></p>
+            <div id="sun-shelf" hidden><label for="sun-file" data-t="sunShelf"></label><select id="sun-file"></select><div><button id="sun-fork" type="button" data-t="sunFork"></button><button id="sun-read" type="button" data-t="sunRead"></button></div></div>
+          </section>
           <section id="glow-book" aria-labelledby="glow-book-title" hidden>
             <header><svg class="icon" aria-hidden="true"><use href="#i-afterglow"/></svg><h3 id="glow-book-title" data-t="glowBook"></h3><span id="glow-count"></span></header>
             <div id="glow-pages" role="group" data-aria="glowBookLink"><button type="button" data-style="clear"><i aria-hidden="true">✦</i><strong data-t="glowStyle_clear"></strong><small data-t="glowGoal_clear"></small><b></b></button><button type="button" data-style="running"><i aria-hidden="true">≈</i><strong data-t="glowStyle_running"></strong><small data-t="glowGoal_running"></small><b></b></button><button type="button" data-style="harbor"><i aria-hidden="true">⚓</i><strong data-t="glowStyle_harbor"></strong><small data-t="glowGoal_harbor"></small><b></b></button></div>
@@ -359,6 +383,7 @@
       <div class="dialog-head"><div><h2 id="album-title" data-t="album">明信片夹</h2><p id="album-summary"></p></div><button class="close" type="button" data-aria="close" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
       <div id="chapters" class="chapters" role="group" data-aria="chapters"><button type="button" data-chapter="coast"><span data-t="coast">沿海夜邮</span> <small>6</small></button><button type="button" data-chapter="replies"><span data-t="replies">回信篇</span> <small>3</small></button><button type="button" data-chapter="together"><span data-t="together">两岸合邮</span> <small>3</small></button><button type="button" data-chapter="darkroom"><span data-t="darkroom">潮汐暗房</span> <small>3</small></button></div>
       <div id="album-grid" class="album-grid"></div>
+      <button id="album-sun" class="desk-entry sun-entry" type="button" hidden><svg class="icon"><use href="#i-frond"/></svg><span><strong data-t="sunTitle"></strong><small data-t="sunAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-glow" class="desk-entry glow-entry" type="button" hidden><svg class="icon"><use href="#i-afterglow"/></svg><span><strong data-t="glowTitle"></strong><small data-t="glowAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-bike" class="desk-entry bike-entry" type="button" hidden><svg class="icon"><use href="#i-bike"/></svg><span><strong data-t="bikeTitle"></strong><small data-t="bikeAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-graft" class="desk-entry graft-entry" type="button" hidden><svg class="icon"><use href="#i-cutting"/></svg><span><strong data-t="graftTitle"></strong><small data-t="graftAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
@@ -390,6 +415,8 @@
         <p id="reel-slip" hidden></p>
         <p id="graft-slip" hidden></p>
         <p id="bike-story" hidden></p>
+        <p id="sun-story" hidden></p>
+        <button id="sun-spread" type="button" aria-controls="contact-sheet" hidden></button>
         <p id="glow-story" hidden></p>
         <div id="editor" hidden><label for="message" data-t="writeLabel">写给收信人的话</label><textarea id="message" rows="3" maxlength="200"></textarea>
           <div class="edit-actions"><span data-t="noteLimit">限 200 字，留空恢复原文</span><button id="use-message" type="button" data-t="saveNote">保存寄语</button><button id="cancel-edit" type="button" data-t="cancel">取消</button></div>
@@ -399,6 +426,7 @@
         <button id="receipt-watch" class="desk-entry watch-entry" type="button" hidden><svg class="icon"><use href="#i-chime"/></svg><span data-t="watchOpen">回风铃栈桥值雾班</span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-hill" class="desk-entry hill-entry" type="button" hidden><svg class="icon"><use href="#i-switchback"/></svg><span></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <p class="export-status"><span id="export-status" role="status"></span> <a id="export-link" data-t="openImage" hidden>打开图片</a></p>
+        <button id="receipt-sun" class="desk-entry sun-entry" type="button" hidden><svg class="icon"><use href="#i-frond"/></svg><span data-t="sunTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-glow" class="desk-entry glow-entry" type="button" hidden><svg class="icon"><use href="#i-afterglow"/></svg><span data-t="glowTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-bike" class="desk-entry bike-entry" type="button" hidden><svg class="icon"><use href="#i-bike"/></svg><span data-t="bikeTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-graft" class="desk-entry graft-entry" type="button" hidden><svg class="icon"><use href="#i-cutting"/></svg><span data-t="graftTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>

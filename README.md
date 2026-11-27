@@ -8,6 +8,10 @@
 
 从首页顶部点「月光邮局」，或打开 [月光邮局](./moon-mail/index.html)。转动海上的圆镜，让月光经过沿途的邮戳、照到收信箱，再点「寄出月光」拆信。「沿海夜邮」的六封信从白沙灯塔一路寄到晨光窗台。「回信篇」从海角温室出发，经过风铃栈桥，抵达望海天文台。回信的编号邮戳要按数字顺序首次经过。
 
+晒网台的**海藻双联晒印**从信里那半枚指印开始。把带藻和鹿角藻夹在原图的圆夹眼上，留下首晒。第二次只能动其中一枝。两次都遮住的地方留白，只遮过一次的地方洗成浅蓝。四处校样晒色吻合，就能把自己的蓝晒印随信寄走。[试玩海藻双联晒印](./moon-mail/index.html#kelpprint-diptych)
+
+想给这封信配一对图，可以从回信点「沿用这张首晒」。日班试着固定鹿角藻，让 A4 留白，换成固定带藻，白印会移到 B5。夜班的两处白印在上沿，同一枝鹿角藻在同一夹眼翻个面，就能调换它们。两页确实共用一张首晒时能合装，还可以拆开看每页的两次曝光，或选一页单独导出。[看实机晒出的双联页](./docs/net-drying-diptych.webp)
+
 白沙灯塔的**余晖引航**让你在第一封信所说的第七闪靠岸。塔灯和两座浮标的灯面每闪一起转动，圆镜会让光转弯。每闪可以向相邻的亮格划一桨，或在灯旁系缆。船上有一瓶余晖，途中能用一次，划进上一闪还亮着的格子。点任意水格，就能查它整晚的灯历。[试玩余晖引航](./moon-mail/index.html#lighthouse-afterglow)
 
 日班第四闪到 D2 后，可以系船等两闪，从南边进信箱。也可以趁 E2 的光刚灭，借余晖绕过 E1，从东边在同一闪靠岸。日班的六份灯历和夜班的五份灯历都能逐份收藏。翻开旧信可从最后一个共同闪次改走，每一闪还能把上次的小船叠回图上，看它当时等在哪儿、两趟从哪里分开。[查看白沙灯塔实机画面](./docs/white-sand-afterglow.webp)
@@ -74,6 +78,8 @@ At **Orange Hill Station**, choose **Hillside Switchbacks**. Fit, flip or lift t
 
 At **Star Bay**, open **Bridge Bells**. Ring each bike’s bell on the swing bridge, then post at its matching box. A waiting bike can give the other rider a new place to stop. Two eight-move rides share their first five moves. At B4, turn the deck and ride straight into B5, or keep it facing east, coast through the gate and borrow a stop at C5. Each page keeps your best ride. Reopen a posted slip at the last fork on a shortest route to another page. [Play Bridge Bells](./moon-mail/index.html#bridge-bells)
 
+At the **Net-Drying Terrace**, make **Seaweed Diptychs** with a ribbon and a forked frond. Pin both on the original chart for a first exposure, then move or turn one specimen. Shade twice for paper white, once for pale blue. Match the four registration marks to post a print. Reuse its first exposure to make a companion with the margin tones reversed. The album binds the two pages and lets you inspect or export either one on its own. [Play Seaweed Diptychs](./moon-mail/index.html#kelpprint-diptych)
+
 At **White Sand Light**, try **Afterglow Passage**. Row on the sweeping lights or wait at a beacon. Once per crossing, a bottled afterglow will carry you onto a square that was lit one flash ago. At D2 on the fourth daytime flash, wait twice for a short approach, or spend the bottle to circle the outer bay. Both letters reach the same box on flash seven. Inspect any square’s light table, rewind a flash, or overlay a posted crossing to see exactly where the wakes part. [Play Afterglow Passage](./moon-mail/index.html#lighthouse-afterglow)
 
 At **Cape Glasshouse**, open **Moonlit Herbarium**. Press the orange blossom to keep its stem and the mirrors it touched. Grow a second shoot to the bellflower, then take a cutting from either stem to reach the mailbox. The two daytime study pages keep the very same flowers but send the final shoot one or nine squares. The night pages make two different eight-square impressions. Keep one or both flowers from a filed specimen to try another ending.
@@ -86,7 +92,7 @@ At **Twin Signal Huts**, choose **Signal Duet**. Gather both letters at the diam
 
 At **The Morning Window**, choose **Tea at the Window**. Slide a frame one square along its track, or tap a mirror to tilt the panes sharing its frame. Warm both cups and reach the same mailbox. Keep a tracing before experimenting and swap the two settings to compare their paths. A filed coaster prints the actual route and the order in which the cups warmed.
 
-在仓库根目录运行 `node --test` 可验证各关光路、曝光组合、调度委托、雾班线索、橘坡走法、两岸同拍的双信时序、一笔星图的岔口、推窗早茶的窗位、回潮航带的逐格航迹、月光标本的接枝与对页、双铃过桥的借停与最短分路、余晖引航的逐闪照明与靠岸航迹，以及存档恢复与提示（Node.js 18 及以上）。
+在仓库根目录运行 `node --test` 可验证各关光路、曝光组合、调度委托、雾班线索、橘坡走法、两岸同拍的双信时序、一笔星图的岔口、推窗早茶的窗位、回潮航带的逐格航迹、月光标本的接枝与对页、双铃过桥的借停与最短分路、余晖引航的逐闪照明与靠岸航迹、海藻双联晒印的全纸晒色与共同首晒，以及存档恢复与提示（Node.js 18 及以上）。
 
 ## GitHub Pages
 
