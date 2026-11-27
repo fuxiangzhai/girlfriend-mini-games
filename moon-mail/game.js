@@ -17,6 +17,8 @@ import { createStarAtlas, atlasKey, atlasStory, atlasSummary, starPrint } from "
 import { createMorningWindow, sashKey, teaStory, teaSummary, teaPrint } from "./sashes-ui.js";
 import { createTideRoom, reelKey, reelSummary, reelPrint } from "./tide-roll-ui.js";
 import { tideCourse } from "./tide-roll.mjs";
+import { createGlasshouse, graftKey, pressPrint, specimenSummary } from "./grafts-ui.js";
+import { glassGarden } from "./grafts.mjs";
 
 const byId = id => document.getElementById(id);
 const pad = value => String(value).padStart(2, "0");
@@ -24,6 +26,7 @@ const memory = new Map();
 const memoryOnly = new Set();
 const prefix = "moon-mail:v1:";
 const services = {
+  graft: {station:"glasshouse", hash:"glasshouse-herbarium", access:"graftAccess", map:"graftMap", icon:"#i-cutting"},
   reel: {station:"arches", hash:"arches-reel", access:"reelAccess", map:"reelMap", icon:"#i-reel"},
   sashes: {station:"dawn", hash:"dawn-sashes", access:"sashAccess", map:"sashMap", icon:"#i-sash"},
   atlas: {station:"observatory", hash:"observatory-atlas", access:"atlasAccess", map:"atlasMap", icon:"#i-atlas"},
@@ -91,12 +94,14 @@ const huts = letters.findIndex(letter => letter.id === "signals");
 const dome = letters.findIndex(letter => letter.id === "observatory");
 const sill = letters.findIndex(letter => letter.id === "dawn");
 const strait = letters.findIndex(letter => letter.id === "arches");
+const greenhouse = letters.findIndex(letter => letter.id === "glasshouse");
+const graft = createGlasshouse({letter:letters[greenhouse], read, write, cue, delivered:updateCount, receipt:id => showReceipt(greenhouse, false, id)});
 const reel = createTideRoom({letter: letters[strait], read, write, cue, delivered: updateCount, receipt: id => showReceipt(strait, false, id)});
 const sashes = createMorningWindow({letter:letters[sill], read, write, cue, delivered:updateCount, receipt:id=>showReceipt(sill,false,id)});
 const atlas = createStarAtlas({ letter: letters[dome], read, write, cue, delivered: updateCount, receipt: ink => showReceipt(dome, false, ink) });
 const duet = createSignalDuet({ letter: letters[huts], read, write, cue, delivered: updateCount, receipt: id => showReceipt(huts, false, id) });
 const fog = createFogWatch({ letter: letters[pier], read, write, cue, delivered: updateCount, openReceipt: record => showReceipt(pier, true, record) });
-let activeService, receiptDuet, receiptAtlas, receiptTea, receiptReel;
+let activeService, receiptDuet, receiptAtlas, receiptTea, receiptReel, receiptGraft;
 let active, board, chart, mask, path, history, sent, hint;
 let frames = [], reading;
 let compared = -1, justExposed = false;
@@ -116,6 +121,7 @@ function delivered(index) {
     || (index === huts && Boolean(duet.record(difficulty)))
     || (index === dome && Boolean(atlas.record(difficulty)))
     || (index === strait && Boolean(reel.record(difficulty)))
+    || (index === greenhouse && Boolean(graft.record(difficulty)))
     || (index === sill && Boolean(sashes.record(difficulty)));
 }
 function hasImprint(index) { return read(routeKey(index, "imprint")) === true; }
@@ -255,7 +261,7 @@ function render() {
     });
     byId("joint-count").textContent = t("sealCount", {n: path.jointCount});
   }
-  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter", "hill-enter", "hill-normal", "duet-enter", "atlas-enter", "sash-enter", "reel-enter"]) byId(id).disabled = sending;
+  for (const id of ["open-album", "open-settings", "mode-open", "language-switch", "station-desk", "watch-enter", "hill-enter", "hill-normal", "duet-enter", "atlas-enter", "sash-enter", "reel-enter", "graft-enter"]) byId(id).disabled = sending;
 }
 
 function openRoute(index, fresh = false, requestedGoal, service) {
@@ -316,6 +322,13 @@ function presentRoute() {
   byId("time").textContent = letter.time;
   byId("brief").textContent = service ? t(activeService + "Brief") : difficulty === "expert" ? letter.expertNote : letter.brief;
   const chartPanel = document.querySelector(".chart-panel");
+  const onGraft = activeService === "graft";
+  chartPanel.classList.toggle("on-graft", onGraft);
+  byId("graft-service").hidden = active !== greenhouse;
+  byId("graft-enter").setAttribute("aria-pressed", String(onGraft));
+  byId("graft-normal").setAttribute("aria-pressed", String(!onGraft));
+  for (const id of ["graft-head", "graft-controls", "graft-book"]) byId(id).hidden = !onGraft;
+  byId("graft-stems").toggleAttribute("hidden", !onGraft);
   const onReel = activeService === "reel";
   chartPanel.classList.toggle("on-reel", onReel);
   byId("reel-service").hidden = active !== strait;
@@ -366,7 +379,8 @@ function presentRoute() {
   for (const key of document.querySelectorAll(".single-symbol")) key.hidden = paired || film;
   for (const key of document.querySelectorAll(".film-symbol")) key.hidden = !film;
   byId("guide-instructions").textContent = t(film ? "filmGuide" : paired ? "pairInstructions" : "instructions");
-  if (onReel) reel.mount(difficulty, t);
+  if (onGraft) graft.mount(difficulty, t);
+  else if (onReel) reel.mount(difficulty, t);
   else if (onSashes) sashes.mount(difficulty, t);
   else if (onAtlas) atlas.mount(difficulty, t);
   else if (onDuet) duet.mount(difficulty, t);
@@ -528,10 +542,11 @@ byId("send").addEventListener("click", async () => {
     }
     if (!document.hidden) sound.play(board.hill ? "punchTicket" : "sent");
   }
-  showReceipt(active, !firstDelivery, board.hill ? hillTrip(board, path).id : [slope,huts,dome,sill,strait].includes(active) ? null : undefined);
+  showReceipt(active, !firstDelivery, board.hill ? hillTrip(board, path).id : [slope,huts,dome,sill,strait,greenhouse].includes(active) ? null : undefined);
 });
 
 function fillAlbum() {
+  byId("album-graft").hidden = chapter !== letters[greenhouse].chapter;
   byId("album-reel").hidden = chapter !== letters[strait].chapter;
   byId("album-sash").hidden = chapter !== "coast";
   byId("album-atlas").hidden = chapter !== "replies";
@@ -563,6 +578,7 @@ function fillAlbum() {
     if (index === dome && wasDelivered && best === null) status.textContent = t("atlasFiled");
     if (index === sill && wasDelivered && best === null) status.textContent = t("sashPosted");
     if (index === strait && wasDelivered && best === null) status.textContent = t("reelPosted");
+    if (index === greenhouse && wasDelivered && best === null) status.textContent = t("graftFiled");
     if (index === slope && wasDelivered && best === null) status.textContent = t("hillFiled", {n: hillTickets(station, difficulty, read).size, total: 4});
     button.append(image, title, status);
     if (station.chapter === "together") {
@@ -617,6 +633,21 @@ function showAlbum(selectedChapter = letters[active].chapter) {
   album.showModal();
 }
 byId("open-album").addEventListener("click", () => showAlbum());
+function openGraft(id) {
+  if (album.open) album.close();
+  if (receipt.open) receipt.close();
+  openRoute(greenhouse, false, undefined, "graft");
+  if (id) graft.keepCutting(id);
+  else {
+    cue("paper");
+    byId("graft-instruction").focus({preventScroll:true});
+    byId("graft-head").scrollIntoView({block:"nearest"});
+  }
+}
+byId("graft-enter").addEventListener("click", () => { if (!sending && activeService !== "graft") openGraft(); });
+byId("graft-normal").addEventListener("click", () => { if (activeService === "graft") { cue("paper"); openRoute(greenhouse); } });
+byId("album-graft").addEventListener("click", () => openGraft());
+byId("receipt-graft").addEventListener("click", () => openGraft(receiptGraft?.id));
 function openReel(id) {
   if (album.open) album.close();
   if (receipt.open) receipt.close();
@@ -746,6 +777,8 @@ function clearExport() {
 }
 
 function setEditing(value) {
+  byId("graft-slip").hidden = value || !receiptGraft;
+  byId("receipt-graft").hidden = value || viewed !== greenhouse;
   byId("reel-slip").hidden = value || !receiptReel;
   byId("receipt-reel").hidden = value || viewed !== strait;
   byId("sash-slip").hidden = value || !receiptTea;
@@ -776,6 +809,7 @@ function setEditing(value) {
 
 function showReceipt(index, rustle = true, record) {
   viewed = index;
+  receiptGraft = index === greenhouse && record !== null && (record !== undefined || bestFor(greenhouse) === null) ? graft.record(difficulty, record) : null;
   if (activeService === "reel") reel.stop();
   receiptReel = index === strait && record !== null && (record !== undefined || bestFor(strait) === null) ? reel.record(difficulty, record) : null;
   receiptTea = index === sill && record !== null && (record !== undefined || bestFor(sill) === null) ? sashes.record(difficulty,record) : null;
@@ -797,6 +831,10 @@ function showReceipt(index, rustle = true, record) {
   byId("receipt-image").alt = letter.artAlt;
   byId("receipt-title").textContent = letter.title;
   byId("letter-text").textContent = messageFor(index);
+  if (index === greenhouse) {
+    byId("receipt-graft").querySelector("span").textContent = t(receiptGraft ? "graftAgain" : read(graftKey(difficulty, "draft")) ? "graftResume" : "graftTitle");
+    if (receiptGraft) byId("graft-slip").textContent = t("graftStory_" + receiptGraft.kind);
+  }
   if (index === strait) {
     byId("receipt-reel").querySelector("span").textContent = t(receiptReel ? "reelRework" : read(reelKey(difficulty, "draft")) ? "reelResume" : "reelTitle");
     if (receiptReel) byId("reel-slip").textContent = t("reelStory_" + receiptReel.coast);
@@ -827,7 +865,8 @@ function showReceipt(index, rustle = true, record) {
   }
   const proof = byId("contact-sheet");
   proof.replaceChildren();
-  byId("film-proof").querySelector("figcaption").textContent = t(receiptReel ? "reelProof" : receiptTea ? "sashProof" : receiptAtlas ? "atlasProof" : "contactTitle");
+  byId("film-proof").querySelector("figcaption").textContent = t(receiptGraft ? "graftProof" : receiptReel ? "reelProof" : receiptTea ? "sashProof" : receiptAtlas ? "atlasProof" : "contactTitle");
+  if (receiptGraft) proof.append(pressPrint(glassGarden(letters[greenhouse],difficulty).board, receiptGraft, t));
   if (receiptReel) proof.append(reelPrint(tideCourse(letters[strait], difficulty).board, receiptReel, t));
   if (receiptTea) proof.append(teaPrint(receiptTea,t));
   if (receiptAtlas) proof.append(starPrint(receiptAtlas, t));
@@ -848,8 +887,8 @@ function updateReceiptRoutes() {
   const paired = station.chapter === "together";
   const goal = paired && read(routeKey(viewed, "goal")) === "joint" ? "joint" : "direct";
   const draft = read(routeKey(viewed, "route", goal));
-  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty)) || [slope,dome,sill,strait].includes(viewed)) && draft?.sent === false && draft.history?.length > 0;
-  byId("replay").textContent = t(receiptTea || receiptReel ? (resume ? "sashRegularResume" : "sashRegularOpen") : (resume ? "continueRoute" : "replay"));
+  const resume = (paired || Boolean(station.plate) || (viewed === pier && fog.latest(difficulty)) || [slope,dome,sill,strait,greenhouse].includes(viewed)) && draft?.sent === false && draft.history?.length > 0;
+  byId("replay").textContent = t(receiptTea || receiptReel || receiptGraft ? (resume ? "sashRegularResume" : "sashRegularOpen") : (resume ? "continueRoute" : "replay"));
   byId("replay").dataset.resume = String(resume);
   if (!paired) return;
   const collected = hasImprint(viewed);
@@ -891,12 +930,13 @@ byId("save-image").addEventListener("click", async () => {
     const letter = localLetter(letters[index], language);
     const last = receiptWatch;
     const trip = receiptHill?.trip;
-    const back = receiptReel ? [t("reelStory_" + receiptReel.coast), reelSummary(receiptReel, t)].join("\n")
+    const back = receiptGraft ? [t("graftStory_" + receiptGraft.kind), specimenSummary(glassGarden(letters[greenhouse], difficulty).board, receiptGraft, t)].join("\n")
+      : receiptReel ? [t("reelStory_" + receiptReel.coast), reelSummary(receiptReel, t)].join("\n")
       : receiptTea ? [teaStory(receiptTea,t),teaSummary(receiptTea,t)].join("\n") : receiptAtlas ? [atlasStory(receiptAtlas, t), atlasSummary(receiptAtlas, t)].join("\n") : receiptDuet ? [t("duetName_" + receiptDuet.id), duetSummary(receiptDuet.score, t), t("duetStory_" + receiptDuet.id)].join("\n")
       : trip ? t("hillName_" + trip.id) + "\n" + hillSummary(prepareHill(letters[slope], difficulty), trip, t) + "\n" + t("hillStory_" + trip.id)
       : last ? t("watchStory") + "\n" + watchSlip(t, last.shift, last) : hasImprint(index) ? letter.postscript : undefined;
-    const backTitle = receiptReel ? "reelBook" : receiptTea ? "sashTable" : receiptAtlas ? "atlasLog" : receiptDuet ? "duetSlip" : trip ? "hillStub" : last ? "watchSlipTitle" : "onTheBack";
-    const proofTitle = receiptReel ? "reelProof" : receiptTea ? "sashProof" : receiptAtlas ? "atlasProof" : "contactTitle";
+    const backTitle = receiptGraft ? "graftBook" : receiptReel ? "reelBook" : receiptTea ? "sashTable" : receiptAtlas ? "atlasLog" : receiptDuet ? "duetSlip" : trip ? "hillStub" : last ? "watchSlipTitle" : "onTheBack";
+    const proofTitle = receiptGraft ? "graftProof" : receiptReel ? "reelProof" : receiptTea ? "sashProof" : receiptAtlas ? "atlasProof" : "contactTitle";
     const blob = await postcardPNG(letter, index + 1, messageFor(index), language, t, back, byId("contact-sheet").firstElementChild, backTitle, proofTitle);
     if (version !== exportVersion || !receipt.open) return;
     exportURL = URL.createObjectURL(blob);
@@ -944,7 +984,7 @@ function switchLanguage() {
   applyLanguage();
   presentRoute();
   if (album.open) fillAlbum();
-  if (receipt.open) showReceipt(viewed, false, viewed === strait ? receiptReel?.id ?? null : viewed === sill ? receiptTea?.trip.id ?? null : viewed === dome ? receiptAtlas?.sketch.ink ?? null : viewed === huts ? receiptDuet?.id ?? null : viewed === slope ? receiptHill?.trip.id ?? null : receiptWatch);
+  if (receipt.open) showReceipt(viewed, false, viewed === greenhouse ? receiptGraft?.id ?? null : viewed === strait ? receiptReel?.id ?? null : viewed === sill ? receiptTea?.trip.id ?? null : viewed === dome ? receiptAtlas?.sketch.ink ?? null : viewed === huts ? receiptDuet?.id ?? null : viewed === slope ? receiptHill?.trip.id ?? null : receiptWatch);
   dispatchDesk.refresh();
 }
 byId("language-switch").addEventListener("click", switchLanguage);
@@ -993,6 +1033,12 @@ setVolume(Number.isInteger(savedVolume) && savedVolume >= 0 && savedVolume <= 10
 applyLanguage();
 window.addEventListener("pageshow", updateCount);
 window.addEventListener("storage", event => {
+  if (event.key?.startsWith(prefix + graftKey(difficulty, "")) && !event.key.endsWith(".draft")) {
+    if (activeService === "graft") graft.refresh();
+    updateCount();
+    if (album.open) fillAlbum();
+    return;
+  }
   if (event.key?.startsWith(prefix + reelKey(difficulty, "")) && !event.key.endsWith(".draft")) {
     if (activeService === "reel") reel.refresh();
     updateCount();

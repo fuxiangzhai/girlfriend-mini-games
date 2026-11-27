@@ -13,6 +13,9 @@
   <body>
     <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
+        <symbol id="i-cutting" viewBox="0 0 24 24"><path d="M4 21 17 8M9 16c-4 0-6-3-6-7 4 0 7 2 7 6m3-3c0-6 3-9 9-9-1 6-4 9-9 9ZM9 17c4-3 7-2 10 0-3 3-7 3-10 0Z"/></symbol>
+        <symbol id="g-blossom" viewBox="0 0 64 64"><g fill="currentColor" stroke="#34483a" stroke-width="2"><path d="M32 13C22-3 8 7 16 22 0 21 1 38 16 40 5 53 20 64 32 50c9 14 25 5 17-9 17-3 15-19-1-19C55 8 41 0 32 13Z"/><circle cx="32" cy="32" r="14" fill="#f4ddac"/></g></symbol>
+        <symbol id="g-bellflower" viewBox="0 0 64 64"><path d="M17 18c5-6 9-10 15-10s12 5 15 12c2 6 1 16 10 24l-12 1-7 8-8-6-12 3-2-7-10-4c9-6 9-14 11-21Z" fill="currentColor" stroke="#424b48" stroke-width="2.4"/><circle cx="32" cy="32" r="13" fill="#f0e2c8"/></symbol>
         <symbol id="i-reel" viewBox="0 0 24 24"><circle cx="9" cy="10" r="6.5"/><circle cx="9" cy="10" r="2"/><path d="M6 6.5h.1m6 1h.1m-3 6h.1M9 16.5h8a3 3 0 0 0 3-3V10m-15 10h14"/></symbol>
         <symbol id="i-helm0" viewBox="0 0 24 24"><path d="M12 20V4m-6 6 6-6 6 6"/></symbol>
         <symbol id="i-helm1" viewBox="0 0 24 24"><path d="M6 20v-7a5 5 0 0 1 5-5h9m-5-5 5 5-5 5"/></symbol>
@@ -99,6 +102,11 @@
           <div id="duet-head" hidden><strong id="duet-phase"></strong><span id="duet-station"></span></div>
           <div id="sash-service" class="goal-strip" role="group" data-aria="sashService" hidden><span data-t="sashService"></span><div class="goal-options"><button type="button" id="sash-normal" data-t="hillOrdinary"></button><button type="button" id="sash-enter" data-t="sashTitle"></button></div></div>
           <div id="reel-service" class="goal-strip" role="group" data-aria="reelService" hidden><span data-t="reelService"></span><div class="goal-options"><button type="button" id="reel-normal" data-t="hillOrdinary"></button><button type="button" id="reel-enter" data-t="reelTitle"></button></div></div>
+          <div id="graft-service" class="goal-strip" role="group" data-aria="graftService" hidden><span data-t="graftService"></span><div class="goal-options"><button type="button" id="graft-normal" data-t="hillOrdinary"></button><button type="button" id="graft-enter" data-t="graftTitle"></button></div></div>
+          <div id="graft-head" hidden>
+            <ol id="graft-stages" data-aria="graftStages"><li><span data-t="graftPart0"></span><b></b></li><li><span data-t="graftPart1"></span><b></b></li><li><span data-t="graftPart2"></span><b></b></li></ol>
+            <p id="graft-instruction" tabindex="-1"></p>
+          </div>
           <div id="reel-head" hidden>
             <p data-t="reelQuick"></p>
             <div id="reel-tape" role="group" data-aria="reelTape"></div>
@@ -131,6 +139,7 @@
               </svg>
               <svg id="beam" aria-hidden="true"><g id="film-overlay"></g><g class="beam-lines"><g data-ray="moon"></g><g data-ray="star"></g></g><g id="courier" class="courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g><g id="star-courier" class="courier" hidden><rect x="-14" y="-10" width="28" height="20" rx="3"/><path d="m-12-7 12 9 12-9"/></g></svg>
               <svg id="sash-rails" aria-hidden="true" hidden></svg>
+              <svg id="graft-stems" preserveAspectRatio="none" aria-hidden="true" hidden></svg>
               <div id="tiles" class="tiles"></div>
               <svg id="reel-soundings" viewBox="0 0 600 500" preserveAspectRatio="none" aria-hidden="true" hidden>
                 <g id="reel-pins"></g>
@@ -141,6 +150,12 @@
             </div>
           </div>
           <p id="route-description" class="sr-only"></p>
+          <section id="graft-controls" data-aria="graftTitle" hidden>
+            <div id="graft-compass" hidden><strong id="graft-joint"></strong><div role="group" data-aria="graftAim"><button type="button" data-graft-dir="3" data-aria="north">↑</button><button type="button" data-graft-dir="0" data-aria="east">→</button><button type="button" data-graft-dir="1" data-aria="south">↓</button><button type="button" data-graft-dir="2" data-aria="west">←</button></div></div>
+            <p id="graft-status" role="status"></p>
+            <div class="actions"><div class="chart-tools"><button type="button" id="graft-undo" data-t="undo"></button><button type="button" id="graft-prune" data-t="graftPrune"></button><button type="button" id="graft-hint" data-t="hint"></button></div><button type="button" class="dispatch" id="graft-main"></button></div>
+            <div class="graft-foot"><details class="graft-guide"><summary data-t="graftGuide"></summary><p data-t="graftRules"></p><button type="button" id="graft-reset" data-t="graftReset"></button></details><button type="button" id="graft-to-book" aria-controls="graft-book" data-t="graftPages"></button></div>
+          </section>
           <section id="reel-controls" data-aria="reelTitle" hidden>
             <div class="reel-reader">
               <button type="button" id="reel-play"></button>
@@ -217,6 +232,15 @@
             </div>
           </article>
           <section class="brief" aria-labelledby="brief-title"><h3 id="brief-title" data-t="fieldNotes">投递手记</h3><p id="brief">今晚的第一封信从这里出发。点一下海面上的圆镜，让月光拐向信箱。</p></section>
+          <section id="graft-book" aria-labelledby="graft-book-title" hidden>
+            <header><svg class="icon" aria-hidden="true"><use href="#i-cutting"/></svg><h3 id="graft-book-title" data-t="graftBook"></h3><span id="graft-count"></span></header>
+            <div id="graft-pages" role="group" data-aria="graftPages"><button type="button" data-leaf="0"><svg viewBox="0 0 120 75" aria-hidden="true"></svg><strong></strong><small></small></button><button type="button" data-leaf="1"><svg viewBox="0 0 120 75" aria-hidden="true"></svg><strong></strong><small></small></button></div>
+            <p id="graft-study"></p>
+            <p id="graft-empty" data-t="graftEmpty"></p>
+            <div id="graft-shelf" hidden><label for="graft-specimens" data-t="graftShelf"></label><select id="graft-specimens"></select><p id="graft-caption"></p>
+              <div class="graft-cuttings"><button type="button" id="graft-keep1"></button><button type="button" id="graft-keep2"></button></div><button type="button" id="graft-read" data-t="graftRead"></button>
+            </div>
+          </section>
           <section id="reel-book" aria-labelledby="reel-book-title" hidden>
             <header><svg class="icon" aria-hidden="true"><use href="#i-reel"/></svg><h3 id="reel-book-title" data-t="reelBook"></h3><span id="reel-count"></span></header>
             <div id="reel-coasts" role="group" data-aria="reelRequests"></div><p id="reel-request"></p>
@@ -278,6 +302,7 @@
       <div class="dialog-head"><div><h2 id="album-title" data-t="album">明信片夹</h2><p id="album-summary"></p></div><button class="close" type="button" data-aria="close" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
       <div id="chapters" class="chapters" role="group" data-aria="chapters"><button type="button" data-chapter="coast"><span data-t="coast">沿海夜邮</span> <small>6</small></button><button type="button" data-chapter="replies"><span data-t="replies">回信篇</span> <small>3</small></button><button type="button" data-chapter="together"><span data-t="together">两岸合邮</span> <small>3</small></button><button type="button" data-chapter="darkroom"><span data-t="darkroom">潮汐暗房</span> <small>3</small></button></div>
       <div id="album-grid" class="album-grid"></div>
+      <button id="album-graft" class="desk-entry graft-entry" type="button" hidden><svg class="icon"><use href="#i-cutting"/></svg><span><strong data-t="graftTitle"></strong><small data-t="graftAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-reel" class="desk-entry reel-entry" type="button" hidden><svg class="icon"><use href="#i-reel"/></svg><span><strong data-t="reelTitle"></strong><small data-t="reelAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-sash" class="desk-entry sash-entry" type="button" hidden><svg class="icon"><use href="#i-sash"/></svg><span><strong data-t="sashTitle"></strong><small data-t="sashAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
       <button id="album-atlas" class="desk-entry atlas-entry" type="button" hidden><svg class="icon"><use href="#i-atlas"/></svg><span><strong data-t="atlasTitle"></strong><small data-t="atlasAlbum"></small></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
@@ -304,6 +329,7 @@
         <p id="atlas-slip" hidden></p>
         <p id="sash-slip" hidden></p>
         <p id="reel-slip" hidden></p>
+        <p id="graft-slip" hidden></p>
         <div id="editor" hidden><label for="message" data-t="writeLabel">写给收信人的话</label><textarea id="message" rows="3" maxlength="200"></textarea>
           <div class="edit-actions"><span data-t="noteLimit">限 200 字，留空恢复原文</span><button id="use-message" type="button" data-t="saveNote">保存寄语</button><button id="cancel-edit" type="button" data-t="cancel">取消</button></div>
         </div>
@@ -312,6 +338,7 @@
         <button id="receipt-watch" class="desk-entry watch-entry" type="button" hidden><svg class="icon"><use href="#i-chime"/></svg><span data-t="watchOpen">回风铃栈桥值雾班</span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-hill" class="desk-entry hill-entry" type="button" hidden><svg class="icon"><use href="#i-switchback"/></svg><span></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <p class="export-status"><span id="export-status" role="status"></span> <a id="export-link" data-t="openImage" hidden>打开图片</a></p>
+        <button id="receipt-graft" class="desk-entry graft-entry" type="button" hidden><svg class="icon"><use href="#i-cutting"/></svg><span data-t="graftTitle"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-reel" class="desk-entry reel-entry" type="button" hidden><svg class="icon"><use href="#i-reel"/></svg><span data-t="reelRework"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-sash" class="desk-entry sash-entry" type="button" hidden><svg class="icon"><use href="#i-sash"/></svg><span data-t="sashAgain"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>
         <button id="receipt-atlas" class="desk-entry atlas-entry" type="button" hidden><svg class="icon"><use href="#i-atlas"/></svg><span data-t="atlasAgain"></span><svg class="icon entry-arrow"><use href="#i-next"/></svg></button>

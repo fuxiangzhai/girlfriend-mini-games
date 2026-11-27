@@ -62,7 +62,7 @@ export function mountChart(board, onRotate, t, options = {}) {
     const isMirror = index !== undefined;
     const berth = options.berths?.indexOf(cell) ?? -1;
     const plotCell = options.onPlot && tile !== "#";
-    const inspectCell = options.onInspect && (tile === "." || tile === "*");
+    const inspectCell = options.onInspect && (tile === "." || tile === "*" || (options.inspectSeals && isNumbered(tile)));
     const element = document.createElement(plotCell || inspectCell || (isMirror && !options.fixedMirrors) || berth >= 0 ? "button" : "span");
     const starDirection = starArrows.indexOf(tile);
     const direction = starDirection !== -1 ? starDirection : arrows.indexOf(tile);

@@ -488,9 +488,85 @@ html:lang(en) .legend span { white-space: normal; }
 }
 
 .on-watch .counters, .on-watch > .transit, .on-watch > .actions,
+.on-graft .counters, .on-graft > .transit, .on-graft > .actions,
 .on-reel .counters, .on-reel > .transit, .on-reel > .actions,
 .on-sashes .counters, .on-sashes > .transit, .on-sashes > .actions,
 .on-atlas .counters, .on-atlas > .transit, .on-atlas > .actions { display: none; }
+.on-graft { border-color: #394d42; background: radial-gradient(ellipse at 90% 4%,#495e47,transparent 60%),#253f39; }
+.on-graft .chart { border-color: #98a792; background-color: #274d40; background-image: linear-gradient(to right,transparent calc(100% - 1px),#c0c89c40 1px),linear-gradient(to bottom,transparent calc(100% - 1px),#c0c89c40 1px),radial-gradient(ellipse at 25% 85%,#345d4a,transparent 75%); }
+.on-graft .soundings { opacity: .04; }
+.on-graft .tile.water svg { opacity: .13; }
+.on-graft .tile.mark { color: #afab8f; }
+.on-graft .tile.mark > svg { width: 75%; height: 75%; }
+.on-graft .tile[data-flower="1"].lit { color: #f4ad79; }
+.on-graft .tile[data-flower="2"].lit { color: #ccafdf; }
+.on-graft .tile.mirror svg { width: 73%; height: 73%; }
+.on-graft .graft-fixed svg { opacity: .79; }
+.on-graft .tile.graft-site { pointer-events: auto; cursor: pointer; }
+.on-graft .graft-site::after { content: ""; position: absolute; width: 17%; height: 12%; right: 8%; bottom: 14%; border: 1.5px solid #cfebac; border-radius: 94% 8% 94% 8%; background: #648255; }
+.on-graft .graft-site:hover, .on-graft .graft-site:focus-visible { background: #dceca01a; }
+.on-graft .tile.graft-picked { background: #deca8b1a; border-radius: 4px; outline: 2px solid #f0d3a4; outline-offset: -4px; }
+.on-graft .graft-picked::after { background: #f8c58c; border-color: #ffe5af; }
+.on-graft [data-graft-arrow]::before { content: attr(data-graft-arrow); position: absolute; top: 3%; right: 5%; z-index: 1; color: #ffdfa1; font: 700 clamp(.74rem,2vw,1rem)/1 system-ui,sans-serif; }
+.on-graft .tile:focus-visible { outline-offset: -3px; }
+.on-graft .beam-core { stroke: #ffda94; stroke-width: 5.5; }
+.on-graft [data-graft-stage="2"] .beam-core { stroke: #e8d2fb; }
+.on-graft .beam-flow { stroke: #fff3c8; }
+#graft-stems { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pressed-stem { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.pressed-stem.stem-0 { stroke: #bcda9d; } .pressed-leaf.stem-0 { fill: #b2ce92; }
+.pressed-stem.stem-1 { stroke: #f3ad8a; } .pressed-leaf.stem-1 { fill: #ecaf8c; }
+#graft-stages { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 2px; margin: 8px 0 4px; padding: 0; list-style: none; }
+#graft-stages li { display: grid; align-content: center; gap: 1px; min-height: 42px; padding: 4px 9px; background: #203930; border-bottom: 2px solid #849782; color: #e0e7d9; font-size: .83rem; }
+#graft-stages li:first-child { border-radius: 6px 0 0 3px; } #graft-stages li:last-child { border-radius: 0 6px 3px 0; }
+#graft-stages b { font-size: .7rem; font-weight: 550; }
+#graft-stages [data-phase="active"] { background: #e9dab5; color: #344331; border-color: #f7bd81; }
+#graft-stages [data-phase="pressed"] { background: #425b44; border-color: #b3d491; }
+#graft-instruction, .graft-guide p { color: #e0e8d9; font-size: .84rem; line-height: 1.55; margin: 6px 0; }
+#graft-compass, #graft-compass > div { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+#graft-compass { gap: 5px 14px; margin-top: 8px; }
+#graft-joint { color: #ffe3aa; font-size: .85rem; }
+#graft-compass button { min-width: 38px; min-height: 36px; padding: 0 9px; border: 1px solid #b1bea9; border-radius: 5px; color: #fcf2d9; font-size: 1.1rem; font-weight: 700; }
+#graft-compass button:disabled { color: #a9b5a5; border-color: #6b8073; }
+#graft-compass button[aria-pressed=true] { color: #304c3c; background: #e0e9c8; }
+#graft-status { margin: 8px 0 3px; padding: 5px 9px; background: #20372f; border-left: 3px solid #c4b291; color: #f0edda; font-size: .85rem; }
+#graft-status.ready { border-color: #c2db91; color: #e7f4d4; }
+.on-graft .graft-guided { outline: 2px dashed #fee5a8; outline-offset: -3px; border-radius: 5px; }
+.on-graft .dispatch.graft-guided { outline-color: #795330; }
+.graft-guide summary, #graft-reset { display: inline-flex; align-items: center; min-height: 34px; color: #e2e8d7; font-size: .81rem; text-decoration: underline; text-underline-offset: 3px; }
+#graft-book { border-block: 1px solid #b6b6a0; padding-block: 10px; }
+#graft-book header { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 9px; color: #41593f; }
+#graft-book h3 { font: 700 1.08rem var(--serif); }
+#graft-count { margin-inline-start: auto; font-size: .77rem; font-weight: 650; }
+#graft-empty, #graft-caption { color: #536151; font-size: .84rem; line-height: 1.55; margin-top: 7px; }
+#graft-shelf label { display: block; margin-block: 7px 2px; font-size: .78rem; font-weight: 650; }
+#graft-specimens { max-width: 100%; min-height: 36px; padding: 2px 6px; color: #334c37; background: #fbf7e9; border: 1px solid #9caa91; border-radius: 4px; }
+.graft-cuttings { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0 2px; }
+.graft-cuttings button { display: grid; align-content: center; min-height: 47px; padding: 3px 9px; text-align: start; background: #e6ecdc; border: 1px solid #a4b395; border-radius: 4px; color: #344a38; }
+.graft-cuttings button strong { font-size: .81rem; } .graft-cuttings button small { font-size: .72rem; }
+#graft-read { color: #405a46; font-size: .81rem; min-height: 35px; text-decoration: underline; text-underline-offset: 3px; }
+.graft-entry { color: #354f3c; background: #e7ebdd; }
+.graft-foot { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+#graft-to-book { min-height: 34px; max-width: 60%; color: #e1ead5; font-size: .8rem; text-decoration: underline; text-underline-offset: 3px; }
+#graft-pages { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 3px; margin-top: 9px; padding: 4px; border: 1px solid #a4a38b; border-radius: 3px 7px 7px 3px; background: #c7c3a9; }
+#graft-pages button { display: grid; grid-template-columns: minmax(0,1fr); place-items: center; align-content: start; padding: 4px 3px 7px; border-radius: 2px; border: 1px solid transparent; color: #3a503d; background: linear-gradient(92deg,#e6dfc4,#f8f1d8 13%,#eee6c9); }
+#graft-pages button[aria-pressed=true] { border-color: #536a4e; box-shadow: inset 0 -3px #586f52; }
+#graft-pages svg { width: 100%; height: 49px; }
+#graft-pages strong { font: 700 .86rem var(--serif); }
+#graft-pages small { color: #52604d; font-size: .71rem; }
+.waiting-leaf { stroke: #939781; stroke-width: 1.3; fill: none; stroke-dasharray: 2.5 3; }
+.sample-trace { fill: none; stroke: var(--trace); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.sample-dot { fill: var(--trace); }
+.trace-0 { --trace:#597748; } .trace-1 { --trace:#a65d3d; } .trace-2 { --trace:#6d6087; }
+#graft-study { margin-top: 7px; color: #3f5442; font-size: .83rem; line-height: 1.5; }
+#graft-slip { font: 1rem/1.65 var(--serif); color: #3b523e; }
+@media (max-width: 680px) {
+  .desk:has(.on-graft) { grid-template-areas: "card" "board" "guide" "brief"; }
+  #graft-book { grid-area: guide; }
+  #graft-compass button, .graft-guide summary, #graft-read, #graft-reset, #graft-specimens, #graft-to-book { min-height: 44px; }
+  #graft-compass button { min-width: 44px; }
+  #graft-stages li { padding-inline: 6px; font-size: .77rem; }
+}
 .on-reel { background: radial-gradient(ellipse at 84% 8%, #38515d, transparent 58%), #203b47; border-color: #344b54; }
 .on-reel .chart { background-color: #1e414e; border-color: #8b9d9a; }
 .on-reel .chart-head { flex-wrap: wrap; gap: 4px 12px; }
