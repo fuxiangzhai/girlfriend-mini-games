@@ -57,7 +57,13 @@
           </div>
           <div id="projection-score" hidden></div>
           <div id="duet-order" hidden><div class="duet-order-line"><strong id="duet-choice-label">谁先动</strong><div id="duet-buttons" role="group" aria-labelledby="duet-choice-label"></div></div><p id="duet-order-note"></p></div>
-          <section id="reading-panel" aria-labelledby="paper-title" hidden><img id="receipt-art" alt=""><div><h3 id="paper-title"></h3><div id="reading-buttons" role="group" aria-label="第六拍的验印方式"><button type="button" data-reading="0">原灯顺读</button><button type="button" data-reading="1">翻面倒读</button></div><p id="paper-instruction"></p></div></section>
+          <section id="reading-panel" aria-labelledby="paper-title" hidden><img id="receipt-art" alt=""><div><h3 id="paper-title"></h3>
+            <div class="paper-line"><span id="paper-label">纸页</span><div id="paper-buttons" role="group" aria-labelledby="paper-label"><button type="button" data-insert="0">回签正文</button><button type="button" data-insert="1">展开夹页</button></div></div>
+            <div class="paper-line"><span id="reading-label">读法</span><div id="reading-buttons" role="group" aria-labelledby="reading-label"><button type="button" data-reading="0">原灯顺读</button><button type="button" data-reading="1">翻面倒读</button></div></div><p id="paper-instruction"></p></div>
+            <details id="paper-loupe" hidden><summary>沿光逐格验纸</summary><div class="loupe-tools"><button type="button" class="subtle" id="peek-mark" aria-pressed="false">看另一印</button><span id="loupe-lamp"></span></div><canvas width="440" height="236" id="loupe-map" role="img" aria-label="实际灯路与读纸游标"></canvas><label for="ray-walk">沿光移动</label><input type="range" min="0" value="0" step="1" id="ray-walk"><button type="button" class="subtle" id="seek-hole">走到第二孔</button><p id="ray-word" role="status"></p></details>
+            <div id="fold-lobby"><button type="button" class="secondary" id="start-fold">排骑缝合签</button><span id="fold-offer"></span></div>
+          </section>
+          <section id="fold-panel" aria-labelledby="fold-phase" hidden><div><strong id="fold-phase"></strong><button type="button" class="subtle" id="leave-fold">退出骑缝排演</button></div><p id="fold-instruction"></p><label><input type="checkbox" id="fold-low">按两场最低合计排演</label><span id="fold-cost"></span></section>
           <section id="trace-panel" aria-label="同谱合签" hidden><div><strong>照底谱实演</strong><span id="trace-count"></span><button type="button" class="subtle" id="leave-trace">退出跟谱</button></div><details id="trace-template"><summary>翻看本拍底稿</summary><canvas id="trace-map" width="480" height="300" role="img" aria-label="底稿中本拍的玻璃位置、镜面与双灯光路"></canvas><p id="trace-panes"></p></details></section>
           <div id="slip-hold" hidden></div>
           <div id="relay-cue" hidden><strong id="relay-owner"></strong><span id="relay-task"></span><small id="relay-reading"></small></div>
@@ -142,7 +148,10 @@
         <div id="audience-note"><div><h3>阁楼点戏签</h3><p id="audience-copy"></p></div><button type="button" class="secondary" id="read-encore" hidden>请观众点一幕</button></div>
         <section id="duet-archive" aria-labelledby="duet-archive-title"><h3 id="duet-archive-title">双片合演</h3><p>同一出戏的两种先手都演完后，可以并排重映。每种顺序留存换片最少的一次。</p><div id="duet-tickets"></div></section>
         <section id="relay-archive" aria-labelledby="relay-archive-title"><h3 id="relay-archive-title">递物返场</h3><p>每一站分别收录实演。能兼演两种递法的镜位另存为两印底谱，可随时并排试映。</p><div id="relay-tickets"></div></section>
-        <section id="receipt-archive" aria-labelledby="receipt-archive-title"><h3 id="receipt-archive-title">回执与合签</h3><p>每一站的回执分顺读、倒读保存。把同一张底谱的早递和晚递都亲手演完，可以收一张双签联。</p><div id="receipt-tickets"></div></section>
+        <section id="receipt-archive" aria-labelledby="receipt-archive-title"><h3 id="receipt-archive-title">回执与合签</h3><p>正文与夹页分别收录。用同一套七拍镜位演完早递和晚递，可以收同谱双签联。</p><div id="receipt-tickets" class="paper-tickets"></div>
+          <details><summary>翻夹页戏本</summary><div id="insert-tickets" class="paper-tickets"></div></details>
+          <details id="fold-album"><summary>翻骑缝联 <span id="fold-count"></span></summary><div id="fold-tickets" class="paper-tickets"></div></details>
+        </section>
       </details>
     </section>
 
@@ -297,7 +306,8 @@
     <div id="slip-proof-pair" hidden><div><strong id="duet-proof-main" hidden></strong><canvas id="slip-map" width="640" height="360" role="img" aria-label="这一拍落片时的双灯镜位" hidden></canvas></div><div id="duet-proof-other" hidden><strong id="duet-proof-label"></strong><canvas id="duet-alt-map" width="640" height="360" role="img" aria-label="另一种先手在这一拍的双灯镜位"></canvas></div></div>
     <div id="slip-lever"><button type="button" class="secondary" id="run-slip">连放</button><label for="slide-lever">推片拉杆</label><input type="range" min="0" step="1" value="0" id="slide-lever" aria-label="推片拉杆，回看已演的各拍"></div>
     <p id="slip-caption"></p><p id="duet-alt-caption" hidden></p><p id="duet-receipt" hidden></p><p id="slip-encore-note" hidden></p><button type="button" class="subtle" id="slip-proof" aria-expanded="false" aria-controls="slip-proof-pair slip-proof-text">看当场镜位</button><p id="slip-proof-text" hidden></p><p id="duet-alt-proof-text" hidden></p>
-    <div id="revise-receipt" class="slip-buttons" hidden><button type="button" class="secondary" id="repair-double" hidden></button><button type="button" class="secondary" id="other-reading" hidden></button></div>
+    <section id="fold-result" hidden><p id="fold-result-note"></p><button type="button" class="secondary" id="fold-action"></button><button type="button" class="subtle" id="trim-fold" hidden></button><div id="fold-jumps" hidden><button type="button" class="subtle" data-fold-jump="0">看最后一拍共谱</button><button type="button" class="subtle" data-fold-jump="1">看分谱第一拍</button><button type="button" class="subtle" data-fold-jump="2">看两面验纸</button></div><div id="fold-letter" hidden><strong></strong><p></p></div></section>
+    <div id="revise-receipt" class="slip-buttons" hidden><button type="button" class="secondary" id="repair-double" hidden></button><button type="button" class="secondary" id="other-reading" hidden></button><button type="button" class="secondary" id="other-paper" hidden></button></div>
     <div class="slip-buttons"><button type="button" class="primary" id="slip-continue"></button><button type="button" class="secondary" id="extend-show" hidden>沿这五拍续演回执</button><button type="button" class="secondary" id="sign-score" hidden>照底谱实演另一印</button><button type="button" class="secondary" id="slip-other" hidden></button><button type="button" class="secondary" id="retry-quiet" hidden>按静场目标改排</button><button type="button" class="secondary" id="compare-duet" aria-pressed="false" hidden>并排看两种先手</button><button type="button" class="secondary" id="compare-score" aria-pressed="false" hidden>同谱换手试映</button><button type="button" class="subtle" id="print-play" hidden>保存连景长票 PNG</button></div><p id="slip-print-status" role="status"></p>
   </div></dialog>
   <dialog id="ticket-dialog" class="dialog" aria-labelledby="ticket-title">

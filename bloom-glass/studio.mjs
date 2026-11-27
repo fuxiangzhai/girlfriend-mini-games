@@ -621,7 +621,7 @@ function openAfterlight() {
 }
 if (location.hash==='#afterlight') openAfterlight();
 else if (location.hash==='#lantern') {openLevel(lastShow());consumeEntry();}
-else if (['#slips','#duets','#relay','#receipts'].includes(location.hash)) {openLevel(location.hash==='#receipts'?lastReceipt():location.hash==='#slips'?lastPlay():lastDuet(location.hash==='#relay'));consumeEntry();}
+else if (['#slips','#duets','#relay','#receipts','#folds'].includes(location.hash)) {openLevel(slipEntry());consumeEntry();}
 else {
   const mode=read('bench:mode');openLevel(mode==='slips'?lastPlay():mode==='lantern'?lastShow():dayLevel());
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
@@ -630,12 +630,16 @@ else {
 }
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#afterlight') openAfterlight();
-  if(['#lantern','#slips','#duets','#relay','#receipts'].includes(location.hash)) {
+  if(['#lantern','#slips','#duets','#relay','#receipts','#folds'].includes(location.hash)) {
     for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
-    openLevel(location.hash==='#receipts'?lastReceipt():location.hash==='#lantern'?lastShow():location.hash==='#slips'?lastPlay():lastDuet(location.hash==='#relay'));consumeEntry();window.scrollTo(0,0);
+    openLevel(location.hash==='#lantern'?lastShow():slipEntry());consumeEntry();window.scrollTo(0,0);
   }
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
     for(const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
     showNight(location.hash==='#shutters'?'roll':'night'); consumeEntry(); window.scrollTo(0,0);
   }
 });
+function slipEntry(){
+  if(location.hash==='#folds' || location.hash==='#receipts')return lastReceipt(location.hash==='#folds');
+  return location.hash==='#slips'?lastPlay():lastDuet(location.hash==='#relay');
+}

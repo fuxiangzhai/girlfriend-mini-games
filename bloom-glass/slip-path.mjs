@@ -18,7 +18,7 @@ export function makeHold(level,base,frame) {
     path.has((place.y+y)*level.width+place.x+x))?[id]:[]);
   return {base,keys:signature(level,base),held,path,keeper:frame.keeper,limit:frame.limit};
 }
-function allows(hold,keys) {
+export function allows(hold,keys) {
   if(!hold)return true;
   const diff=changes(hold.keys,keys);
   return diff.length<=hold.limit && diff.every(id=>!hold.held.includes(id));
@@ -144,6 +144,9 @@ export function cueHint(level,takes,slots,selected,ending,encore=false,quiet=fal
     options:[{slots:reference[takes.length],keys:signature(level,reference[takes.length])}]
   }:reachable(level,takes,playGraph(level,ending,encore),encore,quiet);
   if(!options.length)return {type:'rewind',index:rewindPoint(level,takes,ending,encore,quiet)};
+  return layoutHint(level,slots,selected,hold,options);
+}
+export function layoutHint(level,slots,selected,hold,options){
   const keys=signature(level,slots);
   let best,wrong,cost=Infinity;
   for(const candidate of options){

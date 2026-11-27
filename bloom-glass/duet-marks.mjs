@@ -24,12 +24,27 @@ export function acceptsMark(frame,width,rays){
   const reading=readMark(rays,width,m.cell);
   return m.kind==='pass'?reading.crossed:reading.lit[m.lamp] && !reading.lit[1-m.lamp];
 }
-export function readHoles(mark,width,rays){
-  const ray=rays[mark.lamp],path=ray.points.slice(1,-1).map(([x,y])=>y*width+x);
-  if(mark.reverse)path.reverse();
-  const [a,b]=mark.cells,first=path.indexOf(a),second=path.indexOf(b);
-  return {lit:[first>=0,second>=0],ordered:(!mark.reverse || Boolean(ray.exit)) && first>=0 && path.indexOf(b,first+1)>=0};
+export function pathTurn(points,i){
+  const [x,y]=points[i],[u,v]=points[i-1],[w,z]=points[i+1],cross=(x-u)*(z-y)-(y-v)*(w-x);
+  return cross<0?'left':cross>0?'right':'straight';
 }
+export function readHoles(mark,width,rays){
+  const ray=rays[mark.lamp],points=mark.reverse?[...ray.points].reverse():ray.points;
+  const [a,b]=mark.cells,lit=[false,false];let firstVisit=-1,readableVisit=-1;
+  for(let i=1;i<points.length-1;i++){
+    const [x,y]=points[i],cell=y*width+x;
+    if(cell===b){
+      lit[1]=true;
+      if(lit[0]){
+        if(firstVisit<0)firstVisit=i;
+        if(readableVisit<0 && (!mark.bend || mark.bend===pathTurn(points,i)))readableVisit=i;
+      }
+    }
+    if(cell===a)lit[0]=true;
+  }
+  return {lit,inOrder:firstVisit>=0,ordered:readableVisit>=0 && (!mark.reverse || Boolean(ray.exit)),visit:readableVisit<0?firstVisit:readableVisit};
+}
+export const bendName=m=>m.bend==='left'?'左折':'右折';
 export const versionOf=l=>l.play.delivery?.version??l.play.first;
 export function carrierAt(level,index){
   const d=level.play.delivery;
@@ -45,7 +60,7 @@ export function activeMarks(frame,both){
 export function markTask(level,mark){
   if(!mark)return '';
   const p=level.play,d=p.delivery;
-  if(mark.kind==='watermark')return lampNames[mark.lamp]+(mark.reverse?'从出口倒读 ':'从入口顺读 ')+holeNames(level,mark);
+  if(mark.kind==='watermark')return lampNames[mark.lamp]+(mark.reverse?'从出口倒读 ':'从入口顺读 ')+holeNames(level,mark)+(mark.bend?'，第二孔'+bendName(mark):'');
   const at=address(level,mark);
   if(mark.kind==='wait')return '留到'+d.stops[1]+' · '+p.names[d.giver]+'继续拿'+d.prop;
   if(mark.kind==='pass')return at+' 交接眼 · 两灯一横一竖直穿';
@@ -54,9 +69,10 @@ export function markTask(level,mark){
 export function markReading(level,mark,rays){
   if(!mark || mark.kind==='wait')return '';
   if(mark.kind==='watermark'){
-    const {lit,ordered}=readHoles(mark,level.width,rays),[a,b]=mark.cells.map(c=>cellName(level,c));
-    if(ordered)return lampNames[mark.lamp]+'依次照过 '+a+'、'+b+'，水印可读';
+    const {lit,ordered,inOrder}=readHoles(mark,level.width,rays),[a,b]=mark.cells.map(c=>cellName(level,c));
+    if(ordered)return lampNames[mark.lamp]+'依次照过 '+a+'、'+b+(mark.bend?' 并在第二孔'+bendName(mark):'')+'，水印可读';
     if(mark.reverse && !rays[mark.lamp].exit)return lampNames[mark.lamp]+'尚未出光，接通出口后可倒读';
+    if(inOrder && mark.bend)return '双孔读序已对。沿读纸的方向，在 '+b+' 的银镜'+bendName(mark);
     if(lit.every(Boolean))return '两孔都亮了，读序颠倒。请先过 '+a+'，再过 '+b;
     return '还要照亮 '+[a,b].filter((_,i)=>!lit[i]).join('、');
   }
@@ -68,7 +84,7 @@ export function markReading(level,mark,rays){
 }
 export function propRecord(level,index){
   const p=level.play,d=p.delivery,m=p.frames[index].mark,holder=p.names[carrierAt(level,index)];
-  if(m?.kind==='watermark')return p.names[m.lamp]+(m.reverse?'倒读 ':'顺读 ')+holeNames(level,m);
+  if(m?.kind==='watermark')return p.names[m.lamp]+(m.reverse?'倒读 ':'顺读 ')+holeNames(level,m)+(m.bend?' · '+bendName(m):'');
   if(p.coda && index===6)return address(level,m)+' 回签 · '+p.names[1-d.giver]+' → '+holder;
   if(m?.kind==='pass')return address(level,m)+' 交接 · '+p.names[d.giver]+' → '+holder;
   if(m?.kind==='stamp')return address(level,m)+' 单灯盖印 · '+d.seals[m.lamp];

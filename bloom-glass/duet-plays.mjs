@@ -60,12 +60,14 @@ export const relayCasts=makeRelayCasts(slipPlays.length+duetCasts.length);
 const casts=[...duetCasts,...relayCasts];
 const receiptStart=slipPlays.length+casts.length;
 export const receiptCasts=makeReceiptCasts(relayCasts,receiptStart);
+export const insertCasts=makeReceiptCasts(relayCasts,receiptStart,true);
 export const programmes=[...slipPlays,...casts.map(cast=>cast[0]),...receiptCasts.map(family=>family[0][0])];
-export const allDuets=[...casts.flat(),...receiptCasts.flat(2)];
-export function receiptFor(l,mode=0,v=versionOf(l)){
+export const allDuets=[...casts.flat(),...receiptCasts.flat(2),...insertCasts.flat(2)];
+export function receiptFor(l,mode=0,v=versionOf(l),insert=l.play.coda?.insert){
   const n=l.play.coda?l.showIndex-receiptStart:relayCasts.findIndex(pair=>pair.includes(l));
-  return receiptCasts[n]?.[mode]?.[v];
+  return (insert?insertCasts:receiptCasts)[n]?.[mode]?.[v];
 }
+export const foldPartner=l=>receiptFor(l,1-l.play.coda.mode,1-versionOf(l));
 export const fiveAct=l=>relayCasts[l.showIndex-receiptStart][versionOf(l)];
 export const partnerOrder=level=>level.play.coda?receiptFor(level,level.play.coda.mode,1-versionOf(level)):casts[level.showIndex-slipPlays.length][1-versionOf(level)];
 export const isDuet=level=>level?.play?.first!=null;

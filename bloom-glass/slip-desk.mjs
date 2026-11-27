@@ -5,11 +5,14 @@ import {fits,markCell,mirrorFalls,shapeAt} from './puzzle.mjs';
 import {readProjector} from './projection.mjs';
 import {read,write} from './save.mjs';
 import {slipPlays} from './slip-plays.mjs';
-import {allDuets,duetCasts,relayCasts,receiptCasts,receiptFor,fiveAct,isDuet,orderName,partnerOrder,programmes} from './duet-plays.mjs';
-import {acceptsMark,activeMarks,markReading,markTask,propRecord} from './duet-marks.mjs';
+import {allDuets,duetCasts,relayCasts,receiptCasts,insertCasts,receiptFor,fiveAct,foldPartner,isDuet,orderName,partnerOrder,programmes} from './duet-plays.mjs';
+import {acceptsMark,activeMarks,bendName,markReading,markTask,propRecord,versionOf} from './duet-marks.mjs';
 import {bestShow,continueReceipt,duetBills,enterReceipt,lastDuet,openingForecast,resumeProgramme,setupDuetControls} from './duet-desk.mjs';
-import {canTakeRequests,changeTotal,cueHint,deskAt,differentPanes,encoreBill,firstMissedMark,handStatus,makeHold,playbill,quietScore,readTrace,remainingCost,restorePlay,rewindPoint,savePlay,setTrace,signedWith,sightline,storePlaybill,takeScene,usablePrefix} from './slip-path.mjs';
-import {readingNames} from './receipt-plays.mjs';
+import {canTakeRequests,changeTotal,cueHint,deskAt,differentPanes,encoreBill,firstMissedMark,handStatus,hasPlayDraft,makeHold,playbill,quietScore,readTrace,remainingCost,restorePlay,rewindPoint,savePlay,setTrace,signedWith,sightline,storePlaybill,takeScene,usablePrefix} from './slip-path.mjs';
+import {paperName,readingLabel,readingNames} from './receipt-plays.mjs';
+import {foldHint,foldKeep,foldOptions,foldScore,foldTarget,readFoldDesk,recordFold,saveFoldDesk} from './fold-score.mjs';
+import {foldAlbum,foldLabel,foldPanel,foldResult,onFoldAlbum} from './fold-desk.mjs';
+import {setupPaperReader} from './paper-reader.mjs';
 import {layScreen,longTicket,moveScreen,replayBeat,stagePose} from './slip-screen.mjs';
 
 const $=id=>document.getElementById(id);
@@ -24,25 +27,33 @@ export const lastPlay=()=>resumeProgramme([...slipPlays,...allDuets].find(l=>l.i
 const nextPlay=l=>[slipPlays.length-1,duetCasts.at(-1)[0].showIndex,relayCasts.at(-1)[0].showIndex].includes(l.showIndex)?null:programmes[l.showIndex+1];
 
 export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep,tell,chime,art}) {
-  let level,takes=[],hold=null,ending,encore=false,showing=null,raf=0,downloadRun=0,overlay=false,forecastBoard,reference=null;
+  let level,takes=[],hold=null,ending,encore=false,showing=null,raf=0,downloadRun=0,overlay=false,forecastBoard,reference=null,fold=null;
+  const template=()=>reference || (fold?.leg==='reply' && takes.length<foldScore(level).depth?fold.tape:null);
+  const readPaper=setupPaperReader();
+  function clearRehearsal(l){setTrace(l,null);if(l.play.coda)saveFoldDesk(l,null);}
   const duet=setupDuetControls(switchOrder,(quiet,both)=>{
     $('slip-forecast').textContent='';clearStep();repaint();
     tell(both && quiet?'提示会按两种演法都能达到的最低响数排演。':both?'提示会照顾两条路线上的灯位。':quiet?'提示会按整场最少的换片数排演。':'提示会寻找能演到收场的镜位。');
   },(l,record,shared,pair)=>{display(l,record,0);if(pair)compare(false,pair[1]);else if(shared)compare(true);},switchReading);
   const twoWays=()=>encore || duet.both();
   function switchOrder(other){
-    if(reference || takes.length>1 || !level.play.delivery && hold && handStatus(level,hold,slots()).changed.length)return;
-    const current=deskState();if(other.play.delivery)setTrace(other,null);
+    if(fold || reference || takes.length>1 || !level.play.delivery && hold && handStatus(level,hold,slots()).changed.length)return;
+    const current=deskState();if(other.play.delivery)clearRehearsal(other);
     savePlay(other,takes,current.state,takes.length && !level.play.delivery?[]:current.history);open(other);
     $('duet-buttons').querySelector('[aria-pressed="true"]')?.focus({preventScroll:true});
     tell('已改为'+orderName(other)+'。'+(takes.length?'开场镜位已保留。':'可以继续拼开场。'));
   }
   function switchReading(other){
-    if(reference || takes.length>5 || takes.length===5 && handStatus(level,hold,slots()).changed.length)return;
-    const current=deskState();setTrace(other,null);savePlay(other,takes,current.state,current.history);open(other);
-    $('reading-buttons').querySelector('[aria-pressed="true"]').focus({preventScroll:true});
+    if(fold || reference || takes.length>5 || takes.length===5 && handStatus(level,hold,slots()).changed.length)return;
+    const page=other.play.coda.insert!==level.play.coda.insert;
+    if(page && hasPlayDraft(other)){
+      const saved=resumeProgramme(other);open(saved);$('paper-buttons').querySelector('[aria-pressed="true"]').focus({preventScroll:true});
+      tell('已翻到'+paperName(saved)+'，接回这一页上次的'+readingNames[saved.play.coda.mode]+'和镜位。');return;
+    }
+    const current=deskState();clearRehearsal(other);savePlay(other,takes,current.state,current.history);open(other);
+    $(page?'paper-buttons':'reading-buttons').querySelector('[aria-pressed="true"]').focus({preventScroll:true});
     const keep=usablePrefix(other,takes,duet.both(),duet.quiet());
-    tell('已改为'+readingNames[other.play.coda.mode]+'。'+(keep<takes.length?'这条回路最晚从第 '+(keep+1)+' 拍改起，点一步提示可以倒回。':'已演的 '+takes.length+' 拍和桌上的玻璃都已保留。'));
+    tell('已改为'+readingLabel(other)+'。'+(keep<takes.length?'这条回路最晚从第 '+(keep+1)+' 拍改起，点一步提示可以倒回。':'已演的 '+takes.length+' 拍和桌上的玻璃都已保留。'));
   }
   const finished=()=>takes.length===level.play.frames.length;
   function sceneId(){
@@ -52,7 +63,7 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
   }
   function load(l){
     const restored=restorePlay(l);level=l;takes=restored.takes;
-    reference=readTrace(l,takes);
+    reference=readTrace(l,takes);fold=reference?null:readFoldDesk(l,takes);
     hold=makeHold(l,takes.at(-1),l.play.frames[takes.length]);
     const requested=read('slip:ending:'+l.id);
     ending=endings(l).includes(requested)?requested:endings(l)[0];
@@ -86,10 +97,11 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
   function clamps(placed){
     if(!hold)return '';
     const frame=level.play.frames[takes.length];
-    const marks=activeMarks(frame,duet.both()||reference).filter(m=>m.kind!=='wait').map(m=>{
+    const marks=activeMarks(frame,fold?takes.length<foldScore(level).depth:duet.both()||reference).filter(m=>m.kind!=='wait').map(m=>{
       if(m.kind==='watermark')return m.cells.map((cell,i)=>{
         const x=(cell%level.width+.5)*48,y=(Math.floor(cell/level.width)+.5)*48,color=m.lamp?'#96f5ef':'#ffe197';
-        return '<g data-relay-mark="watermark" transform="translate('+x+' '+y+')" fill="none"><circle r="15" stroke="#2e383a" stroke-width="5"/><circle r="15" stroke="'+color+'" stroke-width="2" stroke-dasharray="4 3"/><circle cx="-11" cy="10" r="7" fill="#28383e" stroke="'+color+'"/><text x="-11" y="13.3" text-anchor="middle" font-size="10" font-weight="bold" fill="'+color+'">'+(i+1)+'</text></g>';
+        const turn=i===1 && m.bend?'<g data-paper-bend="'+m.bend+'"><rect x="0" y="-17" width="19" height="12" rx="3" fill="#28383e"/><text x="9" y="-7.5" text-anchor="middle" font-weight="bold" font-size="10" fill="'+color+'">'+bendName(m)[0]+'</text></g>':'';
+        return '<g data-relay-mark="watermark" transform="translate('+x+' '+y+')" fill="none"><circle r="15" stroke="#2e383a" stroke-width="5"/><circle r="15" stroke="'+color+'" stroke-width="2" stroke-dasharray="4 3"/><circle cx="-11" cy="10" r="7" fill="#28383e" stroke="'+color+'"/><text x="-11" y="13.3" text-anchor="middle" font-size="10" font-weight="bold" fill="'+color+'">'+(i+1)+'</text>'+turn+'</g>';
       }).join('');
       const x=(m.cell%level.width+.5)*48,y=(Math.floor(m.cell/level.width)+.5)*48,pass=m.kind==='pass';
       const shape=pass?'<circle r="15"/>':'<rect x="-13" y="-13" width="26" height="26" rx="'+(m.lamp?10:2)+'"/>';
@@ -123,7 +135,8 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
       const saved=playbill(l,s);if(saved)n++;
       return '<button type="button" data-bill="'+index+'" data-ending="'+s+'" '+(saved?'':'disabled')+'><span>'+two(index+1)+'</span><strong>'+l.title+'</strong><small>'+(saved?'可重映':'待演全')+' · '+l.projection.scenes[s].title+'</small></button>';
     })).join('');
-    $('playbill-count').textContent=n+' / 5 本　·　合演 '+duetBills()+' / 4 场　·　递物 '+duetBills(relayCasts)+' / 4 场　·　回执 '+duetBills(receiptCasts)+' / 8 场';
+    $('playbill-count').textContent=n+' / 5 本　·　合演 '+duetBills()+' / 4 场　·　递物 '+duetBills(relayCasts)+' / 4 场　·　回执 '+duetBills(receiptCasts)+' / 8 场　·　夹页 '+duetBills(insertCasts)+' / 8 场';
+    if($('fold-album').open)foldAlbum();
     const signed=encoreBill(slipPlays.at(-1));
     $('read-encore').hidden=!signed;
     $('audience-copy').textContent=signed?'「我想先跟鲸鱼打个招呼，再让它带我去看天亮。」她把两幕写在同一张点戏签上。':
@@ -152,10 +165,12 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
     $('slip-desk').setAttribute('aria-pressed',String(yes));
     for(const id of ['slip-bar','slip-hold','slip-run-sheet','slip-scorecard','slip-archive'])$(id).hidden=!yes;
     $('slip-overlay-tools').hidden=!yes || !hold;overlay=false;forecastBoard=null;$('slip-forecast').textContent='';
-    $('trace-panel').hidden=!yes || !reference;
+    const draft=yes && template();$('trace-panel').hidden=!draft;$('fold-panel').hidden=true;
     if(!yes){duet.configure(target,null);return;}
     $('trace-template').open=false;
-    if(reference)drawTicketMap($('trace-map'),level,replayBeat(level,reference,takes.length));
+    if(draft)drawTicketMap($('trace-map'),level,replayBeat(level,draft,takes.length));
+    $('leave-trace').hidden=Boolean(fold);
+    $('trace-panel').querySelector('strong').textContent=fold?'骑缝底稿':'照底谱实演';
     $('to-duets').hidden=isDuet(level);
     $('to-relay').hidden=!isDuet(level) || Boolean(level.play.coda);$('to-relay').textContent=level.play.delivery?'回这组正场':'演递物返场';
     $('to-receipts').hidden=!level.play.delivery;$('to-receipts').textContent=level.play.coda?'回五拍返场':'续演回执';
@@ -167,9 +182,10 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
     score();archive();cover();
   }
   function paint(placed,result){
-    duet.paint(takes,hold,placed,result,reference);
-    if(reference){
-      const diff=differentPanes(level,placed,reference[takes.length]);
+    duet.paint(takes,hold,placed,result,reference,fold);foldPanel(level,takes,fold,reference);readPaper(level,takes,placed);
+    const draft=template();
+    if(draft){
+      const diff=differentPanes(level,placed,draft[takes.length]);
       $('trace-count').textContent='第 '+(takes.length+1)+' 拍 · '+(diff.length?'还差 '+diff.length+' 片':'已对齐底稿');
       $('trace-panes').textContent=diff.length?'待对齐的玻璃为'+names(level,diff)+'。一步提示会按底稿排片。':'镜位和底稿吻合，可以落片。';
     }
@@ -208,8 +224,8 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
       const other=v.comparison.beats[index];
       $('duet-alt-caption').textContent=orderName(v.comparison.level)+' · '+other.scene.story;
       $('duet-alt-screen').setAttribute('aria-label',other.scene.title);
-      $('duet-main-label').textContent=orderName(v.l)+' · '+beat.scene.title;
-      $('duet-alt-label').textContent=(v.comparison.rehearsal?'同谱试演 · ':'')+orderName(v.comparison.level)+' · '+other.scene.title;
+      $('duet-main-label').textContent=(v.comparison.fold?foldLabel(v.l):orderName(v.l))+' · '+beat.scene.title;
+      $('duet-alt-label').textContent=(v.comparison.rehearsal?'同谱试演 · ':'')+(v.comparison.fold?foldLabel(v.comparison.level):orderName(v.comparison.level))+' · '+other.scene.title;
       $('duet-main-tally').textContent='本拍 '+beat.changed.length+' 响　/　全剧 '+changeTotal(v.l,v.record)+' 响';
       $('duet-alt-tally').textContent='本拍 '+other.changed.length+' 响　/　全剧 '+changeTotal(v.comparison.level,v.comparison.takes)+' 响';
       $('duet-proof-main').textContent=$('duet-main-label').textContent;$('duet-proof-label').textContent=$('duet-alt-label').textContent;
@@ -235,6 +251,7 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
     const beats=record.map((_,i)=>replayBeat(l,record,i)),all=record.length===l.play.frames.length;
     const last=beats.length-1;
     showing={l,record,beats,scenes:beats.map(b=>b.scene),stage:layScreen($('slip-large-screen'),l,art),index:-1,all,pair};
+    showing.fold=foldResult(l,record,all);
     $('slip-kicker').textContent=l.title+'　/　'+(isDuet(l)?orderName(l)+'　·　':'')+(all?'全剧已收录':('已演 '+record.length+' 拍'));
     $('duet-stage-pair').hidden=false;$('slip-dialog').classList.remove('compare-open');
     $('slip-dialog').classList.toggle('relay-show',Boolean(l.play.delivery));
@@ -244,13 +261,16 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
     $('compare-duet').setAttribute('aria-pressed','false');$('compare-duet').textContent=l.play.delivery?'对照两场实演':'并排看两种先手';
     const miss=all && l.play.delivery?firstMissedMark(l,record):-1;
     const repair=all && l.play.delivery && (miss>=0 || l.play.coda && changeTotal(l,record)>quietScore(l,true).target);
-    $('repair-double').hidden=!repair;$('other-reading').hidden=!all || !l.play.coda;
+    $('repair-double').hidden=!repair;$('other-paper').hidden=$('other-reading').hidden=!all || !l.play.coda;
     $('revise-receipt').hidden=!repair && $('other-reading').hidden;
     if(repair){
       showing.repair=usablePrefix(l,record,true,Boolean(l.play.coda));
       $('repair-double').textContent='从第 '+(showing.repair+1)+' 拍'+(miss>=0?'补两印':'改排兼演静场');
     }
-    if(all && l.play.coda)$('other-reading').textContent='改演'+readingNames[1-l.play.coda.mode];
+    if(all && l.play.coda){
+      $('other-reading').textContent='改演'+readingNames[1-l.play.coda.mode];
+      $('other-paper').textContent='改读'+paperName(receiptFor(l,l.play.coda.mode,versionOf(l),!l.play.coda.insert));
+    }
     $('compare-score').hidden=!all || !l.play.delivery || miss>=0;
     $('sign-score').hidden=!all || !l.play.delivery || miss>=0;
     showing.signed=all && l.play.delivery && miss<0?signedWith(l,record):null;
@@ -310,10 +330,15 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
       tell(f.scenes.includes(r.scene) && !acceptsMark(f,level.width,r.rays)?markReading(level,f.mark,r.rays)+'。':
         '这一拍还没对上。按场记核对两盏灯的出口，点「试灯」可看各自的路径。');return;
     }
+    if(fold && !foldOptions(level,takes,fold,false).some(v=>!differentPanes(level,v.o.slots,board).length)){
+      tell(template()?'本拍和第一场的底稿不同。请对齐每片玻璃再落片。':'这一拍的灯路接不到另一面的折口。点「探后场」或看一步提示可以改排。');return;
+    }
     const next=[...takes,board.map(({x,y,o})=>({x,y,o}))];
     const cuePanes=isDuet(level) && hold?handStatus(level,hold,board).changed:null;
     if(level.play.coda && next.length===5)storePlaybill(fiveAct(level),next);
-    if(next.length===level.play.frames.length){storePlaybill(level,next);if(reference)setTrace(level,null);}
+    if(next.length===level.play.frames.length){
+      storePlaybill(level,next);if(level.play.coda){recordFold(level,next);saveFoldDesk(level,null);}if(reference)setTrace(level,null);
+    }
     setDesk(next,next.at(-1));chime(0,true,cuePanes);display(level,next,index,true);
   }
   function openArchive(){
@@ -328,21 +353,54 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
   $('slip-program').open=matchMedia('(min-width: 651px)').matches;
   $('slip-desk').onclick=()=>{if(!$('bench').classList.contains('slip-bench'))open(lastPlay());};
   $('to-plays').onclick=openArchive;
+  $('fold-album').ontoggle=()=>{if($('fold-album').open)foldAlbum();};
+  onFoldAlbum((l,pair)=>{display(l,pair[0],0);compare(false,pair[1],true);});
   $('to-duets').onclick=()=>open(lastDuet());
   $('to-receipts').onclick=()=>open(level.play.coda?resumeProgramme(fiveAct(level)):enterReceipt(receiptFor(level)));
   $('extend-show').onclick=()=>{
     const {l,record}=showing,plan=continueReceipt(l,record);$('slip-dialog').close();open(plan.l);
     tell('沿用原戏前 '+plan.keep+' 拍，以「'+readingNames[plan.l.play.coda.mode]+'」续演。'+(plan.keep<5?'从第 '+(plan.keep+1)+' 拍起为回程留路。':'接下来验回签。'));
   };
-  $('other-reading').onclick=()=>{
-    const {l,record}=showing,other=receiptFor(l,1-l.play.coda.mode),prefix=record.slice(0,5);
-    const n=usablePrefix(other,prefix,read('relay:both:'+l.play.id)===true,read('duet:quiet:'+l.play.id)===true);
-    $('slip-dialog').close();setTrace(other,null);level=other;setDesk(prefix.slice(0,n),prefix[n]||prefix[n-1]);
-    tell('已保留前 '+n+' 拍。'+(n===5?'这套收场能直接换读法。':'从第 '+(n+1)+' 拍起，为「'+readingNames[other.play.coda.mode]+'」留路。'));
+  function revisePage(changePaper){
+    const {l,record}=showing,c=l.play.coda,other=receiptFor(l,changePaper?c.mode:1-c.mode,versionOf(l),changePaper?!c.insert:c.insert),prefix=record.slice(0,5);
+    const n=usablePrefix(other,prefix,read('relay:both:'+other.play.id)===true,read('duet:quiet:'+other.play.id)===true);
+    $('slip-dialog').close();clearRehearsal(other);level=other;setDesk(prefix.slice(0,n),prefix[n]||prefix[n-1]);
+    tell('已保留前 '+n+' 拍。'+(n===5?'从这一拍直接接读'+paperName(other)+'。':'从第 '+(n+1)+' 拍起，为「'+readingLabel(other)+'」留路。'));
+  }
+  $('other-reading').onclick=()=>revisePage(false);$('other-paper').onclick=()=>revisePage(true);
+  function startFold(l,record,reply=false,low=false){
+    const plan=reply?{leg:'reply',tape:record,low}:{leg:'first',low};
+    const n=reply?0:foldKeep(l,record,plan);
+    setTrace(l,null);saveFoldDesk(l,plan);level=l;
+    if(!reply && n===takes.length && record===takes){
+      const current=deskState();savePlay(l,record,current.state,current.history);open(l);
+    }else setDesk(reply?[]:record.slice(0,n),reply?null:record[n]||record[n-1]);
+    tell(reply?'换站翻面。从第一拍照演底稿，过折口就能另排。':'已保留前 '+n+' 拍。探后场可以查看这套镜位还能把两场合计压到几响。');
+  }
+  $('start-fold').onclick=()=>startFold(level,takes);
+  $('leave-fold').onclick=()=>{saveFoldDesk(level,null);open(level);tell('已回到自由排演，落下的镜位和桌上改动都已留下。');};
+  $('fold-low').onchange=()=>{
+    fold.low=$('fold-low').checked;saveFoldDesk(level,fold);$('slip-forecast').textContent='';clearStep();
+    tell(fold.low?'提示会按两场合计的最低响数排演。':'可以为两场自由挑镜位。');
+  };
+  $('fold-action').onclick=()=>{
+    const {l,record,fold:result}=showing;if(!result)return;
+    if(result.pair){compare(false,result.pair[1-l.play.coda.mode],true);return;}
+    $('slip-dialog').close();startFold(result.eligible?foldPartner(l):l,record,result.eligible);
+  };
+  $('trim-fold').onclick=()=>{
+    const {l,record,fold:result}=showing;if(result?.trim==null)return;
+    const reply=result.trim===record.length;$('slip-dialog').close();startFold(reply?foldPartner(l):l,record,reply,true);
+  };
+  $('fold-jumps').onclick=e=>{
+    const b=e.target.closest('[data-fold-jump]');if(!b || !showing?.comparison?.fold)return;
+    const hop=Number(b.dataset.foldJump);
+    stop();showPosition((hop===2?5:foldScore(showing.l).depth-1+hop)*100);
+    $('slide-lever').focus({preventScroll:true});
   };
   $('repair-double').onclick=()=>{
     const {l,record,repair}=showing;if(repair==null)return;
-    $('slip-dialog').close();setTrace(l,null);write('relay:both:'+l.play.id,true);write('duet:quiet:'+l.play.id,Boolean(l.play.coda));
+    $('slip-dialog').close();clearRehearsal(l);write('relay:both:'+l.play.id,true);write('duet:quiet:'+l.play.id,Boolean(l.play.coda));
     level=l;setDesk(record.slice(0,repair),record[repair]);
     tell('已保留能接上两印的前 '+repair+' 拍。从第 '+(repair+1)+' 拍起排'+(l.play.coda?'兼演静场。':'另一枚印。'));
   };
@@ -350,6 +408,7 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
     const {l,record}=showing,other=partnerOrder(l);
     if(showing.signed){compare(false,showing.signed[1-l.play.delivery.version]);return;}
     if(firstMissedMark(l,record)>=0 || !setTrace(other,record))return;
+    if(other.play.coda)saveFoldDesk(other,null);
     $('slip-dialog').close();savePlay(other,[],deskAt(other,null),[]);open(other);
     tell('这次在'+other.play.delivery.stops[other.play.delivery.version]+'交接。每拍照底稿亲手落片，收场即可合签。');
   };
@@ -375,6 +434,12 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
   $('retake-slip').onclick=()=>rewind(takes.length-1);
   $('predict-slip').onclick=()=>{
     const board=slots();
+    if(fold){
+      const option=foldOptions(level,takes,fold,false).find(v=>!differentPanes(level,v.o.slots,board).length),goal=foldTarget(level,fold);
+      $('slip-forecast').textContent=option?'两场合计最低 '+option.total+' 响。'+(fold.low && option.total>goal?'要达到 '+goal+' 响还须改排。':'可以放心落片。'):
+        template()?'本拍须与另一面底稿逐片吻合。':'这套镜位接不到两场的回程。一步提示能找到该换的玻璃或要退回的拍次。';
+      forecastBoard=board;return;
+    }
     if(reference){
       const diff=differentPanes(level,board,reference[takes.length]);
       $('slip-forecast').textContent=diff.length?'还需对齐'+names(level,diff)+'，才能用同一张底稿合签。':'本拍与底稿逐片相同，可以放心落片。';forecastBoard=board;return;
@@ -404,6 +469,8 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
     if(level.play.coda && takes.length===4 && look.scene>=0){
       const other=receiptFor(level,1-level.play.coda.mode),alt=remainingCost(other,takes,board,duet.both());
       line+='若改「'+readingNames[other.play.coda.mode]+'」，'+(alt?'这套镜位全剧最低 '+alt.total+' 响。':'须改第五拍或更早的镜位。');
+      const page=receiptFor(level,level.play.coda.mode,versionOf(level),!level.play.coda.insert),price=remainingCost(page,takes,board,duet.both());
+      line+='同一读法换「'+paperName(page)+'」'+(price?'可接，全剧最低 '+price.total+' 响。':'还须改排。');
     }
     forecastBoard=board;$('slip-forecast').textContent=line;
   };
@@ -421,33 +488,36 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
     if(raf){stop();return;}
     const end=+$('slide-lever').max,at=+$('slide-lever').value;travel(at===end?0:at,end);
   };
-  function compare(rehearsal,signedRecord=null){
+  function compare(rehearsal,signedRecord=null,folded=false){
     const v=showing;if(!v?.all || !isDuet(v.l))return;
     if(rehearsal && (!v.l.play.delivery || firstMissedMark(v.l,v.record)>=0))return;
-    const other=partnerOrder(v.l),record=signedRecord || (rehearsal?v.record:bestShow(other));if(!record)return;
+    const other=folded?foldPartner(v.l):partnerOrder(v.l),record=signedRecord || (rehearsal?v.record:bestShow(other));if(!record)return;
     stop();downloadRun++;$('print-play').disabled=false;$('slip-print-status').textContent='';
     if(!$('slip-map').hidden)$('slip-proof').click();
-    if(v.comparison?.rehearsal===rehearsal && v.comparison.signed===Boolean(signedRecord))v.comparison=null;
+    if(v.comparison?.rehearsal===rehearsal && v.comparison.signed===Boolean(signedRecord) && v.comparison.fold===folded)v.comparison=null;
     else{
       const beats=record.map((_,i)=>replayBeat(other,record,i));
-      v.comparison={level:other,takes:record,beats,rehearsal,signed:Boolean(signedRecord),scenes:beats.map(b=>b.scene),stage:layScreen($('duet-alt-screen'),other,art)};
+      v.comparison={level:other,takes:record,beats,rehearsal,signed:Boolean(signedRecord),fold:folded,scenes:beats.map(b=>b.scene),stage:layScreen($('duet-alt-screen'),other,art)};
     }
     const on=Boolean(v.comparison);
     $('slip-dialog').classList.toggle('compare-open',on);$('duet-alt-pane').hidden=$('duet-alt-caption').hidden=$('duet-main-label').hidden=$('duet-main-tally').hidden=!on;
-    $('slip-kicker').textContent=v.l.title+'　/　'+(on?(signedRecord?'同谱合签 · 两场实演':rehearsal?'两印底谱 · 同谱试映':'双幕对照'):orderName(v.l)+'　·　全剧已收录');
+    $('slip-kicker').textContent=v.l.title+'　/　'+(on?(folded?'骑缝合签 · '+paperName(v.l):signedRecord?'同谱合签 · 两场实演':rehearsal?'两印底谱 · 同谱试映':'双幕对照'):orderName(v.l)+'　·　全剧已收录');
     $('compare-duet').setAttribute('aria-pressed',String(on && !rehearsal && !signedRecord));$('compare-duet').textContent=on && !rehearsal && !signedRecord?'回到单幕':v.l.play.delivery?'对照两场实演':'并排看两种先手';
-    if(v.signed)$('sign-score').textContent=on && signedRecord?'收起双签联':'看这张同谱双签联';
+    if(v.signed)$('sign-score').textContent=on && signedRecord && !folded?'收起双签联':'看这张同谱双签联';
+    $('fold-jumps').hidden=!(on && folded);
+    if(on && folded)$('fold-jumps').lastElementChild.hidden=foldScore(v.l).depth===5;
+    if(v.fold?.pair)$('fold-action').textContent=on && folded?'收起骑缝联':'翻这张骑缝联';
     $('compare-score').setAttribute('aria-pressed',String(on && rehearsal));$('compare-score').textContent=on && rehearsal?'回到单幕':'同谱换手试映';
-    $('print-play').textContent=on && signedRecord?'保存同谱双签联 PNG':v.l.play.delivery?(on?'保存双幕交接联 PNG':'保存交接联 PNG'):on?'保存双幕对照票 PNG':'保存连景长票 PNG';
+    $('print-play').textContent=on && folded?'保存骑缝联 PNG':on && signedRecord?'保存同谱双签联 PNG':v.l.play.delivery?(on?'保存双幕交接联 PNG':'保存交接联 PNG'):on?'保存双幕对照票 PNG':'保存连景长票 PNG';
     $('slip-proof').textContent=on?'对照两幕镜位':'看当场镜位';
-    v.index=-1;showPosition(on?(v.l.play.coda?500:v.l.play.delivery?200:100):+$('slide-lever').value);
+    v.index=-1;showPosition(on?(folded?foldScore(v.l).depth*100:v.l.play.coda?500:v.l.play.delivery?200:100):+$('slide-lever').value);
     if(on){$('slide-lever').focus({preventScroll:true});$('slip-dialog').scrollTop=0;}
   }
   $('compare-duet').onclick=()=>compare(false);
   $('compare-score').onclick=()=>compare(true);
   $('retry-quiet').onclick=()=>{
     const {l,record}=showing,index=rewindPoint(l,record,endings(l)[0],false,true);
-    $('slip-dialog').close();if(l.play.delivery){write('relay:both:'+l.play.id,false);setTrace(l,null);}
+    $('slip-dialog').close();if(l.play.delivery){write('relay:both:'+l.play.id,false);clearRehearsal(l);}
     write('duet:quiet:'+l.play.id,true);level=l;setDesk(record.slice(0,index),record[index]);
     tell('从第 '+(index+1)+' 拍起改排静场，之前落下的 '+index+' 拍已经留好。');
   };
@@ -473,7 +543,7 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
       const other=partnerOrder(l),goal=endings(other)[0],wantsQuiet=read('duet:quiet:'+other.play.id)===true;
       const joint=Boolean(l.play.delivery && read('relay:both:'+l.play.id)===true);
       const keep=sightline(other,[],record[0],goal,joint,(!joint || Boolean(other.play.coda)) && wantsQuiet).possible;
-      if(other.play.delivery)setTrace(other,null);
+      if(other.play.delivery)clearRehearsal(other);
       level=other;setDesk(keep?[record[0]]:[],record[0]);tell(keep?'保留了刚才的开场。这次'+orderName(other)+'。':'新演法需要改排。已摆回开场落片前，可以接着调。');return;
     }
     const alternatives=endings(l),other=alternatives.find(id=>id!==beats.at(-1).result.scene);
@@ -489,15 +559,16 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
     try{
       const comparison=showing.comparison,blob=await longTicket(l,record,art,comparison);if(run!==downloadRun || !$('slip-dialog').open)return;
       const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;
-      const variant=comparison?(comparison.signed?'同谱双签联':comparison.rehearsal?'两印底谱':l.play.delivery?'双幕交接联':'双幕对照'):isDuet(l)?orderName(l):'';
-      a.download='留灯换景-'+(isDuet(l)?l.title+'-'+(l.play.coda?readingNames[l.play.coda.mode]+'-':'')+variant:showing.scenes.at(-1).title)+'.png';
+      const variant=comparison?(comparison.fold?'骑缝联':comparison.signed?'同谱双签联':comparison.rehearsal?'两印底谱':l.play.delivery?'双幕交接联':'双幕对照'):isDuet(l)?orderName(l):'';
+      const label=l.play.coda?(comparison?.fold?paperName(l)+'-'+orderName(l.play.coda.mode?comparison.level:l)+'顺读':readingLabel(l))+'-':'';
+      a.download='留灯换景-'+(isDuet(l)?l.title+'-'+label+variant:showing.scenes.at(-1).title)+'.png';
       document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
-      $('slip-print-status').textContent=comparison?.signed?'同谱双签联已冲印，两次实演的光路并排留在票上。':'长票已冲印，票下记着每次交灯和换片。';
+      $('slip-print-status').textContent=comparison?.fold?'骑缝联已冲印，票下可以逐拍对照共谱和分读。':comparison?.signed?'同谱双签联已冲印，两次实演的光路并排留在票上。':'长票已冲印，票下记着每次交灯和换片。';
     }catch{if(run===downloadRun)$('slip-print-status').textContent='这次冲印没有成功，可以重试。';}
     finally{if(run===downloadRun)$('print-play').disabled=false;}
   };
   return {load,configure,paint,cover,clamps,issue,project,sceneId,finished,rewind,
     held:id=>Boolean(hold?.held.includes(id)),keeper:()=>hold?.keeper,
     resetDesk:()=>deskAt(level,takes.at(-1)),save:(state,history)=>savePlay(level,takes,state,history),
-    step:(placed,selected)=>cueHint(level,takes,placed,selected,ending,twoWays(),duet.quiet(),reference)};
+    step:(placed,selected)=>fold?foldHint(level,takes,placed,selected,fold):cueHint(level,takes,placed,selected,ending,twoWays(),duet.quiet(),reference)};
 }

@@ -3,7 +3,8 @@ import {readProjector} from './projection.mjs';
 import {changeTotal,handStatus,makeHold,quietScore} from './slip-path.mjs';
 import {isDuet,orderName} from './duet-plays.mjs';
 import {carrierAt,propRecord} from './duet-marks.mjs';
-import {readingNames} from './receipt-plays.mjs';
+import {foldLetter,paperName,readingLabel,readingNames} from './receipt-plays.mjs';
+import {foldScore} from './fold-score.mjs';
 import {drawTicketMap} from './lantern-glass.mjs';
 
 export function layScreen(el,level,art) {
@@ -31,7 +32,7 @@ export function layScreen(el,level,art) {
     prop=document.createElement('span');prop.className='relay-prop';prop.hidden=true;prop.setAttribute('aria-hidden','true');
     const image=new Image();image.alt='';image.src=art(artId,'prop');prop.append(image);el.append(prop);
     if(level.play.coda){
-      receipt=new Image();receipt.alt='';receipt.src=art(artId,'receipt');receipt.hidden=true;
+      receipt=new Image();receipt.alt='';receipt.src=art(artId,level.play.coda.insert?'insert':'receipt');receipt.hidden=true;
       prop.append(receipt);
     }
     prop.dataset.seal=String(carrierAt(level,2));
@@ -125,7 +126,7 @@ function ticketRow(level,takes,images,credit='') {
   ctx.textAlign='right';text((credit?credit+'　·　':'')+'活动戏本  /  第 '+String(level.showIndex+1).padStart(2,'0')+' 出',canvas.width-margin,66,19,sans,'#70553d');ctx.textAlign='left';
   if(isDuet(level)){
     const total=changeTotal(level,takes);
-    ctx.textAlign='right';text(orderName(level)+(level.play.coda?'　·　'+readingNames[level.play.coda.mode]:'')+'　·　全剧 '+total+' 响'+(total===quietScore(level).target?'　静场收班':''),canvas.width-margin,100,19,sans,'#435c54');ctx.textAlign='left';
+    ctx.textAlign='right';text(orderName(level)+(level.play.coda?'　·　'+readingLabel(level):'')+'　·　全剧 '+total+' 响'+(total===quietScore(level).target?'　静场收班':''),canvas.width-margin,100,19,sans,'#435c54');ctx.textAlign='left';
   }
   beats.forEach(({scene,held,changed},i)=>{
     const x=margin+i*(w+gap),y=121,h=250;
@@ -144,7 +145,8 @@ function ticketRow(level,takes,images,credit='') {
   return canvas;
 }
 function signedTicket(level,takes,other,images){
-  const paper=document.createElement('canvas');paper.width=1440;paper.height=1030;
+  const fold=other.fold?foldScore(level):null;
+  const paper=document.createElement('canvas');paper.width=1440;paper.height=fold?1160:1030;
   const g=paper.getContext('2d'),serif='"Songti SC","SimSun",serif',sans='"Microsoft YaHei","PingFang SC",sans-serif';
   function label(str,x,y,size,font=serif,color='#344741'){
     g.fillStyle=color;g.font=size+'px '+font;g.fillText(str,x,y);
@@ -159,19 +161,22 @@ function signedTicket(level,takes,other,images){
     label(line,x,y,19);
   }
   g.fillStyle='#33463f';g.fillRect(0,0,paper.width,paper.height);
-  g.fillStyle='#f8efd9';g.fillRect(11,11,1418,1008);
-  g.strokeStyle='#ab946a';g.strokeRect(22,22,1396,986);
+  g.fillStyle='#f8efd9';g.fillRect(11,11,1418,paper.height-22);
+  g.strokeStyle='#ab946a';g.strokeRect(22,22,1396,paper.height-44);
   label('留 灯 换 景   ／   活 动 戏 本',49,65,18,sans,'#71634d');
-  label('同谱双签联',47,125,52);
-  label(level.title+(level.play.coda?'　·　'+readingNames[level.play.coda.mode]:''),352,119,27);
+  label(fold?'骑缝双面联':'同谱双签联',47,125,52);
+  label(level.title+(level.play.coda?'　·　'+(fold?paperName(level):readingLabel(level)):''),352,119,27);
   const art=images.at(-1),scale=Math.min(180/art.width,98/art.height);
   g.drawImage(art,1370-art.width*scale,80-art.height*scale/2,art.width*scale,art.height*scale);
   rule(49,151,1342);
-  const records=[{l:level,t:takes},{l:other.level,t:other.takes}].sort((a,b)=>a.l.play.delivery.version-b.l.play.delivery.version);
+  const records=[{l:level,t:takes},{l:other.level,t:other.takes}].sort((a,b)=>fold?a.l.play.coda.mode-b.l.play.coda.mode:a.l.play.delivery.version-b.l.play.delivery.version);
+  if(fold){
+    g.save();g.strokeStyle='#a47453';g.setLineDash([5,7]);g.beginPath();g.moveTo(719,161);g.lineTo(719,739);g.stroke();g.restore();
+  }
   for(const [column,{l,t}] of records.entries()){
     const x=51+column*688,d=l.play.delivery;
-    label(orderName(l),x,201,32);label(d.version?'晚递实演':'早递实演',x+480,197,18,sans,'#786045');
-    const scenes=l.play.coda?[2,5]:[2,d.pass];
+    label(fold?readingNames[l.play.coda.mode]+' · '+orderName(l):orderName(l),x,201,32);label(fold?'本场 '+changeTotal(l,t)+' 响':d.version?'晚递实演':'早递实演',x+480,197,18,sans,'#786045');
+    const scenes=fold?[5,6]:l.play.coda?[2,5]:[2,d.pass];
     scenes.forEach((index,row)=>{
       const y=222+row*260,beat=replayBeat(l,t,index);
       paintScene(g,x,y,323,202,images,beat.scene,l,index);
@@ -182,22 +187,30 @@ function signedTicket(level,takes,other,images){
     rule(x,747,648);
     wrapped(l.projection.scenes.at(-1).story,x,782,645);
   }
-  rule(49,848,1342);label('两场共用的镜位',51,884,23);
-  const cost=changeTotal(level,takes);
-  g.textAlign='right';label((level.play.coda && cost===quietScore(level,true).target?'兼演静场　·　':'')+'全剧 '+cost+' 响',1387,883,22,sans);g.textAlign='left';
+  rule(49,848,1342);label(fold?'两场共用前 '+fold.depth+' 拍　／　第 '+(fold.depth+1)+' 拍起各自排灯':'两场共用的镜位',51,884,23);
+  const cost=changeTotal(level,takes)+(fold?changeTotal(other.level,other.takes):0);
+  const lowest=fold?cost===fold.min:level.play.coda && cost===quietScore(level,true).target;
+  g.textAlign='right';label((lowest?(fold?'骑缝静场':'兼演静场')+'　·　':'')+(fold?'合计 ':'全剧 ')+cost+' 响',1387,883,22,sans);g.textAlign='left';
   const w=1336/takes.length;
   takes.forEach((_,i)=>{
     const x=51+i*w,beat=replayBeat(level,takes,i);
-    g.fillStyle=i%2?'#eee4ce':'#e7e1ca';g.fillRect(x,901,w-4,77);
+    const split=fold && i>=fold.depth;
+    g.fillStyle=split?'#eddbc9':i%2?'#eee4ce':'#e7e1ca';g.fillRect(x,901,w-4,77);
     label('第 '+(i+1)+' 拍',x+9,928,18,sans);
-    label(beat.held?lampNames[beat.held.keeper]+'守 · '+beat.changed.length+' 响':'开场免计',x+9,957,17,sans,'#544f41');
+    const tally=split?records.map(({l,t},j)=>(j?'倒 ':'顺 ')+replayBeat(l,t,i).changed.length).join(' · ')+' 响':
+      beat.held?(fold?'两场各 ':lampNames[beat.held.keeper]+'守 · ')+beat.changed.length+' 响':'开场免计';
+    label(tally,x+9,957,17,sans,'#544f41');
   });
+  if(fold){
+    const [title,story]=foldLetter(level);
+    rule(49,1004,1342);label(title,51,1052,31,serif,'#774e35');wrapped(story,51,1094,1326);
+  }
   return paper;
 }
 export async function longTicket(level,takes,art,other=null) {
   const layers=isDuet(level)?['bg','actor','partner']:['bg','actor'];
   if(level.play.delivery)layers.push('prop');
-  if(level.play.coda)layers.push('receipt');
+  if(level.play.coda)layers.push(level.play.coda.insert?'insert':'receipt');
   const images=await Promise.all(layers.map(layer=>imageAt(art((layer==='actor'||layer==='partner') && level.play.castId || level.play.artId || level.play.id,layer))));
   let canvas=other?.signed?signedTicket(level,takes,other,images):ticketRow(level,takes,images,level.play.delivery?'当场实演':'');
   if(other && !other.signed){
