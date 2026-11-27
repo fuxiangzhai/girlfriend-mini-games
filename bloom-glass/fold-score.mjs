@@ -75,6 +75,17 @@ export function recordFold(l,tape){
   const pair=foldWith(l,tape);
   if(pair)write(pairKey(l)+foldTotal(l,pair),pair);
 }
+export function recordedFold(l,ours,peer){
+  const other=foldPartner(l);
+  if(!canFold(l,ours) || !canFold(other,peer) || !sameFold(l,ours,peer))return false;
+  const equal=(a,b)=>Array.isArray(a) && a.length===b.length && a.every((board,i)=>Array.isArray(board) && board.length===b[i].length && boardKey(l,board)===boardKey(l,b[i]));
+  const archived=read(pairKey(l)+foldTotal(l,[ours,peer])),mode=l.play.coda.mode;
+  if(archived && equal(archived[mode],ours) && equal(archived[1-mode],peer))return true;
+  return [[l,ours],[other,peer]].every(([side,tape])=>{
+    const cost=changeTotal(side,tape);
+    return [read(sideKey(side,prefixKey(side,tape))+cost),legacy(side,cost)].some(saved=>equal(saved,tape));
+  });
+}
 export function foldBill(l){
   const front=canonical(l),back=foldPartner(front),min=foldScore(l).min;
   let archived=null;

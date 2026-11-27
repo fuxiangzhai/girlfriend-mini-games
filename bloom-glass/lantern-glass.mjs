@@ -59,7 +59,7 @@ export function opticsOverlay(level,scene,result,filter=-1) {
   return '<g aria-hidden="true">'+addresses.join('')+marks.join('')+ports.join('')+'</g>';
 }
 
-function drawMap(ctx,level,slots,rays,x,y,w,h,mark,cursor) {
+function drawMap(ctx,level,slots,rays,x,y,w,h,mark,cursor,desk) {
   const size=Math.min((w-40)/level.width,(h-36)/level.height);
   const left=x+(w-size*level.width)/2,top=y+(h-size*level.height)/2;
   ctx.fillStyle='#253941';ctx.fillRect(x,y,w,h);
@@ -117,14 +117,33 @@ function drawMap(ctx,level,slots,rays,x,y,w,h,mark,cursor) {
     line(walked,'#293747',7);line(walked,colors[mark.lamp],3.8);
     ctx.beginPath();ctx.arc(px,py,size*.11,0,Math.PI*2);ctx.fillStyle='#fff6db';ctx.fill();ctx.strokeStyle='#25383c';ctx.lineWidth=2;ctx.stroke();
   }
+  if(desk){
+    ctx.save();ctx.textAlign='left';ctx.font='bold '+Math.max(10,Math.round(size*.21))+'px sans-serif';
+    for(let row=0;row<level.height;row++)for(let col=0;col<level.width;col++){
+      const px=left+col*size+3,py=top+row*size+3;
+      ctx.fillStyle='#263a3e';ctx.fillRect(px,py,size*.37,size*.25);
+      ctx.fillStyle='#fff1cd';ctx.fillText(squareName(col,row),px+2,py+size*.2);
+    }
+    desk.goal.forEach((port,i)=>{
+      const [px,py]=onMap([portPoint(level,port)])[0],cx=Math.max(x+9,Math.min(x+w-9,px)),cy=Math.max(y+9,Math.min(y+h-9,py));
+      ctx.strokeStyle=colors[i];ctx.lineWidth=2.5;ctx.strokeRect(cx-6,cy-6,12,12);
+    });
+    const id=desk.selected,p=slots[id];
+    if(p){
+      const cell=markCell(level.width,level.pieces[id].mirror.offset,p),[cx,cy]=xy([cell%level.width,Math.floor(cell/level.width)]);
+      ctx.beginPath();ctx.arc(cx,cy,size*.4,0,Math.PI*2);ctx.lineWidth=3;ctx.strokeStyle='#fffbdb';ctx.stroke();
+      ctx.lineWidth=1.8;ctx.strokeStyle='#4b4435';ctx.setLineDash([5,4]);ctx.stroke();
+    }
+    ctx.restore();
+  }
 }
 export function drawReadingMap(canvas,level,slots,rays,mark,cursor){
   drawMap(canvas.getContext('2d'),level,slots,rays,0,0,canvas.width,canvas.height,mark,cursor);
 }
 
-export function drawTicketMap(canvas,level,receipt) {
+export function drawTicketMap(canvas,level,receipt,desk=null) {
   const ctx=canvas.getContext('2d');
-  drawMap(ctx,level,receipt.slots,receipt.result.rays,0,0,canvas.width,canvas.height,receipt.mark);
+  drawMap(ctx,level,receipt.slots,receipt.result.rays,0,0,canvas.width,canvas.height,receipt.mark,null,desk);
 }
 
 export async function ticketImage(level,scene,receipt,src) {

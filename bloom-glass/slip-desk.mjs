@@ -10,9 +10,10 @@ import {acceptsMark,activeMarks,bendName,markReading,markTask,propRecord,version
 import {bestShow,continueReceipt,duetBills,enterReceipt,lastDuet,openingForecast,resumeProgramme,setupDuetControls} from './duet-desk.mjs';
 import {canTakeRequests,changeTotal,cueHint,deskAt,differentPanes,encoreBill,firstMissedMark,handStatus,hasPlayDraft,makeHold,playbill,quietScore,readTrace,remainingCost,restorePlay,rewindPoint,savePlay,setTrace,signedWith,sightline,storePlaybill,takeScene,usablePrefix} from './slip-path.mjs';
 import {paperName,readingLabel,readingNames} from './receipt-plays.mjs';
-import {foldHint,foldKeep,foldOptions,foldScore,foldTarget,readFoldDesk,recordFold,saveFoldDesk} from './fold-score.mjs';
+import {canFold,foldHint,foldKeep,foldOptions,foldScore,foldTarget,readFoldDesk,recordFold,saveFoldDesk} from './fold-score.mjs';
 import {foldAlbum,foldLabel,foldPanel,foldResult,onFoldAlbum} from './fold-desk.mjs';
 import {setupPaperReader} from './paper-reader.mjs';
+import {setupTailLook,setupTails} from './tail-desk.mjs';
 import {layScreen,longTicket,moveScreen,replayBeat,stagePose} from './slip-screen.mjs';
 
 const $=id=>document.getElementById(id);
@@ -30,6 +31,29 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
   let level,takes=[],hold=null,ending,encore=false,showing=null,raf=0,downloadRun=0,overlay=false,forecastBoard,reference=null,fold=null;
   const template=()=>reference || (fold?.leg==='reply' && takes.length<foldScore(level).depth?fold.tape:null);
   const readPaper=setupPaperReader();
+  const lookAhead=setupTailLook();
+  const tails=setupTails(art,l=>{
+    if($('slip-dialog').open)$('slip-dialog').close();
+    const first=foldPartner(l),prior=bestShow(first);
+    if(canFold(first,prior))startFold(l,prior,true);
+    else startFold(first,restorePlay(first).takes);
+  },chime);
+  $('open-tail').onclick=()=>tails.start(level);
+  $('tail-book').onclick=()=>tails.openLast(true);
+  function tailOffer(){
+    const v=showing;
+    if(!v.all || !v.l.play.coda?.insert){$('tail-invite').hidden=true;return;}
+    const paired=v.comparison?.fold?v.comparison.takes:v.fold?.pair?.[1-v.l.play.coda.mode];
+    $('tail-invite').hidden=!paired;
+    if($('tail-invite').hidden)return;
+    $('tail-invite-text').textContent=v.comparison?.fold?'选一面作第二场，沿那一场实演过的第七拍往下走。':'沿本场的第七拍接下去，原来的灯与玻璃都在。';
+    $('tail-from-show').textContent='续「'+foldLabel(v.l)+'」';$('tail-from-show').onclick=()=>tails.start(v.l,{tape:v.record,peer:paired});
+    $('tail-from-other').hidden=!v.comparison?.fold;
+    if(v.comparison?.fold){
+      const other=v.comparison.level;$('tail-from-other').textContent='续「'+foldLabel(other)+'」';
+      $('tail-from-other').onclick=()=>tails.start(other,{tape:paired,peer:v.record});
+    }
+  }
   function clearRehearsal(l){setTrace(l,null);if(l.play.coda)saveFoldDesk(l,null);}
   const duet=setupDuetControls(switchOrder,(quiet,both)=>{
     $('slip-forecast').textContent='';clearStep();repaint();
@@ -166,6 +190,7 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
     for(const id of ['slip-bar','slip-hold','slip-run-sheet','slip-scorecard','slip-archive'])$(id).hidden=!yes;
     $('slip-overlay-tools').hidden=!yes || !hold;overlay=false;forecastBoard=null;$('slip-forecast').textContent='';
     const draft=yes && template();$('trace-panel').hidden=!draft;$('fold-panel').hidden=true;
+    $('open-tail').hidden=!yes || !target.play.coda?.insert;
     if(!yes){duet.configure(target,null);return;}
     $('trace-template').open=false;
     if(draft)drawTicketMap($('trace-map'),level,replayBeat(level,draft,takes.length));
@@ -182,7 +207,7 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
     score();archive();cover();
   }
   function paint(placed,result){
-    duet.paint(takes,hold,placed,result,reference,fold);foldPanel(level,takes,fold,reference);readPaper(level,takes,placed);
+    duet.paint(takes,hold,placed,result,reference,fold);foldPanel(level,takes,fold,reference);readPaper(level,takes,placed);lookAhead(level,takes,fold,placed);
     const draft=template();
     if(draft){
       const diff=differentPanes(level,placed,draft[takes.length]);
@@ -252,6 +277,7 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
     const last=beats.length-1;
     showing={l,record,beats,scenes:beats.map(b=>b.scene),stage:layScreen($('slip-large-screen'),l,art),index:-1,all,pair};
     showing.fold=foldResult(l,record,all);
+    tailOffer();
     $('slip-kicker').textContent=l.title+'　/　'+(isDuet(l)?orderName(l)+'　·　':'')+(all?'全剧已收录':('已演 '+record.length+' 拍'));
     $('duet-stage-pair').hidden=false;$('slip-dialog').classList.remove('compare-open');
     $('slip-dialog').classList.toggle('relay-show',Boolean(l.play.delivery));
@@ -499,7 +525,7 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
       const beats=record.map((_,i)=>replayBeat(other,record,i));
       v.comparison={level:other,takes:record,beats,rehearsal,signed:Boolean(signedRecord),fold:folded,scenes:beats.map(b=>b.scene),stage:layScreen($('duet-alt-screen'),other,art)};
     }
-    const on=Boolean(v.comparison);
+    const on=Boolean(v.comparison);tailOffer();
     $('slip-dialog').classList.toggle('compare-open',on);$('duet-alt-pane').hidden=$('duet-alt-caption').hidden=$('duet-main-label').hidden=$('duet-main-tally').hidden=!on;
     $('slip-kicker').textContent=v.l.title+'　/　'+(on?(folded?'骑缝合签 · '+paperName(v.l):signedRecord?'同谱合签 · 两场实演':rehearsal?'两印底谱 · 同谱试映':'双幕对照'):orderName(v.l)+'　·　全剧已收录');
     $('compare-duet').setAttribute('aria-pressed',String(on && !rehearsal && !signedRecord));$('compare-duet').textContent=on && !rehearsal && !signedRecord?'回到单幕':v.l.play.delivery?'对照两场实演':'并排看两种先手';
@@ -567,7 +593,7 @@ export function setupSlips({open,slots,selected,deskState,seat,repaint,clearStep
     }catch{if(run===downloadRun)$('slip-print-status').textContent='这次冲印没有成功，可以重试。';}
     finally{if(run===downloadRun)$('print-play').disabled=false;}
   };
-  return {load,configure,paint,cover,clamps,issue,project,sceneId,finished,rewind,
+  return {load,configure,paint,cover,clamps,issue,project,sceneId,finished,rewind,tails,
     held:id=>Boolean(hold?.held.includes(id)),keeper:()=>hold?.keeper,
     resetDesk:()=>deskAt(level,takes.at(-1)),save:(state,history)=>savePlay(level,takes,state,history),
     step:(placed,selected)=>fold?foldHint(level,takes,placed,selected,fold):cueHint(level,takes,placed,selected,ending,twoWays(),duet.quiet(),reference)};

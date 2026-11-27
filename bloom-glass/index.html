@@ -62,8 +62,11 @@
             <div class="paper-line"><span id="reading-label">读法</span><div id="reading-buttons" role="group" aria-labelledby="reading-label"><button type="button" data-reading="0">原灯顺读</button><button type="button" data-reading="1">翻面倒读</button></div></div><p id="paper-instruction"></p></div>
             <details id="paper-loupe" hidden><summary>沿光逐格验纸</summary><div class="loupe-tools"><button type="button" class="subtle" id="peek-mark" aria-pressed="false">看另一印</button><span id="loupe-lamp"></span></div><canvas width="440" height="236" id="loupe-map" role="img" aria-label="实际灯路与读纸游标"></canvas><label for="ray-walk">沿光移动</label><input type="range" min="0" value="0" step="1" id="ray-walk"><button type="button" class="subtle" id="seek-hole">走到第二孔</button><p id="ray-word" role="status"></p></details>
             <div id="fold-lobby"><button type="button" class="secondary" id="start-fold">排骑缝合签</button><span id="fold-offer"></span></div>
+            <button type="button" class="secondary" id="open-tail" hidden>折后两拍 · 续演夹页</button>
           </section>
-          <section id="fold-panel" aria-labelledby="fold-phase" hidden><div><strong id="fold-phase"></strong><button type="button" class="subtle" id="leave-fold">退出骑缝排演</button></div><p id="fold-instruction"></p><label><input type="checkbox" id="fold-low">按两场最低合计排演</label><span id="fold-cost"></span></section>
+          <section id="fold-panel" aria-labelledby="fold-phase" hidden><div><strong id="fold-phase"></strong><button type="button" class="subtle" id="leave-fold">退出骑缝排演</button></div><p id="fold-instruction"></p><label><input type="checkbox" id="fold-low">按两场最低合计排演</label><span id="fold-cost"></span>
+            <details id="tail-look" hidden><summary>落回签前，看看第八拍</summary><p id="tail-look-live"></p><label for="tail-look-route">给哪条路留灯</label><select id="tail-look-route"><option value="0"></option><option value="1"></option></select><canvas id="tail-look-map" width="440" height="245" role="img" aria-label="能从本场第六拍接上的回签参考镜位"></canvas><p id="tail-look-note"></p></details>
+          </section>
           <section id="trace-panel" aria-label="同谱合签" hidden><div><strong>照底谱实演</strong><span id="trace-count"></span><button type="button" class="subtle" id="leave-trace">退出跟谱</button></div><details id="trace-template"><summary>翻看本拍底稿</summary><canvas id="trace-map" width="480" height="300" role="img" aria-label="底稿中本拍的玻璃位置、镜面与双灯光路"></canvas><p id="trace-panes"></p></details></section>
           <div id="slip-hold" hidden></div>
           <div id="relay-cue" hidden><strong id="relay-owner"></strong><span id="relay-task"></span><small id="relay-reading"></small></div>
@@ -150,7 +153,7 @@
         <section id="relay-archive" aria-labelledby="relay-archive-title"><h3 id="relay-archive-title">递物返场</h3><p>每一站分别收录实演。能兼演两种递法的镜位另存为两印底谱，可随时并排试映。</p><div id="relay-tickets"></div></section>
         <section id="receipt-archive" aria-labelledby="receipt-archive-title"><h3 id="receipt-archive-title">回执与合签</h3><p>正文与夹页分别收录。用同一套七拍镜位演完早递和晚递，可以收同谱双签联。</p><div id="receipt-tickets" class="paper-tickets"></div>
           <details><summary>翻夹页戏本</summary><div id="insert-tickets" class="paper-tickets"></div></details>
-          <details id="fold-album"><summary>翻骑缝联 <span id="fold-count"></span></summary><div id="fold-tickets" class="paper-tickets"></div></details>
+          <details id="fold-album"><summary>翻骑缝联 <span id="fold-count"></span></summary><div id="fold-tickets" class="paper-tickets"></div><button type="button" class="secondary" id="tail-book">翻折后戏笺</button></details>
         </section>
       </details>
     </section>
@@ -307,8 +310,30 @@
     <div id="slip-lever"><button type="button" class="secondary" id="run-slip">连放</button><label for="slide-lever">推片拉杆</label><input type="range" min="0" step="1" value="0" id="slide-lever" aria-label="推片拉杆，回看已演的各拍"></div>
     <p id="slip-caption"></p><p id="duet-alt-caption" hidden></p><p id="duet-receipt" hidden></p><p id="slip-encore-note" hidden></p><button type="button" class="subtle" id="slip-proof" aria-expanded="false" aria-controls="slip-proof-pair slip-proof-text">看当场镜位</button><p id="slip-proof-text" hidden></p><p id="duet-alt-proof-text" hidden></p>
     <section id="fold-result" hidden><p id="fold-result-note"></p><button type="button" class="secondary" id="fold-action"></button><button type="button" class="subtle" id="trim-fold" hidden></button><div id="fold-jumps" hidden><button type="button" class="subtle" data-fold-jump="0">看最后一拍共谱</button><button type="button" class="subtle" data-fold-jump="1">看分谱第一拍</button><button type="button" class="subtle" data-fold-jump="2">看两面验纸</button></div><div id="fold-letter" hidden><strong></strong><p></p></div></section>
+    <div id="tail-invite" hidden><strong>夹页还有两拍</strong><p id="tail-invite-text"></p><div class="tail-tools"><button type="button" id="tail-from-show" class="primary">从这张骑缝联续演</button><button type="button" id="tail-from-other" class="secondary" hidden></button></div></div>
     <div id="revise-receipt" class="slip-buttons" hidden><button type="button" class="secondary" id="repair-double" hidden></button><button type="button" class="secondary" id="other-reading" hidden></button><button type="button" class="secondary" id="other-paper" hidden></button></div>
     <div class="slip-buttons"><button type="button" class="primary" id="slip-continue"></button><button type="button" class="secondary" id="extend-show" hidden>沿这五拍续演回执</button><button type="button" class="secondary" id="sign-score" hidden>照底谱实演另一印</button><button type="button" class="secondary" id="slip-other" hidden></button><button type="button" class="secondary" id="retry-quiet" hidden>按静场目标改排</button><button type="button" class="secondary" id="compare-duet" aria-pressed="false" hidden>并排看两种先手</button><button type="button" class="secondary" id="compare-score" aria-pressed="false" hidden>同谱换手试映</button><button type="button" class="subtle" id="print-play" hidden>保存连景长票 PNG</button></div><p id="slip-print-status" role="status"></p>
+  </div></dialog>
+  <dialog id="tail-dialog" class="dialog" aria-labelledby="tail-title"><div class="dialog-inner">
+    <button type="button" class="round close" data-close aria-label="合上折后两拍"><span data-icon="close"></span></button>
+    <header class="tail-head"><div><p class="overline">留灯换景 · 夹页续场</p><h2 id="tail-title" tabindex="-1">折后两拍</h2><p id="tail-intro"></p></div><img id="tail-paper" alt=""></header>
+    <div class="tail-source"><label for="tail-page">夹页</label><select id="tail-page"><option value="0">饭桌夹页</option><option value="1">雪路夹页</option></select><label for="tail-side">第二场</label><select id="tail-side"></select></div>
+    <p class="tail-credit" id="tail-credit"></p><button type="button" id="tail-to-bench" class="subtle">去调镜 ↓</button>
+    <div id="tail-work"><div class="tail-program">
+      <h3>第八拍 · 留哪盏灯</h3><div id="tail-routes" class="tail-choices" role="group" aria-label="第八拍路线"></div>
+      <h3>第九拍 · 灯往哪里去</h3><div id="tail-ends" class="tail-choices" role="group" aria-label="第九拍去处"></div>
+      <p id="tail-passage"></p><label id="tail-both-label"><input type="checkbox" id="tail-both">第八拍给两个结局都留路</label>
+      <div class="tail-tools"><button type="button" class="subtle" id="tail-back" hidden>回第八拍另排</button><button type="button" class="subtle" id="tail-prep">另排第七拍</button></div>
+    </div><section class="tail-bench" aria-labelledby="tail-cue"><h3 id="tail-cue" tabindex="-1"></h3><p id="tail-task"></p>
+      <canvas id="tail-map" width="510" height="286" role="img" aria-label="当前镜位、所选玻璃的银镜与双灯出口，列 A 至 E，行 1 至 4"></canvas><p id="tail-rays"></p>
+      <div id="tail-rack" role="group" aria-label="选择一片玻璃"></div><div id="tail-sockets" role="group" aria-label="选择插槽"></div>
+      <p id="tail-message" role="status" aria-live="polite"></p><div class="tail-tools"><button type="button" class="primary" id="tail-take">落片</button><button type="button" class="secondary" id="tail-hint">看一步提示</button><button type="button" class="subtle" id="tail-undo">撤销</button><button type="button" class="subtle" id="tail-reset">还原本拍</button></div>
+    </section></div>
+    <section id="tail-finale" hidden><img id="tail-image" alt=""><div><p class="overline" id="tail-stamp"></p><h3 id="tail-ending" tabindex="-1"></h3><p id="tail-story"></p><p id="tail-margin"></p><div id="tail-joint" hidden><strong></strong><p></p><button type="button" class="subtle" id="tail-turn">翻读另一张落款</button></div><p id="tail-tally"></p>
+      <details id="tail-proofs"><summary>看续场实演镜位</summary><div id="tail-maps"></div></details>
+      <div class="tail-tools"><button type="button" class="primary" id="tail-sibling">留住第八拍，换个结局</button><button type="button" class="secondary" id="tail-again">换第八拍路线</button><button type="button" class="subtle" id="tail-print">保存折后戏笺 PNG</button></div><p id="tail-print-status" role="status"></p></div></section>
+    <details id="tail-album"><summary>这面夹页的折后戏笺 <span id="tail-count"></span></summary><div id="tail-collection"></div></details>
+    <button type="button" class="subtle" id="tail-rehearse">回工作台排正式骑缝联</button>
   </div></dialog>
   <dialog id="ticket-dialog" class="dialog" aria-labelledby="ticket-title">
     <div class="ticket-image-mat"><img id="ticket-image" alt=""><canvas id="ticket-map" width="620" height="360" role="img" aria-label="这张戏票实际使用的镜位和灯路" hidden></canvas></div>

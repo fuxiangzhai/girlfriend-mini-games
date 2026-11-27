@@ -621,18 +621,19 @@ function openAfterlight() {
 }
 if (location.hash==='#afterlight') openAfterlight();
 else if (location.hash==='#lantern') {openLevel(lastShow());consumeEntry();}
-else if (['#slips','#duets','#relay','#receipts','#folds'].includes(location.hash)) {openLevel(slipEntry());consumeEntry();}
+else if (['#slips','#duets','#relay','#receipts','#folds','#tails'].includes(location.hash)) {openLevel(slipEntry());if(location.hash==='#tails')slips.tails.openLast();consumeEntry();}
 else {
   const mode=read('bench:mode');openLevel(mode==='slips'?lastPlay():mode==='lantern'?lastShow():dayLevel());
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
     showNight(location.hash==='#shutters'?'roll':'night'); consumeEntry();
   } else if(lastRoom==='night') showNight();
+  else if(mode==='slips' && slips.tails.shouldResume())slips.tails.openLast();
 }
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#afterlight') openAfterlight();
-  if(['#lantern','#slips','#duets','#relay','#receipts','#folds'].includes(location.hash)) {
+  if(['#lantern','#slips','#duets','#relay','#receipts','#folds','#tails'].includes(location.hash)) {
     for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
-    openLevel(location.hash==='#lantern'?lastShow():slipEntry());consumeEntry();window.scrollTo(0,0);
+    openLevel(location.hash==='#lantern'?lastShow():slipEntry());if(location.hash==='#tails')slips.tails.openLast();consumeEntry();window.scrollTo(0,0);
   }
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
     for(const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
@@ -640,6 +641,6 @@ window.addEventListener('hashchange',()=>{
   }
 });
 function slipEntry(){
-  if(location.hash==='#folds' || location.hash==='#receipts')return lastReceipt(location.hash==='#folds');
+  if(['#folds','#receipts','#tails'].includes(location.hash))return lastReceipt(location.hash!=='#receipts');
   return location.hash==='#slips'?lastPlay():lastDuet(location.hash==='#relay');
 }
