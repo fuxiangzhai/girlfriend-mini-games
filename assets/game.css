@@ -20,6 +20,11 @@ button:focus-visible { outline: 3px solid #f5ee7d; outline-offset: 4px; }
 .topbar { background: #1a122a; border-bottom: 1px solid #ffffff1a; }
 .topbar-inner { min-height: 74px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .brand { display: flex; align-items: center; gap: 11px; }
+.top-actions { display: flex; align-items: center; gap: 12px; }
+.moon-link { display: inline-flex; align-items: center; gap: 5px; min-height: 42px; color: #ffdfa6; text-decoration: none; font-size: .9rem; font-weight: 750; }
+.moon-link span { font-size: 1.35rem; }
+.moon-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+.moon-link:focus-visible { outline: 3px solid #f5ee7d; outline-offset: 3px; }
 .brand-mark { display: grid; place-items: center; flex: 0 0 40px; height: 40px; border: 1px solid #c89aff; border-radius: 13px; color: #ffdd95; background: #513680; font-size: 23px; transform: rotate(-8deg); }
 .brand strong { font-size: 1.06rem; line-height: 1.25; letter-spacing: .045em; }
 .button { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid transparent; border-radius: 10px; padding: 0 15px; font-size: .91rem; font-weight: 800; white-space: nowrap; transition: filter 140ms, background 140ms, transform 140ms; }
@@ -149,4 +154,10 @@ h2 { font-size: 1.18rem; font-weight: 900; line-height: 1.4; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
+}
+
+@media (max-width: 375px) {
+  .topbar-inner, .brand, .top-actions { gap: 7px; }
+  .top-actions .sound-button { padding-inline: 8px; }
+  .brand strong { font-size: .95rem; }
 }
