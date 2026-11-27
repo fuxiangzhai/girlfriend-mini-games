@@ -123,6 +123,28 @@
 #relay-tickets small { display:block; font-size:.72rem; }
 #relay-tickets button:disabled { opacity:1; color:#675f50; background:#eee8d8; border-style:dashed; }
 #relay-tickets .read-double { margin-top:6px; width:100%; background:#e3ead9; color:#364c3f; }
+#to-receipts { min-height:32px; padding:3px 9px; font-size:.8rem; }
+#reading-panel { display:grid; grid-template-columns:clamp(85px,21%,142px) 1fr; align-items:center; gap:clamp(8px,2vw,18px); margin:8px 0 12px; padding:11px 13px; background:#f2ead6; border:1px solid #baae90; border-radius:6px; }
+#receipt-art { display:block; width:100%; max-height:82px; object-fit:contain; filter:drop-shadow(1px 2px 1px #65533730); }
+#reading-panel.turned #receipt-art { transform:scaleX(-1); }
+#reading-panel h3,#trace-panel strong { margin:0 0 5px; font:650 .95rem var(--serif); color:#3e493e; }
+#reading-buttons { display:flex; flex-wrap:wrap; gap:4px; }
+#reading-buttons button { min-height:32px; padding:4px 8px; background:#fffbef; color:#3e4c43; border:1px solid #a59b82; border-radius:4px; font-size:.8rem; }
+#reading-buttons button[aria-pressed=true] { color:#fff5df; background:#555d49; border-color:#555d49; }
+#reading-buttons button:disabled { opacity:.85; }
+#reading-panel p,#trace-panel p { margin:5px 0 0; font-size:.78rem; line-height:1.5; color:#514d41; }
+#trace-panel { padding:8px 10px; margin:7px 0 12px; border:1px dashed #778873; background:#edf1e6; border-radius:5px; color:#3c514a; font-size:.81rem; }
+#trace-panel>div { display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px; } #trace-panel strong { margin:0; } #leave-trace { margin-left:auto; min-height:30px; }
+#trace-panel summary { cursor:pointer; padding:4px 0; }
+#trace-map { display:block; width:min(100%,360px); margin:5px auto; border-radius:4px; }
+#revise-receipt { margin:5px 0 9px; }
+#receipt-archive { border-top:1px dashed #b6a982; margin-top:12px; padding-top:10px; } #receipt-archive h3 { font:700 1rem var(--serif); }
+#receipt-archive>p { color:#555446; font-size:.8rem; }
+#receipt-tickets { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,215px),1fr)); gap:8px; margin-top:8px; }
+#receipt-tickets button { flex:1; border:1px solid #a59c85; border-radius:4px; padding:5px 7px; background:#fff8e7; color:#43473b; text-align:left; font-size:.8rem; }
+#receipt-tickets small { display:block; font-size:.72rem; } #receipt-tickets button:disabled { opacity:1; color:#655b4e; border-style:dashed; background:#eee7d8; }
+#receipt-tickets .read-double,#receipt-tickets .read-signed,#relay-tickets .read-signed { display:block; width:100%; margin-top:5px; color:#374b42; background:#e5eadb; }
+@media(max-width:390px) { #reading-panel { grid-template-columns:66px 1fr; padding:8px; gap:7px; } }
 @media(max-width:520px) {
   .compare-open #duet-stage-pair,.compare-open #slip-proof-pair { grid-template-columns:1fr; gap:7px; }
   .compare-open #duet-stage-pair .slip-screen { width:min(100%,48dvh); margin-inline:auto; }

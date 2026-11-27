@@ -1,6 +1,7 @@
 import {makeLevel} from './levels.mjs';
 import {slipPlays} from './slip-plays.mjs';
 import {makeRelayCasts} from './duet-relays.mjs';
+import {makeReceiptCasts} from './receipt-plays.mjs';
 import {versionOf} from './duet-marks.mjs';
 
 // The two glasses have independent stops. A lamp's exit selects its actor's
@@ -57,8 +58,16 @@ export const duetCasts=scripts.map((script,index)=>{
 
 export const relayCasts=makeRelayCasts(slipPlays.length+duetCasts.length);
 const casts=[...duetCasts,...relayCasts];
-export const programmes=[...slipPlays,...casts.map(cast=>cast[0])];
-export const partnerOrder=level=>casts[level.showIndex-slipPlays.length][1-versionOf(level)];
+const receiptStart=slipPlays.length+casts.length;
+export const receiptCasts=makeReceiptCasts(relayCasts,receiptStart);
+export const programmes=[...slipPlays,...casts.map(cast=>cast[0]),...receiptCasts.map(family=>family[0][0])];
+export const allDuets=[...casts.flat(),...receiptCasts.flat(2)];
+export function receiptFor(l,mode=0,v=versionOf(l)){
+  const n=l.play.coda?l.showIndex-receiptStart:relayCasts.findIndex(pair=>pair.includes(l));
+  return receiptCasts[n]?.[mode]?.[v];
+}
+export const fiveAct=l=>relayCasts[l.showIndex-receiptStart][versionOf(l)];
+export const partnerOrder=level=>level.play.coda?receiptFor(level,level.play.coda.mode,1-versionOf(level)):casts[level.showIndex-slipPlays.length][1-versionOf(level)];
 export const isDuet=level=>level?.play?.first!=null;
 export function orderName(level){
   const d=level.play.delivery;

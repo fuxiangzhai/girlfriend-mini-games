@@ -3,11 +3,14 @@ import {readProjector} from './projection.mjs';
 import {changeTotal,handStatus,makeHold,quietScore} from './slip-path.mjs';
 import {isDuet,orderName} from './duet-plays.mjs';
 import {carrierAt,propRecord} from './duet-marks.mjs';
+import {readingNames} from './receipt-plays.mjs';
+import {drawTicketMap} from './lantern-glass.mjs';
 
 export function layScreen(el,level,art) {
   const bg=new Image(),actor=new Image();
   const cast=level.play.castId||level.play.id;
-  bg.alt=actor.alt='';bg.src=art(level.play.id,'bg');actor.src=art(cast,'actor');
+  const artId=level.play.artId||level.play.id;
+  bg.alt=actor.alt='';bg.src=art(artId,'bg');actor.src=art(cast,'actor');
   bg.className='painted-back';actor.className='slipping-glass';
   el.replaceChildren(bg);el.setAttribute('aria-label',level.play.backdrop);
   const {wire,anchor}=level.play;
@@ -23,13 +26,17 @@ export function layScreen(el,level,art) {
   if(isDuet(level)){
     partner=new Image();partner.className='slipping-glass second-glass';partner.alt='';partner.src=art(cast,'partner');el.append(partner);
   }
-  let prop=null;
+  let prop=null,receipt=null;
   if(level.play.delivery){
     prop=document.createElement('span');prop.className='relay-prop';prop.hidden=true;prop.setAttribute('aria-hidden','true');
-    const image=new Image();image.alt='';image.src=art(level.play.id,'prop');prop.append(image);el.append(prop);
+    const image=new Image();image.alt='';image.src=art(artId,'prop');prop.append(image);el.append(prop);
+    if(level.play.coda){
+      receipt=new Image();receipt.alt='';receipt.src=art(artId,'receipt');receipt.hidden=true;
+      prop.append(receipt);
+    }
     prop.dataset.seal=String(carrierAt(level,2));
   }
-  return {actor,partner,anchor,prop,level};
+  return {actor,partner,anchor,prop,receipt,level};
 }
 export function stagePose(scenes,at,key='pose',arc=0) {
   const position=Math.max(0,Math.min(scenes.length-1,at)),left=Math.floor(position),right=Math.ceil(position);
@@ -48,22 +55,27 @@ function moveActor(actor,pose,anchor=[.5,.5]) {
   actor.style.transform='translate('+anchor.map(v=>-v*100+'%').join(',')+') rotate('+angle+'deg)';
 }
 export function propPose(level,at,poses){
-  const d=level.play.delivery;
+  const d=level.play.delivery,returning=Boolean(level.play.coda && at>4);
+  const giver=returning?1-d.giver:d.giver,pass=returning?6:d.pass,width=returning?9:d.width;
   function grip(i){
     const pose=poses[i];return pose?[pose[0]+d.grips[i][0],pose[1]+d.grips[i][1]]:null;
   }
-  const raw=Math.max(0,Math.min(1,(at-d.pass+.50)/.44)),t=raw*raw*(3-2*raw);
-  const start=grip(d.giver),end=grip(1-d.giver);
-  if(t===0 || t===1){const hand=t===0?start:end;return hand?[...hand,d.width,0]:null;}
+  const raw=Math.max(0,Math.min(1,(at-pass+.50)/.44)),t=raw*raw*(3-2*raw);
+  const start=grip(giver),end=grip(1-giver);
+  if(t===0 || t===1){const hand=t===0?start:end;return hand?[...hand,width,0]:null;}
   if(!start || !end)return null;
   const arc=4*t*(1-t);
-  return [start[0]+(end[0]-start[0])*t,start[1]+(end[1]-start[1])*t-arc*4,d.width,arc*-12];
+  return [start[0]+(end[0]-start[0])*t,start[1]+(end[1]-start[1])*t-arc*4,width,arc*-12];
 }
 export function moveScreen(screen,pose,partnerPose,at=0){
   moveActor(screen.actor,pose,screen.anchor);
   if(screen.partner)moveActor(screen.partner,partnerPose);
   if(screen.prop){
     moveActor(screen.prop,propPose(screen.level,at,[pose,partnerPose]));
+    if(screen.receipt){
+      screen.receipt.hidden=at<=4;screen.prop.firstElementChild.hidden=at>4;
+      screen.receipt.style.transform=screen.level.play.coda.mode && at>4 && at<6?'scaleX(-1)':'';
+    }
     screen.prop.classList.toggle('is-stamped',at>=1.94);
   }
 }
@@ -75,7 +87,7 @@ export function replayBeat(level,takes,index) {
 }
 function imageAt(src){const img=new Image();img.src=src;return img.decode().then(()=>img);}
 function paintScene(ctx,x,y,w,h,images,scene,level,index) {
-  const [back,actor,partner,prop]=images,play=level.play;
+  const [back,actor,partner,prop,receipt]=images,play=level.play;
   ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
   const scale=Math.max(w/back.width,h/back.height),bw=back.width*scale,bh=back.height*scale;
   ctx.drawImage(back,x+(w-bw)/2,y+(h-bh)/2,bw,bh);
@@ -83,14 +95,14 @@ function paintScene(ctx,x,y,w,h,images,scene,level,index) {
     ctx.beginPath();ctx.moveTo(x,y+h*play.wire[0]/100);ctx.lineTo(x+w,y+h*play.wire[1]/100);
     ctx.strokeStyle='#38353e';ctx.lineWidth=h*.0042;ctx.stroke();
   }
-  function draw(img,pose,anchor=[.5,.5]){
+  function draw(img,pose,anchor=[.5,.5],reverse=false){
     const [cx,cy,percent,angle]=pose,aw=w*percent/100,ah=aw*img.height/img.width;
-    ctx.save();ctx.translate(x+w*cx/100,y+h*cy/100);ctx.rotate(angle*Math.PI/180);
+    ctx.save();ctx.translate(x+w*cx/100,y+h*cy/100);ctx.rotate(angle*Math.PI/180);if(reverse)ctx.scale(-1,1);
     ctx.drawImage(img,-aw*anchor[0],-ah*anchor[1],aw,ah);ctx.restore();
   }
   draw(actor,scene.pose,play.anchor);if(partner)draw(partner,scene.partnerPose);
   if(prop){
-    const p=propPose(level,index,[scene.pose,scene.partnerPose]);draw(prop,p);
+    const p=propPose(level,index,[scene.pose,scene.partnerPose]);draw(receipt && index>4?receipt:prop,p,undefined,play.coda?.mode===1 && index===5);
     if(index>=2){
       const px=x+w*(p[0]+p[2]*.32)/100,py=y+h*p[1]/100,r=w*.0065;
       ctx.beginPath();
@@ -113,7 +125,7 @@ function ticketRow(level,takes,images,credit='') {
   ctx.textAlign='right';text((credit?credit+'　·　':'')+'活动戏本  /  第 '+String(level.showIndex+1).padStart(2,'0')+' 出',canvas.width-margin,66,19,sans,'#70553d');ctx.textAlign='left';
   if(isDuet(level)){
     const total=changeTotal(level,takes);
-    ctx.textAlign='right';text(orderName(level)+'　·　全剧 '+total+' 响'+(total===quietScore(level).target?'　静场收班':''),canvas.width-margin,100,19,sans,'#435c54');ctx.textAlign='left';
+    ctx.textAlign='right';text(orderName(level)+(level.play.coda?'　·　'+readingNames[level.play.coda.mode]:'')+'　·　全剧 '+total+' 响'+(total===quietScore(level).target?'　静场收班':''),canvas.width-margin,100,19,sans,'#435c54');ctx.textAlign='left';
   }
   beats.forEach(({scene,held,changed},i)=>{
     const x=margin+i*(w+gap),y=121,h=250;
@@ -131,12 +143,64 @@ function ticketRow(level,takes,images,credit='') {
   });
   return canvas;
 }
+function signedTicket(level,takes,other,images){
+  const paper=document.createElement('canvas');paper.width=1440;paper.height=1030;
+  const g=paper.getContext('2d'),serif='"Songti SC","SimSun",serif',sans='"Microsoft YaHei","PingFang SC",sans-serif';
+  function label(str,x,y,size,font=serif,color='#344741'){
+    g.fillStyle=color;g.font=size+'px '+font;g.fillText(str,x,y);
+  }
+  function rule(x,y,w){g.fillStyle='#b6a582';g.fillRect(x,y,w,1);}
+  function wrapped(str,x,y,w){
+    g.font='19px '+serif;let line='';
+    for(const char of str){
+      if(line && g.measureText(line+char).width>w){label(line,x,y,19);y+=27;line='';}
+      line+=char;
+    }
+    label(line,x,y,19);
+  }
+  g.fillStyle='#33463f';g.fillRect(0,0,paper.width,paper.height);
+  g.fillStyle='#f8efd9';g.fillRect(11,11,1418,1008);
+  g.strokeStyle='#ab946a';g.strokeRect(22,22,1396,986);
+  label('留 灯 换 景   ／   活 动 戏 本',49,65,18,sans,'#71634d');
+  label('同谱双签联',47,125,52);
+  label(level.title+(level.play.coda?'　·　'+readingNames[level.play.coda.mode]:''),352,119,27);
+  const art=images.at(-1),scale=Math.min(180/art.width,98/art.height);
+  g.drawImage(art,1370-art.width*scale,80-art.height*scale/2,art.width*scale,art.height*scale);
+  rule(49,151,1342);
+  const records=[{l:level,t:takes},{l:other.level,t:other.takes}].sort((a,b)=>a.l.play.delivery.version-b.l.play.delivery.version);
+  for(const [column,{l,t}] of records.entries()){
+    const x=51+column*688,d=l.play.delivery;
+    label(orderName(l),x,201,32);label(d.version?'晚递实演':'早递实演',x+480,197,18,sans,'#786045');
+    const scenes=l.play.coda?[2,5]:[2,d.pass];
+    scenes.forEach((index,row)=>{
+      const y=222+row*260,beat=replayBeat(l,t,index);
+      paintScene(g,x,y,323,202,images,beat.scene,l,index);
+      const map=document.createElement('canvas');map.width=320;map.height=202;drawTicketMap(map,l,beat);
+      g.drawImage(map,x+331,y);
+      label('第 '+(index+1)+' 拍　'+propRecord(l,index),x,y+234,21);
+    });
+    rule(x,747,648);
+    wrapped(l.projection.scenes.at(-1).story,x,782,645);
+  }
+  rule(49,848,1342);label('两场共用的镜位',51,884,23);
+  const cost=changeTotal(level,takes);
+  g.textAlign='right';label((level.play.coda && cost===quietScore(level,true).target?'兼演静场　·　':'')+'全剧 '+cost+' 响',1387,883,22,sans);g.textAlign='left';
+  const w=1336/takes.length;
+  takes.forEach((_,i)=>{
+    const x=51+i*w,beat=replayBeat(level,takes,i);
+    g.fillStyle=i%2?'#eee4ce':'#e7e1ca';g.fillRect(x,901,w-4,77);
+    label('第 '+(i+1)+' 拍',x+9,928,18,sans);
+    label(beat.held?lampNames[beat.held.keeper]+'守 · '+beat.changed.length+' 响':'开场免计',x+9,957,17,sans,'#544f41');
+  });
+  return paper;
+}
 export async function longTicket(level,takes,art,other=null) {
   const layers=isDuet(level)?['bg','actor','partner']:['bg','actor'];
   if(level.play.delivery)layers.push('prop');
-  const images=await Promise.all(layers.map(layer=>imageAt(art((layer==='actor'||layer==='partner') && level.play.castId || level.play.id,layer))));
-  let canvas=ticketRow(level,takes,images,level.play.delivery?'当场实演':'');
-  if(other){
+  if(level.play.coda)layers.push('receipt');
+  const images=await Promise.all(layers.map(layer=>imageAt(art((layer==='actor'||layer==='partner') && level.play.castId || level.play.artId || level.play.id,layer))));
+  let canvas=other?.signed?signedTicket(level,takes,other,images):ticketRow(level,takes,images,level.play.delivery?'当场实演':'');
+  if(other && !other.signed){
     const credit=level.play.delivery?(other.rehearsal?'同谱试演':'当场实演'):'';
     const next=ticketRow(other.level,other.takes,images,credit),pair=document.createElement('canvas');
     pair.width=canvas.width;pair.height=canvas.height+next.height;

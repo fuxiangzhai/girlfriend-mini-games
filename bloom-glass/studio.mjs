@@ -6,7 +6,7 @@ import { read, write, fresh, restore, save, record, award } from './save.mjs';
 import { setupNight } from './night-shift.mjs';
 import { lastShow, setupLantern } from './lantern-desk.mjs';
 import { lastPlay, setupSlips } from './slip-desk.mjs';
-import {lastDuet} from './duet-desk.mjs';
+import {lastDuet,lastReceipt} from './duet-desk.mjs';
 import { paneDescription } from './lantern-glass.mjs';
 
 const $ = id => document.getElementById(id);
@@ -621,7 +621,7 @@ function openAfterlight() {
 }
 if (location.hash==='#afterlight') openAfterlight();
 else if (location.hash==='#lantern') {openLevel(lastShow());consumeEntry();}
-else if (['#slips','#duets','#relay'].includes(location.hash)) {openLevel(location.hash==='#slips'?lastPlay():lastDuet(location.hash==='#relay'));consumeEntry();}
+else if (['#slips','#duets','#relay','#receipts'].includes(location.hash)) {openLevel(location.hash==='#receipts'?lastReceipt():location.hash==='#slips'?lastPlay():lastDuet(location.hash==='#relay'));consumeEntry();}
 else {
   const mode=read('bench:mode');openLevel(mode==='slips'?lastPlay():mode==='lantern'?lastShow():dayLevel());
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
@@ -630,9 +630,9 @@ else {
 }
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#afterlight') openAfterlight();
-  if(['#lantern','#slips','#duets','#relay'].includes(location.hash)) {
+  if(['#lantern','#slips','#duets','#relay','#receipts'].includes(location.hash)) {
     for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
-    openLevel(location.hash==='#lantern'?lastShow():location.hash==='#slips'?lastPlay():lastDuet(location.hash==='#relay'));consumeEntry();window.scrollTo(0,0);
+    openLevel(location.hash==='#receipts'?lastReceipt():location.hash==='#lantern'?lastShow():location.hash==='#slips'?lastPlay():lastDuet(location.hash==='#relay'));consumeEntry();window.scrollTo(0,0);
   }
   if(location.hash==='#nightshift' || location.hash==='#shutters') {
     for(const dialog of document.querySelectorAll('dialog[open]')) dialog.close();

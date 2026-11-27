@@ -89,17 +89,22 @@ function drawMap(ctx,level,slots,rays,x,y,w,h,mark) {
     line(path,'#293747',5);line(path,colors[i],3,i?[6,4]:[]);
   });
   const at=mark && mark.kind!=='wait'?mark.cell:level.projection.cross;
-  if(at!=null){
+  const locations=mark?.kind==='watermark'?mark.cells:at!=null?[at]:[];
+  locations.forEach((at,i)=>{
     const [px,py]=xy([at%level.width,Math.floor(at/level.width)]);
     ctx.beginPath();
     if(mark?.kind==='stamp')ctx.rect(px-size*.28,py-size*.28,size*.56,size*.56);else ctx.arc(px,py,size*.29,0,Math.PI*2);
     ctx.strokeStyle='#243743';ctx.lineWidth=4;ctx.stroke();
-    ctx.strokeStyle=mark?.kind==='stamp'?colors[mark.lamp]:'#f7f0cb';ctx.lineWidth=1.8;ctx.stroke();
+    ctx.strokeStyle=mark?.lamp!=null?colors[mark.lamp]:'#f7f0cb';ctx.lineWidth=1.8;ctx.stroke();
     if(mark){
       ctx.font='bold '+Math.max(12,size*.22)+'px sans-serif';ctx.fillStyle='#233347';ctx.fillRect(px-size*.46,py-size*.48,size*.42,size*.25);
       ctx.fillStyle='#fff4db';ctx.fillText(squareName(at%level.width,Math.floor(at/level.width)),px-size*.44,py-size*.29);
+      if(mark.kind==='watermark'){
+        ctx.fillStyle='#243743';ctx.beginPath();ctx.arc(px-size*.23,py+size*.20,size*.15,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=colors[mark.lamp];ctx.textAlign='center';ctx.fillText(String(i+1),px-size*.23,py+size*.27);ctx.textAlign='left';
+      }
     }
-  }
+  });
 }
 
 export function drawTicketMap(canvas,level,receipt) {
